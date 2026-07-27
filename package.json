@@ -1,0 +1,22 @@
+{
+  "name": "ResearchAndTracking",
+  "version": "1.0.0",
+  "description": "Research Pipeline & Tracking Web Application ",
+  "keywords": [],
+  "author": "Vritika Tuteja",
+  "license": "ISC",
+  "devEngines": {
+    "packageManager": {
+      "name": "pnpm",
+      "version": "^11.17.0",
+      "onFail": "download"
+    }
+  },
+  "type": "module",
+  "private":true,
+  "engines":{
+    "node": "24.18.0",
+    "pnpm":"11.17.0"
+  },
+  "packageManager": "pnpm@11.17.0"
+}
