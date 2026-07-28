@@ -8,6 +8,7 @@ node_modules/
 dist/
 build/
 .next/
+*.tsbuildinfo
 
 #environmnet variables
 .env

@@ -1,0 +1,19 @@
+import { Outlet } from "react-router-dom";
+
+import { SiteHeader } from "@/components/layout/site-header";
+
+export function AppLayout() {
+  return (
+    <div className="flex min-h-screen flex-col">
+      <SiteHeader />
+      <main className="container flex-1 py-8">
+        <Outlet />
+      </main>
+      <footer className="border-t py-6">
+        <div className="container text-sm text-muted-foreground">
+          Research &amp; Tracking
+        </div>
+      </footer>
+    </div>
+  );
+}
