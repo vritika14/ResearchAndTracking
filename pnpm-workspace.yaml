@@ -3,4 +3,5 @@ packages:
   - 'apps/*'
   - 'database/*'
 allowBuilds:
+  esbuild: true
   unrs-resolver: true
