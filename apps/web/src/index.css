@@ -1,0 +1,78 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    --background: 0 0% 100%;
+    --foreground: 353 15% 12%;
+
+    --card: 0 0% 100%;
+    --card-foreground: 353 15% 12%;
+
+    --popover: 0 0% 100%;
+    --popover-foreground: 353 15% 12%;
+
+    /* Brand maroon — primary actions, links, and the bold heading standard. */
+    --primary: 353 72% 27%;
+    --primary-foreground: 353 55% 97%;
+
+    --secondary: 353 20% 95.5%;
+    --secondary-foreground: 353 72% 20%;
+
+    --muted: 353 15% 95.5%;
+    --muted-foreground: 353 8% 42%;
+
+    --accent: 353 40% 94%;
+    --accent-foreground: 353 72% 22%;
+
+    --destructive: 0 72% 42%;
+    --destructive-foreground: 0 0% 98%;
+
+    --border: 353 15% 89%;
+    --input: 353 15% 89%;
+    --ring: 353 68% 34%;
+
+    --radius: 0.625rem;
+  }
+
+  .dark {
+    --background: 353 25% 6%;
+    --foreground: 353 20% 96%;
+
+    --card: 353 22% 8%;
+    --card-foreground: 353 20% 96%;
+
+    --popover: 353 22% 8%;
+    --popover-foreground: 353 20% 96%;
+
+    --primary: 353 62% 58%;
+    --primary-foreground: 353 40% 8%;
+
+    --secondary: 353 18% 16%;
+    --secondary-foreground: 353 20% 96%;
+
+    --muted: 353 18% 16%;
+    --muted-foreground: 353 12% 65%;
+
+    --accent: 353 22% 18%;
+    --accent-foreground: 353 30% 92%;
+
+    --destructive: 0 62% 45%;
+    --destructive-foreground: 0 0% 98%;
+
+    --border: 353 18% 18%;
+    --input: 353 18% 18%;
+    --ring: 353 55% 55%;
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+
+  body {
+    @apply bg-background text-foreground antialiased;
+  }
+}
