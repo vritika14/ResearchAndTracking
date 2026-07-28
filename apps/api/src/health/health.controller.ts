@@ -27,15 +27,15 @@ export class HealthController {
   checkReadiness() {
     return this.health.check([
       () => this.checkPostgres(),
-      () => this.http.pingCheck('minio', 'http://localhost:9000/minio/health/live'),
+      () => this.http.pingCheck('minio', this.config.getOrThrow('MINIO_ENDPOINT')),
     ]);
   }
 
   //opens a new connection to the Postgres database, runs a simple query, and returns the result. If the connection or query fails, it throws an error with a message indicating the failure.
   private async checkPostgres(): Promise<HealthIndicatorResult> {
     const client = new Client({
-      host: 'localhost',
-      port: 5432,
+      host: this.config.getOrThrow('POSTGRES_HOST'),
+      port: this.config.get<number>('POSTGRES_PORT'),
       user: this.config.get<string>('POSTGRES_USER'),
       password: this.config.get<string>('POSTGRES_PASSWORD'),
       database: this.config.get<string>('POSTGRES_DB'),
