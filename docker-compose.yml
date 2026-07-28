@@ -13,7 +13,7 @@ services:
       - postgres_data:/var/lib/postgresql/data
 
   minio:
-    image: minio/minio:RELEASE.2024-01-16T16-07-38Z
+    image: minio/minio:RELEASE.2025-10-15T17-29-55Z
     container_name: your-repo-minio
     restart: unless-stopped
     environment:
