@@ -2,3 +2,5 @@ packages:
   - 'packages/*'
   - 'apps/*'
   - 'database/*'
+allowBuilds:
+  unrs-resolver: true
