@@ -1,5 +1,5 @@
 {
-  "name": "researchTrackere2e",
+  "name": "@research-tracker/e2e",
   "description": "",
   "main": "index.js",
   "scripts": {

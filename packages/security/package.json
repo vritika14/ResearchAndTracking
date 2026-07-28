@@ -1,5 +1,5 @@
 {
-  "name": "researchTrackersecurity",
+  "name": "@research-tracker/security",
   "description": "",
   "main": "index.js",
   "scripts": {

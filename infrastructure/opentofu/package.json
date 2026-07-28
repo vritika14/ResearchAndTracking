@@ -1,5 +1,5 @@
 {
-  "name": "researchTrackeropentofu",
+  "name": "@research-tracker/opentofu",
   "description": "",
   "main": "index.js",
   "scripts": {

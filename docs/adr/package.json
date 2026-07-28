@@ -1,5 +1,5 @@
 {
-  "name": "researchTrackeradr",
+  "name": "@research-tracker/adr",
   "description": "",
   "main": "index.js",
   "scripts": {

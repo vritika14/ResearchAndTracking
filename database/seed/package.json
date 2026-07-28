@@ -1,5 +1,5 @@
 {
-  "name": "researchTrackerseed",
+  "name": "@research-tracker/seed",
   "description": "",
   "main": "index.js",
   "scripts": {

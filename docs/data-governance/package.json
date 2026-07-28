@@ -1,5 +1,5 @@
 {
-  "name": "researchTrackerdata-governance",
+  "name": "@research-tracker/data-governance",
   "description": "",
   "main": "index.js",
   "scripts": {

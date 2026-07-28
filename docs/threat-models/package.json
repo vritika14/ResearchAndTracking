@@ -1,5 +1,5 @@
 {
-  "name": "researchTrackerthreat-models",
+  "name": "@research-tracker/threat-models",
   "description": "",
   "main": "index.js",
   "scripts": {

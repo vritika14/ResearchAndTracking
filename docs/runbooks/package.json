@@ -1,5 +1,5 @@
 {
-  "name": "researchTrackerrunbooks",
+  "name": "@research-tracker/runbooks",
   "description": "",
   "main": "index.js",
   "scripts": {

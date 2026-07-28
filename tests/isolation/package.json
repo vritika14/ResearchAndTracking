@@ -1,5 +1,5 @@
 {
-  "name": "researchTrackerisolation",
+  "name": "@research-tracker/isolation",
   "description": "",
   "main": "index.js",
   "scripts": {

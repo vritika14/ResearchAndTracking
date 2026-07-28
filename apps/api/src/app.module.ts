@@ -20,8 +20,6 @@ import { LoggerModule } from 'nestjs-pino';
             'req.headers.authorization',
             'req.headers.cookie',
             'req.headers["set-cookie"]',
-            'req.body.passowrd',
-            'req.body.confirmpassword',
             'req.body.*.password',
             '*.token',
             'req.body.accesstoken',

@@ -1,5 +1,5 @@
 {
-  "name": "researchTrackershared",
+  "name": "@research-tracker/shared",
   "description": "",
   "main": "index.js",
   "scripts": {

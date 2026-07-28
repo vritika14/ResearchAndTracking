@@ -1,5 +1,5 @@
 {
-  "name": "researchTrackermigrations",
+  "name": "@research-tracker/migrations",
   "description": "",
   "main": "index.js",
   "scripts": {
