@@ -3,6 +3,7 @@ import { AppController } from './app.controller';
 import { AppService } from './app.service';
 import { ConfigModule } from '@nestjs/config';
 import { HealthModule } from './health/health.module';
+import { LoggerModule } from 'nestjs-pino';
 
 @Module({
   imports: [
@@ -11,6 +12,11 @@ import { HealthModule } from './health/health.module';
       envFilePath: '../../.env',
     }),
     HealthModule,
+    LoggerModule.forRoot({
+      pinoHttp: {
+        level: 'info',
+      },
+    }),
   ],
   controllers: [AppController],
   providers: [AppService],
