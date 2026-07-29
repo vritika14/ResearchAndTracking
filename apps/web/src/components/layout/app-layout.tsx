@@ -7,7 +7,7 @@ export function AppLayout() {
   return (
     <div className="flex min-h-screen">
       <Sidebar />
-      <div className="flex min-h-screen flex-1 flex-col">
+      <div className="flex min-h-screen min-w-0 flex-1 flex-col">
         <SiteHeader />
         <main className="container flex-1 py-8">
           <Outlet />

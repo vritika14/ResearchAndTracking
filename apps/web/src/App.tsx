@@ -4,6 +4,7 @@ import { AppLayout } from "@/components/layout/app-layout";
 import DashboardPage from "@/pages/dashboard";
 import ProjectsPage from "@/pages/projects";
 import TasksPage from "@/pages/tasks";
+import PipelinePage from "@/pages/pipeline";
 import DailyNotesPage from "@/pages/daily-notes";
 import DailyNotesInputPage from "@/pages/daily-notes-input";
 import DailyNotesOutputPage from "@/pages/daily-notes-output";
@@ -19,6 +20,7 @@ export default function App() {
         <Route index element={<DashboardPage />} />
         <Route path="projects" element={<ProjectsPage />} />
         <Route path="tasks" element={<TasksPage />} />
+        <Route path="pipeline" element={<PipelinePage />} />
         <Route path="daily-notes" element={<DailyNotesPage />} />
         <Route path="daily-notes/input" element={<DailyNotesInputPage />} />
         <Route path="daily-notes/output" element={<DailyNotesOutputPage />} />

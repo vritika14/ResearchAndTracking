@@ -7,9 +7,9 @@ export default {
   theme: {
     container: {
       center: true,
-      padding: "1.5rem",
+      padding: "1rem",
       screens: {
-        "2xl": "1280px",
+        "2xl": "1600px",
       },
     },
     extend: {
@@ -47,19 +47,19 @@ export default {
           DEFAULT: "hsl(var(--popover))",
           foreground: "hsl(var(--popover-foreground))",
         },
-        // Brand scale — bold maroon used for headings, primary actions, and accents.
-        maroon: {
-          50: "#faeff0",
-          100: "#f5dbde",
-          200: "#eebac0",
-          300: "#e38792",
-          400: "#da4e5f",
-          500: "#bc2436",
-          600: "#931a28",
-          700: "#76131f",
-          800: "#620f18",
-          900: "#4c0a12",
-          950: "#2d060a",
+        // Brand scale — bold blue used for headings, primary actions, and accents.
+        blue: {
+          50: "#eff6ff",
+          100: "#dbeafe",
+          200: "#bfdbfe",
+          300: "#93c5fd",
+          400: "#60a5fa",
+          500: "#3b82f6",
+          600: "#2563eb",
+          700: "#1d4ed8",
+          800: "#1e40af",
+          900: "#1e3a8a",
+          950: "#172554",
         },
       },
       borderRadius: {

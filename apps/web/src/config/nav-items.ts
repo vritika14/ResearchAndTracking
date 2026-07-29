@@ -7,6 +7,7 @@ import {
   ScrollText,
   Settings,
   ShieldCheck,
+  Workflow,
 } from "lucide-react";
 
 export interface NavLeaf {
@@ -38,15 +39,16 @@ export const navGroups: NavGroup[] = [
     label: "Research",
     items: [
       { label: "Projects", to: "/projects", icon: FolderKanban },
-      { label: "Tasks", to: "/tasks", icon: ClipboardList },
+      { label: "Tasks and to do", to: "/tasks", icon: ClipboardList },
+      { label: "Pipeline", to: "/pipeline", icon: Workflow },
       {
         label: "Daily Notes",
         to: "/daily-notes",
         icon: NotebookPen,
-        children: [
-          { label: "Input", to: "/daily-notes/input" },
-          { label: "Output", to: "/daily-notes/output" },
-        ],
+        // children: [
+        //   { label: "Input", to: "/daily-notes/input" },
+        //   { label: "Output", to: "/daily-notes/output" },
+        // ],
       },
     ],
   },
