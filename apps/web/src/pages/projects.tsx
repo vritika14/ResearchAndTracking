@@ -1,5 +1,6 @@
 import { useMemo, useState } from "react";
 import { ChevronRight } from "lucide-react";
+import { Link } from "react-router-dom";
 
 import { PageHeading } from "@/components/typography/heading";
 import { Badge } from "@/components/ui/badge";
@@ -312,7 +313,12 @@ export default function ProjectsPage() {
                           <span className="font-mono text-[11px] text-muted-foreground">
                             {project.id}
                           </span>
-                          <span className="font-semibold leading-tight">{project.title}</span>
+                          <Link
+                            to={`/projects/${project.id}`}
+                            className="font-semibold leading-tight transition-colors hover:text-primary hover:underline"
+                          >
+                            {project.title}
+                          </Link>
                           <span className="text-xs text-muted-foreground">
                             {project.pi} · {project.funder} · {project.collaborators}
                           </span>

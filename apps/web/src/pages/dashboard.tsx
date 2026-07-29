@@ -25,7 +25,7 @@ export default function DashboardPage() {
       <PageHeading
         eyebrow="Overview"
         title="Dashboard"
-        description="A snapshot of research activity across projects, tasks, daily notes, and regulated records."
+        description="A snapshot of research activity across projects, tasks, daily notes, and project files."
       />
       <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-5">
         {summary.map((item) => (

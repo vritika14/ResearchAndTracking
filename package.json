@@ -14,6 +14,13 @@
   },
   "type": "module",
   "private":true,
+  "scripts": {
+    "dev:web": "pnpm --filter researchTrackerweb dev",
+    "typecheck": "pnpm --filter researchTrackerweb typecheck",
+    "lint": "pnpm --filter researchTrackerweb lint",
+    "build": "pnpm --filter researchTrackerweb build",
+    "check": "pnpm typecheck && pnpm lint && pnpm build"
+  },
   "engines":{
     "node": "24.18.0",
     "pnpm":"11.17.0"

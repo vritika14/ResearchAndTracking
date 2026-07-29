@@ -57,9 +57,11 @@ export function NavTree({ onNavigate }: NavTreeProps) {
     <nav className="flex flex-col gap-6">
       {navGroups.map((group) => (
         <div key={group.label} className="flex flex-col gap-1">
-          <span className="px-3 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-            {group.label}
-          </span>
+          {group.label ? (
+            <span className="px-3 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+              {group.label}
+            </span>
+          ) : null}
           <div className="flex flex-col gap-0.5">
             {group.items.map((item) => {
               const hasChildren = Boolean(item.children?.length);

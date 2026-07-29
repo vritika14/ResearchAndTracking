@@ -79,4 +79,4 @@ const PageHeading = React.forwardRef<HTMLDivElement, PageHeadingProps>(
 );
 PageHeading.displayName = "PageHeading";
 
-export { Heading, headingVariants, PageHeading };
+export { Heading, PageHeading };
