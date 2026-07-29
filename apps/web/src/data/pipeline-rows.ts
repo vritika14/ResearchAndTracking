@@ -1,5 +1,5 @@
-import { pipelineProjects, type ProjectPriority } from "./pipeline-projects";
-import { projects, type ProjectRole, type ProjectStatus } from "./projects";
+import { pipelineProjects } from "./pipeline-projects";
+import { projects, type ProjectPriority, type ProjectRole, type ProjectStatus } from "./projects";
 
 export interface PipelineStageInfo {
   name: string;
@@ -45,13 +45,17 @@ export const RESEARCH_PIPELINE_STAGES: PipelineStageInfo[] = [
     description: "Submitted for peer review or internal sign-off.",
   },
   {
+    name: "Revise & Submit",
+    description: "Addressing reviewer feedback and preparing the final resubmission.",
+  },
+  {
     name: "Published",
     description: "Publicly released, presented, or archived.",
   },
 ];
 
-/** Old 6-stage PIPELINE_STAGES index (pipeline-projects.ts) -> new 9-stage index above. */
-const OLD_TO_NEW_STAGE_INDEX = [0, 2, 4, 5, 6, 8];
+/** Old 6-stage PIPELINE_STAGES index (pipeline-projects.ts) -> new 10-stage index above. */
+const OLD_TO_NEW_STAGE_INDEX = [0, 2, 4, 5, 6, 9];
 
 export interface PipelineRow {
   id: string;
@@ -64,15 +68,15 @@ export interface PipelineRow {
   stageIndex: number;
 }
 
-/** Joins projects.ts (role/tasks/stage) with pipeline-projects.ts (priority/completion) by id. */
+/** Joins projects.ts (role/priority/tasks/stage) with pipeline-projects.ts (completion) by id. */
 export const pipelineRows: PipelineRow[] = projects.map((project) => {
-  const priorityInfo = pipelineProjects.find((row) => row.id === project.id);
+  const completionInfo = pipelineProjects.find((row) => row.id === project.id);
   return {
     id: project.id,
     title: project.title,
-    priority: priorityInfo?.priority ?? "Medium",
+    priority: project.priority,
     status: project.status,
-    completion: priorityInfo?.completion ?? 0,
+    completion: completionInfo?.completion ?? 0,
     outstanding: project.tasksTotal - project.tasksCompleted,
     myRole: project.myRole,
     stageIndex: OLD_TO_NEW_STAGE_INDEX[project.stageIndex] ?? 0,

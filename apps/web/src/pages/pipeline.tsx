@@ -3,6 +3,13 @@ import { useMemo, useState } from "react";
 import { Heading, PageHeading } from "@/components/typography/heading";
 import { Badge } from "@/components/ui/badge";
 import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import {
   RESEARCH_PIPELINE_STAGES,
   pipelineRows,
   type PipelineRow,
@@ -53,34 +60,6 @@ function controlPillClass(selected: boolean) {
     selected
       ? "border-primary bg-primary text-primary-foreground"
       : "border-border bg-background text-muted-foreground hover:bg-accent hover:text-accent-foreground",
-  );
-}
-
-interface FilterPillRowProps<T extends string> {
-  label: string;
-  options: readonly T[];
-  value: T;
-  onChange: (value: T) => void;
-}
-
-function FilterPillRow<T extends string>({ label, options, value, onChange }: FilterPillRowProps<T>) {
-  return (
-    <div className="flex flex-wrap items-center gap-2">
-      <span className="mr-1 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-        {label}
-      </span>
-      {options.map((option) => (
-        <button
-          key={option}
-          type="button"
-          onClick={() => onChange(option)}
-          aria-pressed={option === value}
-          className={controlPillClass(option === value)}
-        >
-          {option}
-        </button>
-      ))}
-    </div>
   );
 }
 
@@ -187,10 +166,43 @@ export default function PipelinePage() {
           ))}
         </div>
 
-        <div className="flex flex-col gap-3">
-          <FilterPillRow label="Priority" options={PRIORITY_FILTERS} value={priority} onChange={setPriority} />
-          <FilterPillRow label="Status" options={STATUS_FILTERS} value={status} onChange={setStatus} />
-          <FilterPillRow label="Role" options={ROLE_FILTERS} value={role} onChange={setRole} />
+        <div className="flex flex-wrap items-center gap-3">
+          <Select value={priority} onValueChange={(value) => setPriority(value as PriorityFilter)}>
+            <SelectTrigger className="sm:w-40">
+              <SelectValue placeholder="Priority" />
+            </SelectTrigger>
+            <SelectContent>
+              {PRIORITY_FILTERS.map((option) => (
+                <SelectItem key={option} value={option}>
+                  {option === "All" ? "All priorities" : option}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+          <Select value={status} onValueChange={(value) => setStatus(value as StatusFilter)}>
+            <SelectTrigger className="sm:w-40">
+              <SelectValue placeholder="Status" />
+            </SelectTrigger>
+            <SelectContent>
+              {STATUS_FILTERS.map((option) => (
+                <SelectItem key={option} value={option}>
+                  {option === "All" ? "All statuses" : option}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+          <Select value={role} onValueChange={(value) => setRole(value as RoleFilter)}>
+            <SelectTrigger className="sm:w-40">
+              <SelectValue placeholder="Role" />
+            </SelectTrigger>
+            <SelectContent>
+              {ROLE_FILTERS.map((option) => (
+                <SelectItem key={option} value={option}>
+                  {option === "All" ? "All roles" : option}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
         </div>
       </div>
 

@@ -1,3 +1,6 @@
+import type { ProjectPriority } from "./pipeline-projects";
+
+export type { ProjectPriority };
 export type ProjectStatus = "Active" | "Review" | "Stalled" | "Complete";
 export type ProjectRole = "Owner" | "Lead" | "Collaborator" | "Supervisor";
 
@@ -8,6 +11,7 @@ export interface Project {
   funder: string;
   collaborators: string;
   myRole: ProjectRole;
+  priority: ProjectPriority;
   status: ProjectStatus;
   /** Index into PIPELINE_STAGES (see data/pipeline-projects.ts). */
   stageIndex: number;
@@ -20,6 +24,7 @@ export interface Project {
   /** ISO yyyy-mm-dd — sorts correctly as a plain string. */
   dueDate: string;
   overdue?: boolean;
+  targetJournal: string;
 }
 
 /** Placeholder rows until the projects API lands — shapes the projects list for the UI pass. */
@@ -31,6 +36,7 @@ export const projects: Project[] = [
     funder: "NIH R01",
     collaborators: "J. Alvarez, T. Okafor",
     myRole: "Lead",
+    priority: "High",
     status: "Active",
     stageIndex: 1,
     tasksCompleted: 5,
@@ -40,6 +46,7 @@ export const projects: Project[] = [
     notes: 9,
     wordCount: 2400,
     dueDate: "2026-08-15",
+    targetJournal: "Journal of Biological Chemistry",
   },
   {
     id: "PRJ-102",
@@ -48,6 +55,7 @@ export const projects: Project[] = [
     funder: "American Heart Association",
     collaborators: "L. Whitfield, S. Banerjee, M. O'Connell",
     myRole: "Owner",
+    priority: "Critical",
     status: "Active",
     stageIndex: 3,
     tasksCompleted: 11,
@@ -57,6 +65,7 @@ export const projects: Project[] = [
     notes: 24,
     wordCount: 6150,
     dueDate: "2026-08-05",
+    targetJournal: "Circulation",
   },
   {
     id: "PRJ-103",
@@ -65,6 +74,7 @@ export const projects: Project[] = [
     funder: "Internal",
     collaborators: "EHS Office",
     myRole: "Supervisor",
+    priority: "High",
     status: "Review",
     stageIndex: 4,
     tasksCompleted: 8,
@@ -74,6 +84,7 @@ export const projects: Project[] = [
     notes: 6,
     wordCount: 3800,
     dueDate: "2026-08-12",
+    targetJournal: "N/A — Internal Report",
   },
   {
     id: "PRJ-104",
@@ -82,6 +93,7 @@ export const projects: Project[] = [
     funder: "CDC",
     collaborators: "R. Fischer, D. Nakamura",
     myRole: "Collaborator",
+    priority: "Critical",
     status: "Stalled",
     stageIndex: 2,
     tasksCompleted: 5,
@@ -92,6 +104,7 @@ export const projects: Project[] = [
     wordCount: 1200,
     dueDate: "2026-07-24",
     overdue: true,
+    targetJournal: "Epidemiology",
   },
   {
     id: "PRJ-105",
@@ -100,6 +113,7 @@ export const projects: Project[] = [
     funder: "Internal",
     collaborators: "Research Systems IT",
     myRole: "Owner",
+    priority: "Medium",
     status: "Active",
     stageIndex: 2,
     tasksCompleted: 13,
@@ -109,6 +123,7 @@ export const projects: Project[] = [
     notes: 11,
     wordCount: 900,
     dueDate: "2026-09-03",
+    targetJournal: "N/A — Internal Report",
   },
   {
     id: "PRJ-106",
@@ -117,6 +132,7 @@ export const projects: Project[] = [
     funder: "NSF",
     collaborators: "F. Dubois, K. Osei",
     myRole: "Lead",
+    priority: "Medium",
     status: "Active",
     stageIndex: 0,
     tasksCompleted: 4,
@@ -126,6 +142,7 @@ export const projects: Project[] = [
     notes: 4,
     wordCount: 1650,
     dueDate: "2026-09-20",
+    targetJournal: "N/A — Grant Proposal",
   },
   {
     id: "PRJ-107",
@@ -134,6 +151,7 @@ export const projects: Project[] = [
     funder: "Internal",
     collaborators: "Compliance Team",
     myRole: "Supervisor",
+    priority: "Medium",
     status: "Complete",
     stageIndex: 5,
     tasksCompleted: 10,
@@ -143,6 +161,7 @@ export const projects: Project[] = [
     notes: 5,
     wordCount: 4300,
     dueDate: "2026-07-20",
+    targetJournal: "N/A — Internal Report",
   },
   {
     id: "PRJ-108",
@@ -151,6 +170,7 @@ export const projects: Project[] = [
     funder: "Department of Energy",
     collaborators: "N. Petrov",
     myRole: "Collaborator",
+    priority: "High",
     status: "Complete",
     stageIndex: 5,
     tasksCompleted: 7,
@@ -160,5 +180,6 @@ export const projects: Project[] = [
     notes: 8,
     wordCount: 2900,
     dueDate: "2026-07-18",
+    targetJournal: "Analytical Chemistry",
   },
 ];

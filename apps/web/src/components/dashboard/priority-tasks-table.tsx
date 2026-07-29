@@ -1,8 +1,18 @@
 import { useMemo, useState } from "react";
 
-import { priorityTasks, type TaskPriority, type TaskStatus } from "@/data/priority-tasks";
+import {
+  priorityTasks,
+  type TaskPriority,
+  type TaskStatus,
+} from "@/data/priority-tasks";
 import { Badge } from "@/components/ui/badge";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import {
   Select,
@@ -11,11 +21,24 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
 import { cn } from "@/lib/utils";
 
-const PRIORITY_FILTERS = ["All", "Critical", "High"] as const;
-const STATUS_FILTERS = ["All", "Open", "In Progress", "Blocked", "Done"] as const;
+const PRIORITY_FILTERS = ["All", "Critical", "High", "Medium", "Low"] as const;
+const STATUS_FILTERS = [
+  "All",
+  "Open",
+  "In Progress",
+  "Blocked",
+  "Done",
+] as const;
 
 type PriorityFilter = (typeof PRIORITY_FILTERS)[number];
 type StatusFilter = (typeof STATUS_FILTERS)[number];
@@ -60,7 +83,8 @@ export function PriorityTasksTable() {
     });
   }, [search, priority, status]);
 
-  const hasActiveFilters = search !== "" || priority !== "All" || status !== "All";
+  const hasActiveFilters =
+    search !== "" || priority !== "All" || status !== "All";
 
   function clearFilters() {
     setSearch("");
@@ -72,8 +96,10 @@ export function PriorityTasksTable() {
     <Card>
       <CardHeader className="gap-4">
         <div>
-          <CardTitle>Critical &amp; High Priority Tasks</CardTitle>
-          <CardDescription>Tasks across all projects that need attention first.</CardDescription>
+          <CardTitle>Tasks to be done</CardTitle>
+          <CardDescription>
+            Tasks across all projects that need attention first.
+          </CardDescription>
         </div>
         <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
           <Input
@@ -82,7 +108,10 @@ export function PriorityTasksTable() {
             placeholder="Search project or task…"
             className="sm:max-w-xs"
           />
-          <Select value={priority} onValueChange={(value) => setPriority(value as PriorityFilter)}>
+          <Select
+            value={priority}
+            onValueChange={(value) => setPriority(value as PriorityFilter)}
+          >
             <SelectTrigger className="sm:w-40">
               <SelectValue placeholder="Priority" />
             </SelectTrigger>
@@ -94,7 +123,10 @@ export function PriorityTasksTable() {
               ))}
             </SelectContent>
           </Select>
-          <Select value={status} onValueChange={(value) => setStatus(value as StatusFilter)}>
+          <Select
+            value={status}
+            onValueChange={(value) => setStatus(value as StatusFilter)}
+          >
             <SelectTrigger className="sm:w-40">
               <SelectValue placeholder="Status" />
             </SelectTrigger>
@@ -131,7 +163,10 @@ export function PriorityTasksTable() {
           <TableBody>
             {filtered.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={5} className="h-24 text-center text-muted-foreground">
+                <TableCell
+                  colSpan={5}
+                  className="h-24 text-center text-muted-foreground"
+                >
                   No tasks match the current filters.
                 </TableCell>
               </TableRow>
@@ -139,17 +174,29 @@ export function PriorityTasksTable() {
               filtered.map((row) => (
                 <TableRow key={row.id}>
                   <TableCell className="font-medium">{row.project}</TableCell>
-                  <TableCell className="text-muted-foreground">{row.task}</TableCell>
-                  <TableCell className={cn(row.overdue && "font-medium text-destructive")}>
+                  <TableCell className="text-muted-foreground">
+                    {row.task}
+                  </TableCell>
+                  <TableCell
+                    className={cn(
+                      row.overdue && "font-medium text-destructive",
+                    )}
+                  >
                     {row.due}
                   </TableCell>
                   <TableCell>
-                    <Badge variant="outline" className={priorityBadgeClass(row.priority)}>
+                    <Badge
+                      variant="outline"
+                      className={priorityBadgeClass(row.priority)}
+                    >
                       {row.priority}
                     </Badge>
                   </TableCell>
                   <TableCell>
-                    <Badge variant="outline" className={statusBadgeClass(row.status)}>
+                    <Badge
+                      variant="outline"
+                      className={statusBadgeClass(row.status)}
+                    >
                       {row.status}
                     </Badge>
                   </TableCell>
