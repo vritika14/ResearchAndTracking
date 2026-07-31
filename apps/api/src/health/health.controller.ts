@@ -27,7 +27,8 @@ export class HealthController {
   checkReadiness() {
     return this.health.check([
       () => this.checkPostgres(),
-      () => this.http.pingCheck('minio', this.config.getOrThrow('MINIO_ENDPOINT')),
+      () =>
+        this.http.pingCheck('minio', this.config.getOrThrow('MINIO_ENDPOINT')),
     ]);
   }
 
