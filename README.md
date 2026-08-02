@@ -1,107 +1,135 @@
-# Research & Tracking
+# Overview
 
-Research & Tracking is a pnpm workspace containing the React/Vite web shell and
-supporting API, shared packages, database and infrastructure workspaces.
+A functioning application that several researchers can use concurrently through realistic project, task, daily-note and regulated-record workflows. The MVP must be deployable, testable and suitable for controlled improvement after the initial pilot. It must not require a later architectural rewrite merely to add users, modules, capacity or stronger infrastructure.
 
-The current frontend establishes the complete local application shell and
-approved navigation boundary. Business modules still use placeholder or local
-demonstration data.
+## Local Development Setup
 
-## Prerequisites
+### Prerequisites
 
-- Node.js `24.18.0` (see `.nvmrc` and `.node-version`)
-- pnpm `11.17.0`
-- Git
+- Node.js (version pinned in `.nvmrc`) — install via [nvm](https://github.com/nvm-sh/nvm) or [fnm](https://github.com/Schniz/fnm)
+- pnpm (version pinned in `package.json`'s `packageManager` field, managed via Corepack)
+- [Docker Desktop](https://www.docker.com/products/docker-desktop/) (running, not just installed)
 
-Using a Node version manager is recommended:
+### 1. Clone and enter the repo
 
-```powershell
-nvm install 24.18.0
-nvm use 24.18.0
+```bash
+git clone https://github.com/vritika14/ResearchAndTracking.git
+cd ResearchAndTracking
+```
+
+### 2. Use the correct Node version
+
+```bash
+nvm use
+```
+
+If you don't have this Node version installed yet:
+```bash
+nvm install
+nvm use
+```
+
+### 3. Enable Corepack and activate pnpm
+
+```bash
 corepack enable
-corepack prepare pnpm@11.17.0 --activate
+corepack prepare --activate
 ```
 
-Confirm the versions:
+Verify:
+```bash
+node -v
+pnpm -v
+```
+These should match the versions in `.nvmrc` and `package.json`.
 
-```powershell
-node --version
-pnpm --version
+### 4. Install dependencies
+
+```bash
+pnpm install
 ```
 
-## Install and run the complete local web shell
+If you see an `ERR_PNPM_IGNORED_BUILDS` warning, run:
+```bash
+pnpm approve-builds
+```
+and select the listed packages, then re-run `pnpm install`.
 
-From the repository root:
+### 5. Set up environment variables
 
-```powershell
-pnpm install --frozen-lockfile
-pnpm dev:web
+```bash
+cp .env.example .env
 ```
 
-Open the URL printed by Vite, normally:
+Open `.env` and fill in your own local values for `POSTGRES_USER`, `POSTGRES_PASSWORD`, `POSTGRES_DB`, `MINIO_ROOT_USER`, and `MINIO_ROOT_PASSWORD`. These can be anything — they only apply to your own local containers.
 
-```text
-http://localhost:5173
+### 6. Start PostgreSQL and MinIO
+
+```bash
+docker compose up -d
 ```
 
-Stop the development server with `Ctrl+C`.
+Verify both containers are running:
+```bash
+docker compose ps
+```
+Both `postgres` and `minio` should show status `Up`.
 
-## Quality checks
+**Verify PostgreSQL is reachable:**
+```bash
+docker exec -it your-repo-postgres psql -U <POSTGRES_USER value> -d <POSTGRES_DB value>
+```
+You should land in a `psql` prompt. Type `\q` to exit.
 
-The same command used by CI runs the frontend typecheck, lint and production
-build:
+**Verify MinIO is reachable:**
+Open [http://localhost:9001](http://localhost:9001) in a browser and log in with your `MINIO_ROOT_USER` / `MINIO_ROOT_PASSWORD`.
 
-```powershell
-pnpm check
+### 7. Run the API
+
+```bash
+pnpm dev
 ```
 
-Individual commands are also available:
+This starts the NestJS API in watch mode at `http://localhost:3000`. Verify it's running:
+```bash
+curl http://localhost:3000/health/live
+curl http://localhost:3000/health/ready
+```
+Both should return `200 OK` with a small JSON body. `/health/ready` will return `503` if PostgreSQL or MinIO aren't running.
 
-```powershell
-pnpm typecheck
-pnpm lint
-pnpm build
+### 8. Run the web app
+
+```bash
+pnpm --filter @research-tracker/web dev
 ```
 
-## Approved MVP route map
+This starts the Vite dev server at [http://localhost:5173](http://localhost:5173).
 
-| Route | Purpose |
-| --- | --- |
-| `/` | Dashboard shell |
-| `/projects` | Projects shell |
-| `/projects/:projectId` | Project detail shell |
-| `/tasks` | Tasks shell |
-| `/daily-notes` | Daily Notes shell |
-| `/pipeline` | Research pipeline shell |
-| `/settings` | Account settings |
-| `/settings/account-audit` | Account audit log |
-| `/future/:feature` | Shared placeholder for potential future features |
+### 9. Useful root-level commands
 
-Calendar, Collaborators, Conferences, CV Builder, Dissemination, Documents,
-Funding, HDR students, Journal rankings and research lists, real-time activity,
-reviews and HDR examinations, and Teaching currently use the shared future
-feature placeholder.
+Run from the repo root, across all workspace packages:
 
-## Frontend structure
-
-```text
-apps/web/src/
-├── components/
-│   ├── layout/       shared desktop sidebar and mobile shell
-│   ├── shared/       loading, empty, error, status and table shells
-│   ├── typography/   reusable heading standard
-│   └── ui/           shadcn-style primitives
-├── config/           the single navigation configuration
-├── data/             local demonstration data
-└── pages/            route-level shells
+```bash
+pnpm lint         # lint all packages
+pnpm type-check   # type-check all packages
+pnpm test         # run all backend tests
+pnpm build        # production build for apps
 ```
 
-The frontend uses semantic blue design tokens from `src/index.css` and
-`tailwind.config.ts`. Both desktop and mobile navigation consume the same
-`navGroups` configuration.
+### 10. Stopping local services
 
-## Current scope
+```bash
+docker compose down
+```
+This stops the containers but **keeps your data**. To fully reset (delete all local data):
+```bash
+docker compose down -v
+```
 
-The local shell is intended for route, layout, responsive and design-system
-validation. Authentication, persistence, authorization and production business
-workflows are later delivery items.
+### Troubleshooting
+
+- **`ERR_PNPM_IGNORED_BUILDS` during install** — run `pnpm approve-builds`, select the listed packages, then re-run `pnpm install`.
+- **`ERR_PNPM_OUTDATED_LOCKFILE`** — someone changed a `package.json` without updating the lockfile. Run `pnpm install` (without `--frozen-lockfile`) to regenerate it, then commit the result.
+- **Port already in use (5432, 9000, 9001, 3000, or 5173)** — something else on your machine is using that port. Stop it, or check what's using it with `lsof -i :<port>`.
+- **Postgres login fails after changing `.env`** — Postgres only applies `POSTGRES_USER`/`POSTGRES_PASSWORD`/`POSTGRES_DB` on first container creation. If you change these after the fact, run `docker compose down -v` (removes local data) and `docker compose up -d` again to reinitialize.
+````

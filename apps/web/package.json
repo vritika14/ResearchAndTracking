@@ -1,5 +1,5 @@
 {
-  "name": "researchTrackerweb",
+  "name": "@research-tracker/web",
   "description": "Research Pipeline & Tracking web application shell",
   "private": true,
   "version": "0.0.0",
@@ -9,7 +9,7 @@
     "build": "tsc -b && vite build",
     "preview": "vite preview",
     "lint": "eslint .",
-    "typecheck": "tsc -b --noEmit"
+    "type-check": "tsc -b --noEmit"
   },
   "dependencies": {
     "@radix-ui/react-dialog": "^1.1.6",
