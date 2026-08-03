@@ -22,14 +22,14 @@ describe('HealthController', () => {
       const values: Record<string, string> = {
         MINIO_ENDPOINT: 'http://localhost:9000/minio/health/live',
         POSTGRES_HOST: 'localhost',
+        POSTGRES_RUNTIME_USER: 'testuser',
+        POSTGRES_RUNTIME_PASSWORD: 'testpassword',
       };
       return values[key];
     }),
     get: jest.fn((key: string) => {
       const values: Record<string, string> = {
         POSTGRES_PORT: '5432',
-        POSTGRES_USER: 'testuser',
-        POSTGRES_PASSWORD: 'testpassword',
         POSTGRES_DB: 'testdb',
       };
       return values[key];
