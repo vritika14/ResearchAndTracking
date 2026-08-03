@@ -1,11 +1,22 @@
+// import { ActivityOverviewChart } from "@/components/dashboard/activity-overview-chart";
+import { ConferenceSubmissionsTable } from "@/components/dashboard/conference-submissions-table";
+import { PipelineOverviewTable } from "@/components/dashboard/pipeline-overview-table";
+import { PriorityTasksTable } from "@/components/dashboard/priority-tasks-table";
+// import { WorkOnThisNextBanner } from "@/components/dashboard/work-on-this-next-banner";
 import { PageHeading } from "@/components/typography/heading";
-import { Card, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  Card,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
 
 const summary = [
   { label: "Active Projects", value: "—" },
   { label: "Open Tasks", value: "—" },
-  { label: "Daily Notes This Week", value: "—" },
-  { label: "Records Pending Review", value: "—" },
+  { label: "Grants in pipeline", value: "—" },
+  { label: "In Writing Stage", value: "—" },
+  { label: "Submitted - Last 30 days", value: "—" },
 ];
 
 export default function DashboardPage() {
@@ -14,9 +25,9 @@ export default function DashboardPage() {
       <PageHeading
         eyebrow="Overview"
         title="Dashboard"
-        description="A snapshot of research activity across projects, tasks, daily notes, and regulated records."
+        description="A snapshot of research activity across projects, tasks, daily notes, and project files."
       />
-      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+      <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-5">
         {summary.map((item) => (
           <Card key={item.label}>
             <CardHeader>
@@ -26,6 +37,11 @@ export default function DashboardPage() {
           </Card>
         ))}
       </div>
+      {/* <WorkOnThisNextBanner /> */}
+      <PriorityTasksTable />
+      <PipelineOverviewTable />
+      <ConferenceSubmissionsTable />
+      {/* <ActivityOverviewChart /> */}
     </div>
   );
 }

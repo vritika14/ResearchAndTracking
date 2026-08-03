@@ -1,0 +1,30 @@
+import { LoaderCircle } from "lucide-react";
+
+import { cn } from "@/lib/utils";
+
+interface LoadingStateProps {
+  title?: string;
+  description?: string;
+  className?: string;
+}
+
+export function LoadingState({
+  title = "Loading",
+  description = "Please wait while this information is prepared.",
+  className,
+}: LoadingStateProps) {
+  return (
+    <div
+      role="status"
+      aria-live="polite"
+      className={cn(
+        "flex min-h-48 flex-col items-center justify-center rounded-xl border border-dashed bg-card p-8 text-center",
+        className,
+      )}
+    >
+      <LoaderCircle className="h-6 w-6 animate-spin text-primary" />
+      <p className="mt-4 text-sm font-semibold">{title}</p>
+      <p className="mt-1 max-w-sm text-sm text-muted-foreground">{description}</p>
+    </div>
+  );
+}

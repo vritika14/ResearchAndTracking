@@ -22,6 +22,10 @@ Thumbs.db
 #editor
 .vscode/*
 !.vscode/extensions.json
+.claude/
+
+# repository uses pnpm
+package-lock.json
 
 #logs
 *.log

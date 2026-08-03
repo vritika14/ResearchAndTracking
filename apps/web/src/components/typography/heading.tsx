@@ -4,7 +4,7 @@ import { cva, type VariantProps } from "class-variance-authority";
 import { cn } from "@/lib/utils";
 
 /**
- * The bold maroon heading standard: every page and section heading in the
+ * The bold blue heading standard: every page and section heading in the
  * app renders through this component so weight/color stay consistent.
  * `as` controls the semantic tag independently of the visual `level`.
  */
@@ -49,7 +49,7 @@ export interface PageHeadingProps extends React.HTMLAttributes<HTMLDivElement> {
   actions?: React.ReactNode;
 }
 
-/** Standard top-of-page header: eyebrow, bold maroon title, description, actions. */
+/** Standard top-of-page header: eyebrow, bold blue title, description, actions. */
 const PageHeading = React.forwardRef<HTMLDivElement, PageHeadingProps>(
   ({ className, title, description, eyebrow, actions, ...props }, ref) => (
     <div
@@ -79,4 +79,4 @@ const PageHeading = React.forwardRef<HTMLDivElement, PageHeadingProps>(
 );
 PageHeading.displayName = "PageHeading";
 
-export { Heading, headingVariants, PageHeading };
+export { Heading, PageHeading };
