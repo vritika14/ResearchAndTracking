@@ -13,24 +13,17 @@
     }
   },
   "type": "module",
-  "private":true,
-  "scripts": {
-    "dev:web": "pnpm --filter researchTrackerweb dev",
-    "typecheck": "pnpm --filter researchTrackerweb typecheck",
-    "lint": "pnpm --filter researchTrackerweb lint",
-    "build": "pnpm --filter researchTrackerweb build",
-    "check": "pnpm typecheck && pnpm lint && pnpm build"
-  },
-  "engines":{
+  "private": true,
+  "engines": {
     "node": "24.18.0",
-    "pnpm":"11.17.0"
+    "pnpm": "11.17.0"
   },
   "packageManager": "pnpm@11.17.0",
   "scripts": {
-  "dev": "pnpm --filter @research-tracker/api start:dev",
-  "build": "pnpm -r --filter=./apps/* build",
-  "lint": "pnpm -r lint",
-  "type-check": "pnpm -r type-check",
-  "test": "pnpm -r test"
-}
+    "dev": "pnpm --filter @research-tracker/api start:dev",
+    "build": "pnpm -r --filter=./apps/* build",
+    "lint": "pnpm -r lint",
+    "type-check": "pnpm -r type-check",
+    "test": "pnpm -r test"
+  }
 }
