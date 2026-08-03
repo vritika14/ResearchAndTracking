@@ -2,6 +2,7 @@ import { useState } from "react";
 import { Menu } from "lucide-react";
 
 import { NavTree } from "@/components/layout/nav-tree";
+import { UserMenu } from "@/components/layout/user-menu";
 import { Wordmark } from "@/components/layout/wordmark";
 import { Button } from "@/components/ui/button";
 import {
@@ -29,8 +30,11 @@ export function SiteHeader() {
           <SheetHeader>
             <SheetTitle>Research &amp; Tracking</SheetTitle>
           </SheetHeader>
-          <div className="mt-6">
+          <div className="mt-6 flex flex-col gap-6">
             <NavTree onNavigate={() => setOpen(false)} />
+            <div className="border-t pt-4">
+              <UserMenu />
+            </div>
           </div>
         </SheetContent>
       </Sheet>
