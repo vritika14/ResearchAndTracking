@@ -29,3 +29,11 @@ package-lock.json
 
 #logs
 *.log
+
+#opentofu / terraform
+.terraform/
+.terraform.lock.hcl
+*.tfstate
+*.tfstate.*
+terraform.tfvars
+*.auto.tfvars
