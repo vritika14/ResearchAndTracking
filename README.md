@@ -84,7 +84,38 @@ You should land in a `psql` prompt. Type `\q` to exit.
 **Verify MinIO is reachable:**
 Open [http://localhost:9001](http://localhost:9001) in a browser and log in with your `MINIO_ROOT_USER` / `MINIO_ROOT_PASSWORD`.
 
-### 7. Run the API
+### 7. Database roles and migrations
+
+This project uses two Postgres roles, created once per database cluster:
+
+- `research_tracker_migration` — full schema privileges, used only to run migrations.
+- `research_tracker_app` — read/write only, used by the running application.
+
+**Bootstrap the roles (once per fresh database):**
+```bash
+export $(grep -v '^#' .env | xargs)
+./scripts/db-bootstrap.sh
+```
+
+**Run migrations:**
+```bash
+cd database/migrations
+pnpm db:migrate
+```
+
+Both scripts are idempotent and environment-agnostic — the same commands run identically against local Docker Postgres, staging, or production; only the underlying `.env`/secrets values differ per environment.
+
+**Required environment variables:**
+
+| Variable | Used by | Purpose |
+|---|---|---|
+| `POSTGRES_HOST` / `POSTGRES_PORT` / `POSTGRES_DB` | migrations & app | Connection target |
+| `POSTGRES_MIGRATION_USER` / `POSTGRES_MIGRATION_PASSWORD` | `drizzle-kit migrate` | Runs schema migrations, owns tables |
+| `POSTGRES_RUNTIME_USER` / `POSTGRES_RUNTIME_PASSWORD` | the running API | Read/write only, cannot alter schema |
+
+> **Note:** `POSTGRES_MIGRATION_USER` must always be named exactly `research_tracker_migration` in every environment (local, staging, production) — this is a fixed convention, not a configurable value, since the GRANT statements in generated migrations reference this literal role name.
+
+### 8. Run the API
 
 ```bash
 pnpm dev
@@ -97,7 +128,7 @@ curl http://localhost:3000/health/ready
 ```
 Both should return `200 OK` with a small JSON body. `/health/ready` will return `503` if PostgreSQL or MinIO aren't running.
 
-### 8. Run the web app
+### 9. Run the web app
 
 ```bash
 pnpm --filter @research-tracker/web dev
@@ -105,7 +136,7 @@ pnpm --filter @research-tracker/web dev
 
 This starts the Vite dev server at [http://localhost:5173](http://localhost:5173).
 
-### 9. Useful root-level commands
+### 10. Useful root-level commands
 
 Run from the repo root, across all workspace packages:
 
@@ -116,7 +147,7 @@ pnpm test         # run all backend tests
 pnpm build        # production build for apps
 ```
 
-### 10. Stopping local services
+### 11. Stopping local services
 
 ```bash
 docker compose down
