@@ -13,7 +13,9 @@ export const tenantMemberships = pgTable(
       .notNull()
       .references(() => users.id, { onDelete: 'cascade' }),
     role: text('role').notNull(), // e.g. 'owner' | 'member'
-    isPrimary: boolean('is_primary').notNull().default(false),
+    status: text('status').default('active').notNull(),
+    invietedAt: timestamp('invited_at', { withTimezone: true }).defaultNow().notNull(),
+    joinedAt: timestamp('joined_at', { withTimezone: true }),
     createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
     updatedAt: timestamp('updated_at', { withTimezone: true }).defaultNow().notNull(),
   },
