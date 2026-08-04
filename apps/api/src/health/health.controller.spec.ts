@@ -173,7 +173,7 @@ describe('HealthController', () => {
       (healthCheckService.check as jest.Mock).mockImplementation(
         async (indicators: Array<() => Promise<any>>) => {
           // only invoke the postgres indicator (index 0) for this test
-          // eslint-disable-next-line @typescript-eslint/no-unsafe-return, @typescript-eslint/no-unnecessary-type-assertion
+          // eslint-disable-next-line @typescript-eslint/no-unsafe-return
           return indicators[0]!();
         },
       );

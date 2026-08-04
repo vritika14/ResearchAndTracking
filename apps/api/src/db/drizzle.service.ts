@@ -16,7 +16,9 @@ export class DrizzleService implements OnModuleInit, OnModuleDestroy {
       host: this.configService.getOrThrow<string>('POSTGRES_HOST'),
       port: this.configService.getOrThrow<number>('POSTGRES_PORT'),
       user: this.configService.getOrThrow<string>('POSTGRES_RUNTIME_USER'),
-      password: this.configService.getOrThrow<string>('POSTGRES_RUNTIME_PASSWORD'),
+      password: this.configService.getOrThrow<string>(
+        'POSTGRES_RUNTIME_PASSWORD',
+      ),
       database: this.configService.getOrThrow<string>('POSTGRES_DB'),
       ssl: this.configService.get<string>('POSTGRES_SSL') === 'true',
     });

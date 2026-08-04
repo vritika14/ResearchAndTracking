@@ -21,7 +21,7 @@ export class MeController {
   @Get()
   async getMe(@Req() req: AuthenticatedRequest) {
     const { sub } = req.user;
-    // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
+
     const user = await this.usersService.findOrProvisionByExternalAuthId(sub);
 
     if (!user) {
@@ -29,13 +29,12 @@ export class MeController {
     }
 
     return {
-      // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-member-access
       id: user.id,
-      // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-member-access
+
       email: user.email,
-      // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-member-access
+
       displayName: user.displayName,
-      // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-member-access
+
       status: user.status,
     };
   }
