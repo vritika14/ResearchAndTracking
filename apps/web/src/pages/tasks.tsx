@@ -2,6 +2,7 @@ import { useMemo, useState } from "react";
 import { ChevronDown } from "lucide-react";
 
 import { PageHeading } from "@/components/typography/heading";
+import { NewTaskDialog, type NewTaskInput } from "@/components/tasks/new-task-dialog";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -13,6 +14,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { tasks, type TaskItem, type TaskPriority, type TaskStatus } from "@/data/tasks";
+import { projects } from "@/data/projects";
 import { cn } from "@/lib/utils";
 
 const STATUS_FILTERS = ["All", "To do", "Underway", "Waiting", "Complete"] as const;
@@ -123,6 +125,8 @@ function SortableHeader({ label, column, sortColumn, sortDirection, onSort }: So
 }
 
 export default function TasksPage() {
+  const [taskRows, setTaskRows] = useState<TaskItem[]>(tasks);
+  const [isNewTaskOpen, setIsNewTaskOpen] = useState(false);
   const [search, setSearch] = useState("");
   const [status, setStatus] = useState<StatusFilter>("All");
   const [priority, setPriority] = useState<PriorityFilter>("All");
@@ -140,7 +144,7 @@ export default function TasksPage() {
 
   const visibleTasks = useMemo(() => {
     const query = search.trim().toLowerCase();
-    const filtered = tasks.filter((task) => {
+    const filtered = taskRows.filter((task) => {
       if (status !== "All" && task.status !== status) return false;
       if (priority !== "All" && task.priority !== priority) return false;
       if (
@@ -158,7 +162,7 @@ export default function TasksPage() {
       (a, b) => compareTasks(a, b, sortColumn) * (sortDirection === "asc" ? 1 : -1),
     );
     return sorted;
-  }, [search, status, priority, sortColumn, sortDirection]);
+  }, [taskRows, search, status, priority, sortColumn, sortDirection]);
 
   const hasActiveFilters = search !== "" || status !== "All" || priority !== "All";
 
@@ -168,13 +172,43 @@ export default function TasksPage() {
     setPriority("All");
   }
 
+  function createTask(input: NewTaskInput) {
+    const highestCode = taskRows.reduce((highest, task) => {
+      const numericCode = Number(task.code.replace(/\D/g, ""));
+      return Number.isNaN(numericCode) ? highest : Math.max(highest, numericCode);
+    }, 440);
+    const projectName = projects.find((project) => project.id === input.projectId)?.title;
+    if (!projectName) return;
+
+    setTaskRows((current) => [
+      {
+        code: `TSK-${String(highestCode + 1).padStart(4, "0")}`,
+        title: input.title,
+        projectName,
+        status: input.status,
+        priority: input.priority,
+        dueDate: input.dueDate,
+        estimatedHours: input.estimatedHours,
+        waitingOn: input.waitingOn,
+      },
+      ...current,
+    ]);
+  }
+
   return (
     <div className="flex flex-col gap-6">
       <PageHeading
         eyebrow="Workflows"
         title="Tasks and To Do"
         description="Everything outstanding across your projects — filter by status or priority, then sort any column."
-        actions={<Button>New Task</Button>}
+        actions={<Button onClick={() => setIsNewTaskOpen(true)}>New Task</Button>}
+      />
+
+      <NewTaskDialog
+        open={isNewTaskOpen}
+        onOpenChange={setIsNewTaskOpen}
+        projects={projects}
+        onCreate={createTask}
       />
 
       <div className="flex flex-wrap items-center gap-3 rounded-lg border p-4">

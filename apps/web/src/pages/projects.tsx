@@ -3,6 +3,10 @@ import { ChevronRight } from "lucide-react";
 import { Link } from "react-router-dom";
 
 import { PageHeading } from "@/components/typography/heading";
+import {
+  NewProjectDialog,
+  type NewProjectInput,
+} from "@/components/projects/new-project-dialog";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -149,6 +153,8 @@ function sortProjects(rows: Project[], sortBy: SortOption) {
 }
 
 export default function ProjectsPage() {
+  const [projectRows, setProjectRows] = useState<Project[]>(projects);
+  const [isNewProjectOpen, setIsNewProjectOpen] = useState(false);
   const [search, setSearch] = useState("");
   const [status, setStatus] = useState<StatusFilter>("All");
   const [role, setRole] = useState<RoleFilter>("All roles");
@@ -161,7 +167,7 @@ export default function ProjectsPage() {
 
   const visibleProjects = useMemo(() => {
     const query = search.trim().toLowerCase();
-    const filtered = projects.filter((project) => {
+    const filtered = projectRows.filter((project) => {
       if (status !== "All" && project.status !== status) return false;
       if (role !== "All roles" && project.myRole !== role) return false;
       if (
@@ -176,7 +182,7 @@ export default function ProjectsPage() {
       return true;
     });
     return sortProjects(filtered, sortBy);
-  }, [search, status, role, sortBy]);
+  }, [projectRows, search, status, role, sortBy]);
 
   const hasActiveFilters = search !== "" || status !== "All" || role !== "All roles";
 
@@ -186,13 +192,41 @@ export default function ProjectsPage() {
     setRole("All roles");
   }
 
+  function createProject(input: NewProjectInput) {
+    const highestId = projectRows.reduce((highest, project) => {
+      const numericId = Number(project.id.replace(/\D/g, ""));
+      return Number.isNaN(numericId) ? highest : Math.max(highest, numericId);
+    }, 100);
+    const today = new Date().toISOString().slice(0, 10);
+
+    setProjectRows((current) => [
+      {
+        id: `PRJ-${highestId + 1}`,
+        ...input,
+        tasksCompleted: 0,
+        tasksTotal: 0,
+        budgetUsed: 0,
+        notes: 0,
+        wordCount: 0,
+        overdue: input.status !== "Complete" && input.dueDate < today,
+      },
+      ...current,
+    ]);
+  }
+
   return (
     <div className="flex flex-col gap-6">
       <PageHeading
         eyebrow="Workflows"
         title="Projects"
         description="Track research work by stage, dates, collaborators and outstanding tasks."
-        actions={<Button>New Project</Button>}
+        actions={<Button onClick={() => setIsNewProjectOpen(true)}>New Project</Button>}
+      />
+
+      <NewProjectDialog
+        open={isNewProjectOpen}
+        onOpenChange={setIsNewProjectOpen}
+        onCreate={createProject}
       />
 
       <div className="flex flex-col gap-4 rounded-lg border p-4 lg:flex-row lg:items-start lg:justify-between">
