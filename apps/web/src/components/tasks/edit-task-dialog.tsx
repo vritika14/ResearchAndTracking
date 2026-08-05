@@ -19,12 +19,17 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import type { TaskPriority, TaskStatus } from "@/data/tasks";
+import type { TaskItem, TaskPriority, TaskStatus } from "@/data/tasks";
 
 const TASK_STATUSES: TaskStatus[] = ["To do", "Underway", "Waiting", "Complete"];
 const TASK_PRIORITIES: TaskPriority[] = ["Low", "Medium", "High", "Critical"];
 
-export interface NewTaskInput {
+interface ProjectOption {
+  id: string;
+  title: string;
+}
+
+export interface EditTaskInput {
   title: string;
   projectId: string;
   status: TaskStatus;
@@ -35,28 +40,13 @@ export interface NewTaskInput {
   waitingOn?: string;
 }
 
-interface ProjectOption {
-  id: string;
-  title: string;
-}
-
-interface NewTaskDialogProps {
+interface EditTaskDialogProps {
   open: boolean;
-  onOpenChange: (open: boolean) => void;
+  task: TaskItem;
   projects: ProjectOption[];
-  onCreate: (task: NewTaskInput) => void;
+  onOpenChange: (open: boolean) => void;
+  onSave: (task: EditTaskInput) => void;
 }
-
-const INITIAL_FORM: NewTaskInput = {
-  title: "",
-  projectId: "",
-  status: "To do",
-  priority: "Medium",
-  scheduledFor: "",
-  dueDate: "",
-  estimatedHours: 1,
-  waitingOn: "",
-};
 
 function FormField({ label, htmlFor, required, children }: {
   label: string;
@@ -75,54 +65,64 @@ function FormField({ label, htmlFor, required, children }: {
   );
 }
 
-export function NewTaskDialog({ open, onOpenChange, projects, onCreate }: NewTaskDialogProps) {
-  const [form, setForm] = useState<NewTaskInput>(INITIAL_FORM);
-
-  function handleOpenChange(nextOpen: boolean) {
-    if (!nextOpen) setForm(INITIAL_FORM);
-    onOpenChange(nextOpen);
-  }
+export function EditTaskDialog({
+  open,
+  task,
+  projects,
+  onOpenChange,
+  onSave,
+}: EditTaskDialogProps) {
+  const [form, setForm] = useState<EditTaskInput>(() => ({
+    title: task.title,
+    projectId: projects.find((project) => project.title === task.projectName)?.id ?? "",
+    status: task.status,
+    priority: task.priority,
+    scheduledFor: task.scheduledFor,
+    dueDate: task.dueDate,
+    estimatedHours: task.estimatedHours,
+    waitingOn: task.waitingOn ?? "",
+  }));
 
   function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    onCreate({
+    onSave({
       ...form,
       title: form.title.trim(),
       waitingOn: form.status === "Waiting" ? form.waitingOn?.trim() || undefined : undefined,
     });
-    setForm(INITIAL_FORM);
     onOpenChange(false);
   }
 
   return (
-    <Dialog open={open} onOpenChange={handleOpenChange}>
+    <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent>
         <DialogHeader>
-          <DialogTitle>Create a new task</DialogTitle>
+          <DialogTitle>Edit task</DialogTitle>
           <DialogDescription>
-            Add a task to a project and set its current priority and due date.
+            Update the task details, schedule and current progress.
           </DialogDescription>
         </DialogHeader>
 
         <form onSubmit={handleSubmit} className="grid gap-5">
-          <FormField label="Task title" htmlFor="task-title" required>
+          <FormField label="Task title" htmlFor="edit-task-title" required>
             <Input
-              id="task-title"
+              id="edit-task-title"
               value={form.title}
-              onChange={(event) => setForm((prev) => ({ ...prev, title: event.target.value }))}
-              placeholder="What needs to be done?"
-              autoFocus
+              onChange={(event) => setForm((current) => ({ ...current, title: event.target.value }))}
               required
+              autoFocus
             />
           </FormField>
 
-          <FormField label="Project" htmlFor="task-project" required>
+          <FormField label="Project" htmlFor="edit-task-project" required>
             <Select
               value={form.projectId}
-              onValueChange={(value) => setForm((prev) => ({ ...prev, projectId: value }))}
+              onValueChange={(value) => setForm((current) => ({ ...current, projectId: value }))}
               required
             >
-              <SelectTrigger id="task-project"><SelectValue placeholder="Select a project" /></SelectTrigger>
+              <SelectTrigger id="edit-task-project">
+                <SelectValue placeholder="Select a project" />
+              </SelectTrigger>
               <SelectContent>
                 {projects.map((project) => (
                   <SelectItem key={project.id} value={project.id}>{project.title}</SelectItem>
@@ -132,28 +132,30 @@ export function NewTaskDialog({ open, onOpenChange, projects, onCreate }: NewTas
           </FormField>
 
           <div className="grid gap-4 sm:grid-cols-2">
-            <FormField label="Status" htmlFor="task-status">
+            <FormField label="Status" htmlFor="edit-task-status">
               <Select
                 value={form.status}
                 onValueChange={(value) =>
-                  setForm((prev) => ({ ...prev, status: value as TaskStatus }))
+                  setForm((current) => ({ ...current, status: value as TaskStatus }))
                 }
               >
-                <SelectTrigger id="task-status"><SelectValue /></SelectTrigger>
+                <SelectTrigger id="edit-task-status"><SelectValue /></SelectTrigger>
                 <SelectContent>
-                  {TASK_STATUSES.map((status) => <SelectItem key={status} value={status}>{status}</SelectItem>)}
+                  {TASK_STATUSES.map((status) => (
+                    <SelectItem key={status} value={status}>{status}</SelectItem>
+                  ))}
                 </SelectContent>
               </Select>
             </FormField>
 
-            <FormField label="Priority" htmlFor="task-priority">
+            <FormField label="Priority" htmlFor="edit-task-priority">
               <Select
                 value={form.priority}
                 onValueChange={(value) =>
-                  setForm((prev) => ({ ...prev, priority: value as TaskPriority }))
+                  setForm((current) => ({ ...current, priority: value as TaskPriority }))
                 }
               >
-                <SelectTrigger id="task-priority"><SelectValue /></SelectTrigger>
+                <SelectTrigger id="edit-task-priority"><SelectValue /></SelectTrigger>
                 <SelectContent>
                   {TASK_PRIORITIES.map((priority) => (
                     <SelectItem key={priority} value={priority}>{priority}</SelectItem>
@@ -162,35 +164,36 @@ export function NewTaskDialog({ open, onOpenChange, projects, onCreate }: NewTas
               </Select>
             </FormField>
 
-            <FormField label="Scheduled for" htmlFor="task-scheduled-for">
+            <FormField label="Scheduled for" htmlFor="edit-task-scheduled-for">
               <DatePickerInput
-                id="task-scheduled-for"
+                id="edit-task-scheduled-for"
                 label="Scheduled for date"
                 value={form.scheduledFor}
-                onChange={(value) =>
-                  setForm((prev) => ({ ...prev, scheduledFor: value }))
-                }
+                onChange={(value) => setForm((current) => ({ ...current, scheduledFor: value }))}
               />
             </FormField>
 
-            <FormField label="Due date" htmlFor="task-due-date">
+            <FormField label="Due date" htmlFor="edit-task-due-date">
               <DatePickerInput
-                id="task-due-date"
+                id="edit-task-due-date"
                 label="Due date"
                 value={form.dueDate}
-                onChange={(value) => setForm((prev) => ({ ...prev, dueDate: value }))}
+                onChange={(value) => setForm((current) => ({ ...current, dueDate: value }))}
               />
             </FormField>
 
-            <FormField label="Estimated hours" htmlFor="task-hours" required>
+            <FormField label="Estimated hours" htmlFor="edit-task-hours" required>
               <Input
-                id="task-hours"
+                id="edit-task-hours"
                 type="number"
                 min="0.5"
                 step="0.5"
                 value={form.estimatedHours}
                 onChange={(event) =>
-                  setForm((prev) => ({ ...prev, estimatedHours: Number(event.target.value) }))
+                  setForm((current) => ({
+                    ...current,
+                    estimatedHours: Number(event.target.value),
+                  }))
                 }
                 required
               />
@@ -198,19 +201,20 @@ export function NewTaskDialog({ open, onOpenChange, projects, onCreate }: NewTas
           </div>
 
           {form.status === "Waiting" ? (
-            <FormField label="Waiting on" htmlFor="task-waiting-on">
+            <FormField label="Waiting on" htmlFor="edit-task-waiting-on">
               <Input
-                id="task-waiting-on"
+                id="edit-task-waiting-on"
                 value={form.waitingOn ?? ""}
-                onChange={(event) => setForm((prev) => ({ ...prev, waitingOn: event.target.value }))}
-                placeholder="Person, team or external dependency"
+                onChange={(event) =>
+                  setForm((current) => ({ ...current, waitingOn: event.target.value }))
+                }
               />
             </FormField>
           ) : null}
 
           <DialogFooter className="border-t pt-4">
             <DialogClose asChild><Button type="button" variant="outline">Cancel</Button></DialogClose>
-            <Button type="submit">Create Task</Button>
+            <Button type="submit">Save Changes</Button>
           </DialogFooter>
         </form>
       </DialogContent>

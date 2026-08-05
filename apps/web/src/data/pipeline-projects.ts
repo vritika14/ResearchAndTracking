@@ -1,13 +1,17 @@
-export type ProjectPriority = "Critical" | "High" | "Medium";
+export type ProjectPriority = "Critical" | "High" | "Medium" | "Low";
 export type ProjectStatus = "Active" | "Review" | "Complete" | "Stalled";
 
 /** Ordered research pipeline stages — position drives both the ruler header and each row's marker. */
 export const PIPELINE_STAGES = [
-  "Concept",
-  "Proposal",
+  "Concept & Ideation",
+  "Literature Review",
+  "Study Design & Protocol",
+  "Ethics and other approvals",
   "Data Collection",
-  "Analysis",
-  "Writing",
+  "Data Analysis",
+  "Drafting, writing and revising",
+  "Under Review",
+  "Revise & Resubmit",
   "Published",
 ] as const;
 
@@ -27,7 +31,7 @@ export const pipelineProjects: PipelineProject[] = [
   {
     id: "PRJ-101",
     name: "Enzyme Kinetics Inhibition Study Across Temperature Gradients",
-    stageIndex: 1,
+    stageIndex: 2,
     completion: 18,
     priority: "High",
     status: "Active",
@@ -35,7 +39,7 @@ export const pipelineProjects: PipelineProject[] = [
   {
     id: "PRJ-102",
     name: "Clinical Trial Phase II — Cardiac Biomarker Response",
-    stageIndex: 3,
+    stageIndex: 5,
     completion: 55,
     priority: "Critical",
     status: "Active",
@@ -43,7 +47,7 @@ export const pipelineProjects: PipelineProject[] = [
   {
     id: "PRJ-103",
     name: "Biosafety Level 2 Lab Compliance Audit",
-    stageIndex: 4,
+    stageIndex: 6,
     completion: 78,
     priority: "High",
     status: "Review",
@@ -51,7 +55,7 @@ export const pipelineProjects: PipelineProject[] = [
   {
     id: "PRJ-104",
     name: "Cohort B Longitudinal Recruitment Program",
-    stageIndex: 2,
+    stageIndex: 4,
     completion: 40,
     priority: "Critical",
     status: "Stalled",
@@ -59,7 +63,7 @@ export const pipelineProjects: PipelineProject[] = [
   {
     id: "PRJ-105",
     name: "Legacy Sample Data Migration to New LIMS",
-    stageIndex: 3,
+    stageIndex: 4,
     completion: 62,
     priority: "Medium",
     status: "Active",
@@ -75,15 +79,15 @@ export const pipelineProjects: PipelineProject[] = [
   {
     id: "PRJ-107",
     name: "Quarterly Regulatory Compliance Summary",
-    stageIndex: 5,
+    stageIndex: 9,
     completion: 100,
-    priority: "Medium",
+    priority: "Low",
     status: "Complete",
   },
   {
     id: "PRJ-108",
     name: "Mass Spectrometry Calibration Standardization",
-    stageIndex: 5,
+    stageIndex: 9,
     completion: 100,
     priority: "High",
     status: "Complete",

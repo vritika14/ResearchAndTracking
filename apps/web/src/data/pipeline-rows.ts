@@ -1,5 +1,10 @@
-import { pipelineProjects } from "./pipeline-projects";
-import { projects, type ProjectPriority, type ProjectRole, type ProjectStatus } from "./projects";
+import { PIPELINE_STAGES, pipelineProjects } from "./pipeline-projects";
+import {
+  projects,
+  type ProjectPriority,
+  type ProjectRole,
+  type ProjectStatus,
+} from "./projects";
 
 export interface PipelineStageInfo {
   name: string;
@@ -7,55 +12,54 @@ export interface PipelineStageInfo {
 }
 
 /**
- * A more granular research pipeline than the 6-stage PIPELINE_STAGES used on
- * the Dashboard/Projects/Tasks pages — see OLD_TO_NEW_STAGE_INDEX below for
- * how the two map together.
+ * The shared research workflow used across Pipeline, Projects and Dashboard views.
  */
 export const RESEARCH_PIPELINE_STAGES: PipelineStageInfo[] = [
   {
-    name: "Concept & Ideation",
-    description: "Early framing of the research question and initial feasibility.",
+    name: PIPELINE_STAGES[0],
+    description:
+      "Early framing of the research question and initial feasibility.",
   },
   {
-    name: "Literature Review",
+    name: PIPELINE_STAGES[1],
     description: "Surveying prior work and identifying open gaps.",
   },
   {
-    name: "Study Design & Protocol",
-    description: "Defining methodology, sample size, and experimental protocol.",
+    name: PIPELINE_STAGES[2],
+    description:
+      "Defining methodology, sample size, and experimental protocol.",
   },
   {
-    name: "Ethics and other approvals",
+    name: PIPELINE_STAGES[3],
     description: "IRB, biosafety, and other regulatory sign-off.",
   },
   {
-    name: "Data Collection",
+    name: PIPELINE_STAGES[4],
     description: "Running experiments, trials, or recruitment in the field.",
   },
   {
-    name: "Data Analysis",
+    name: PIPELINE_STAGES[5],
     description: "Processing results and testing hypotheses against the data.",
   },
   {
-    name: "Drafting, writing and revising",
-    description: "Producing the manuscript and incorporating co-author feedback.",
+    name: PIPELINE_STAGES[6],
+    description:
+      "Producing the manuscript and incorporating co-author feedback.",
   },
   {
-    name: "Under Review",
+    name: PIPELINE_STAGES[7],
     description: "Submitted for peer review or internal sign-off.",
   },
   {
-    name: "Revise & Submit",
-    description: "Addressing reviewer feedback and preparing the final resubmission.",
+    name: PIPELINE_STAGES[8],
+    description:
+      "Addressing reviewer feedback and preparing the final resubmission.",
   },
   {
-    name: "Published",
+    name: PIPELINE_STAGES[9],
     description: "Publicly released, presented, or archived.",
   },
 ];
-
-/** Old 6-stage PIPELINE_STAGES index (pipeline-projects.ts) -> new 10-stage index above. */
-const OLD_TO_NEW_STAGE_INDEX = [0, 2, 4, 5, 6, 9];
 
 export interface PipelineRow {
   id: string;
@@ -79,6 +83,6 @@ export const pipelineRows: PipelineRow[] = projects.map((project) => {
     completion: completionInfo?.completion ?? 0,
     outstanding: project.tasksTotal - project.tasksCompleted,
     myRole: project.myRole,
-    stageIndex: OLD_TO_NEW_STAGE_INDEX[project.stageIndex] ?? 0,
+    stageIndex: project.stageIndex,
   };
 });

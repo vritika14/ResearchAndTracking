@@ -47,7 +47,7 @@ export const navGroups: NavGroup[] = [
       { label: "Dashboard", to: "/", icon: LayoutDashboard, end: true },
       { label: "Projects", to: "/projects", icon: FolderKanban },
       { label: "Tasks and to do", to: "/tasks", icon: ClipboardList },
-      { label: "Daily Notes", to: "/daily-notes", icon: NotebookPen },
+      { label: "Notes", to: "/daily-notes", icon: NotebookPen },
       { label: "Pipeline", to: "/pipeline", icon: Workflow },
     ],
   },
@@ -55,7 +55,11 @@ export const navGroups: NavGroup[] = [
     label: "Account",
     items: [
       { label: "Settings", to: "/settings", icon: Settings },
-      { label: "Account Audit", to: "/settings/account-audit", icon: ShieldCheck },
+      {
+        label: "Account Audit",
+        to: "/settings/account-audit",
+        icon: ShieldCheck,
+      },
     ],
   },
   {
@@ -68,7 +72,11 @@ export const navGroups: NavGroup[] = [
       { label: "Dissemination", to: "/future/dissemination", icon: Megaphone },
       { label: "Documents", to: "/future/documents", icon: Files },
       { label: "Funding", to: "/future/funding", icon: DollarSign },
-      { label: "HDR students", to: "/future/hdr-students", icon: GraduationCap },
+      {
+        label: "HDR students",
+        to: "/future/hdr-students",
+        icon: GraduationCap,
+      },
       {
         label: "Journal rankings & research lists",
         to: "/future/journal-rankings-research-lists",

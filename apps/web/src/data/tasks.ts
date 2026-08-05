@@ -9,6 +9,8 @@ export interface TaskItem {
   projectName: string;
   status: TaskStatus;
   priority: TaskPriority;
+  /** ISO yyyy-mm-dd date when the task is planned to be worked on. */
+  scheduledFor: string;
   /** ISO yyyy-mm-dd — sorts correctly as a plain string. */
   dueDate: string;
   estimatedHours: number;
@@ -22,6 +24,7 @@ export const tasks: TaskItem[] = [
     projectName: "Clinical Trial Phase II — Cardiac Biomarker Response",
     status: "To do",
     priority: "Critical",
+    scheduledFor: "2026-07-30",
     dueDate: "2026-08-01",
     estimatedHours: 3,
   },
@@ -31,6 +34,7 @@ export const tasks: TaskItem[] = [
     projectName: "Biosafety Level 2 Lab Compliance Audit",
     status: "Underway",
     priority: "High",
+    scheduledFor: "2026-08-01",
     dueDate: "2026-08-03",
     estimatedHours: 4,
   },
@@ -41,6 +45,7 @@ export const tasks: TaskItem[] = [
     projectName: "Cohort B Longitudinal Recruitment Program",
     status: "Waiting",
     priority: "Critical",
+    scheduledFor: "2026-08-04",
     dueDate: "2026-08-05",
     estimatedHours: 2,
   },
@@ -50,6 +55,7 @@ export const tasks: TaskItem[] = [
     projectName: "NSF Grant Renewal — Structural Biology Core",
     status: "To do",
     priority: "Medium",
+    scheduledFor: "2026-08-07",
     dueDate: "2026-08-10",
     estimatedHours: 6,
   },
@@ -59,6 +65,7 @@ export const tasks: TaskItem[] = [
     projectName: "Legacy Sample Data Migration to New LIMS",
     status: "Underway",
     priority: "High",
+    scheduledFor: "2026-07-31",
     dueDate: "2026-08-02",
     estimatedHours: 5,
   },
@@ -69,6 +76,7 @@ export const tasks: TaskItem[] = [
     projectName: "Clinical Trial Phase II — Cardiac Biomarker Response",
     status: "Waiting",
     priority: "Critical",
+    scheduledFor: "2026-08-06",
     dueDate: "2026-08-08",
     estimatedHours: 8,
   },
@@ -78,6 +86,7 @@ export const tasks: TaskItem[] = [
     projectName: "Quarterly Regulatory Compliance Summary",
     status: "Complete",
     priority: "Medium",
+    scheduledFor: "2026-07-17",
     dueDate: "2026-07-20",
     estimatedHours: 4,
   },
@@ -87,6 +96,7 @@ export const tasks: TaskItem[] = [
     projectName: "Biosafety Level 2 Lab Compliance Audit",
     status: "Complete",
     priority: "High",
+    scheduledFor: "2026-07-23",
     dueDate: "2026-07-26",
     estimatedHours: 3,
   },
@@ -96,6 +106,7 @@ export const tasks: TaskItem[] = [
     projectName: "Enzyme Kinetics Inhibition Study Across Temperature Gradients",
     status: "To do",
     priority: "Low",
+    scheduledFor: "2026-08-10",
     dueDate: "2026-08-12",
     estimatedHours: 1,
   },
@@ -105,6 +116,7 @@ export const tasks: TaskItem[] = [
     projectName: "NSF Grant Renewal — Structural Biology Core",
     status: "Underway",
     priority: "Medium",
+    scheduledFor: "2026-08-04",
     dueDate: "2026-08-06",
     estimatedHours: 2,
   },
@@ -114,6 +126,7 @@ export const tasks: TaskItem[] = [
     projectName: "Genome Sequencing Pipeline v3",
     status: "To do",
     priority: "Critical",
+    scheduledFor: "2026-07-27",
     dueDate: "2026-07-29",
     estimatedHours: 3,
   },
@@ -123,6 +136,7 @@ export const tasks: TaskItem[] = [
     projectName: "Mass Spectrometry Calibration Standardization",
     status: "Complete",
     priority: "Low",
+    scheduledFor: "2026-07-15",
     dueDate: "2026-07-18",
     estimatedHours: 2,
   },

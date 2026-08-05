@@ -1,5 +1,5 @@
 import { useMemo, useState } from "react";
-import { ChevronRight } from "lucide-react";
+import { ChevronRight, Pencil } from "lucide-react";
 import { Link } from "react-router-dom";
 
 import { PageHeading } from "@/components/typography/heading";
@@ -35,7 +35,8 @@ type StatusFilter = (typeof STATUS_FILTERS)[number];
 type RoleFilter = (typeof ROLE_FILTERS)[number];
 type SortOption = (typeof SORT_OPTIONS)[number];
 
-const GRID_TEMPLATE = "minmax(280px,2.2fr) 110px 110px 110px 120px 130px 70px 100px 110px";
+const GRID_TEMPLATE =
+  "minmax(280px,2.2fr) 110px 110px 110px 120px 130px 70px 110px 110px";
 
 function priorityPillClass(priority: ProjectPriority) {
   switch (priority) {
@@ -45,6 +46,8 @@ function priorityPillClass(priority: ProjectPriority) {
       return "border-orange-300 text-orange-700 dark:border-orange-800 dark:text-orange-400";
     case "Medium":
       return "border-blue-300 text-blue-700 dark:border-blue-800 dark:text-blue-400";
+    case "Low":
+      return "border-border text-muted-foreground";
   }
 }
 
@@ -84,11 +87,9 @@ function controlPillClass(selected: boolean) {
 }
 
 function formatDate(iso: string) {
-  return new Date(`${iso}T00:00:00`).toLocaleDateString("en-US", {
-    month: "short",
-    day: "numeric",
-    year: "numeric",
-  });
+  if (!iso) return "—";
+  const [year, month, day] = iso.split("-");
+  return `${day}/${month}/${year}`;
 }
 
 function ProgressCell({ completed, total }: { completed: number; total: number }) {
@@ -208,7 +209,7 @@ export default function ProjectsPage() {
         budgetUsed: 0,
         notes: 0,
         wordCount: 0,
-        overdue: input.status !== "Complete" && input.dueDate < today,
+        overdue: Boolean(input.dueDate) && input.status !== "Complete" && input.dueDate < today,
       },
       ...current,
     ]);
@@ -292,7 +293,7 @@ export default function ProjectsPage() {
       </div>
 
       <div className="overflow-x-auto">
-        <div className="min-w-[1080px]">
+        <div className="min-w-[1100px]">
           <div
             className="grid gap-4 px-4 pb-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground"
             style={{ gridTemplateColumns: GRID_TEMPLATE }}
@@ -304,7 +305,7 @@ export default function ProjectsPage() {
             <span>Stage</span>
             <span>Progress</span>
             <span>Notes</span>
-            <span>Words</span>
+            <span>Scheduled For</span>
             <span>Due Date</span>
           </div>
 
@@ -347,12 +348,24 @@ export default function ProjectsPage() {
                           <span className="font-mono text-[11px] text-muted-foreground">
                             {project.id}
                           </span>
-                          <Link
-                            to={`/projects/${project.id}`}
-                            className="font-semibold leading-tight transition-colors hover:text-primary hover:underline"
-                          >
-                            {project.title}
-                          </Link>
+                          <div className="flex items-start gap-2">
+                            <Link
+                              to={`/projects/${project.id}`}
+                              onClick={(event) => event.stopPropagation()}
+                              className="font-semibold leading-tight transition-colors hover:text-primary hover:underline"
+                            >
+                              {project.title}
+                            </Link>
+                            <Link
+                              to={`/projects/${project.id}?edit=true`}
+                              onClick={(event) => event.stopPropagation()}
+                              aria-label={`Edit ${project.title}`}
+                              title="Edit project"
+                              className="inline-flex h-6 w-6 shrink-0 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-accent hover:text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                            >
+                              <Pencil className="h-3.5 w-3.5" />
+                            </Link>
+                          </div>
                           <span className="text-xs text-muted-foreground">
                             {project.pi} · {project.funder} · {project.collaborators}
                           </span>
@@ -382,8 +395,8 @@ export default function ProjectsPage() {
 
                       <span className="text-sm text-muted-foreground">{project.notes}</span>
 
-                      <span className="text-sm text-muted-foreground">
-                        {project.wordCount.toLocaleString()}
+                      <span className="text-sm tabular-nums text-muted-foreground">
+                        {formatDate(project.scheduledFor)}
                       </span>
 
                       <span
