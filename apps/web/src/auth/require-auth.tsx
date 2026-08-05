@@ -9,6 +9,7 @@ import { useAuth } from "react-oidc-context";
 export function RequireAuth() {
   const auth = useAuth();
   const location = useLocation();
+  const returnTo = location.pathname + location.search;
 
   if (auth.isLoading) {
     return (
@@ -18,10 +19,17 @@ export function RequireAuth() {
     );
   }
 
-  if (!auth.isAuthenticated) {
+  if (auth.user?.expired) {
     return (
-      <Navigate to="/sign-in" replace state={{ returnTo: location.pathname + location.search }} />
+      <Navigate
+        to={`/session-expired?returnTo=${encodeURIComponent(returnTo)}`}
+        replace
+      />
     );
+  }
+
+  if (!auth.isAuthenticated) {
+    return <Navigate to="/sign-in" replace state={{ returnTo }} />;
   }
 
   return <Outlet />;

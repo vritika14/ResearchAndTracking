@@ -15,6 +15,9 @@ import SignInPage from "@/pages/sign-in";
 import AuthCallbackPage from "@/pages/auth-callback";
 import InvitationAcceptancePage from "@/pages/invitation-acceptance";
 import WorkspaceOnboardingPage from "@/pages/workspace-onboarding";
+import SessionExpiredPage from "@/pages/session-expired";
+import AccessDeniedPage from "@/pages/access-denied";
+import MembershipStatusPage from "@/pages/membership-status";
 import NotFoundPage from "@/pages/not-found";
 
 export default function App() {
@@ -23,9 +26,12 @@ export default function App() {
       <Route path="sign-in" element={<SignInPage />} />
       <Route path="auth/callback" element={<AuthCallbackPage />} />
       <Route path="invitations/:token" element={<InvitationAcceptancePage />} />
+      <Route path="session-expired" element={<SessionExpiredPage />} />
+      <Route path="access-denied" element={<AccessDeniedPage />} />
 
       <Route element={<RequireAuth />}>
         <Route path="onboarding" element={<WorkspaceOnboardingPage />} />
+        <Route path="membership-status/:status" element={<MembershipStatusPage />} />
         <Route element={<AppLayout />}>
           <Route index element={<DashboardPage />} />
           <Route path="projects" element={<ProjectsPage />} />
