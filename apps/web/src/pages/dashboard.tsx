@@ -14,7 +14,6 @@ import {
 const summary = [
   { label: "Active Projects", value: "—" },
   { label: "Open Tasks", value: "—" },
-  { label: "Grants in pipeline", value: "—" },
   { label: "In Writing Stage", value: "—" },
   { label: "Submitted - Last 30 days", value: "—" },
 ];
@@ -27,7 +26,7 @@ export default function DashboardPage() {
         title="Dashboard"
         description="A snapshot of research activity across projects, tasks, daily notes, and project files."
       />
-      <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-5">
+      <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4">
         {summary.map((item) => (
           <Card key={item.label}>
             <CardHeader>

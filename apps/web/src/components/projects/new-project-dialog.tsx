@@ -1,6 +1,7 @@
 import { useState, type FormEvent, type ReactNode } from "react";
 
 import { Button } from "@/components/ui/button";
+import { DatePickerInput } from "@/components/ui/date-picker-input";
 import {
   Dialog,
   DialogClose,
@@ -22,7 +23,7 @@ import { PIPELINE_STAGES } from "@/data/pipeline-projects";
 import type { ProjectPriority, ProjectRole, ProjectStatus } from "@/data/projects";
 
 const PROJECT_ROLES: ProjectRole[] = ["Owner", "Lead", "Collaborator", "Supervisor"];
-const PROJECT_PRIORITIES: ProjectPriority[] = ["Medium", "High", "Critical"];
+const PROJECT_PRIORITIES: ProjectPriority[] = ["Low", "Medium", "High", "Critical"];
 const PROJECT_STATUSES: ProjectStatus[] = ["Active", "Review", "Stalled", "Complete"];
 
 export interface NewProjectInput {
@@ -34,6 +35,7 @@ export interface NewProjectInput {
   priority: ProjectPriority;
   status: ProjectStatus;
   stageIndex: number;
+  scheduledFor: string;
   dueDate: string;
   budgetTotal: number;
   targetJournal: string;
@@ -54,6 +56,7 @@ const INITIAL_FORM: NewProjectInput = {
   priority: "Medium",
   status: "Active",
   stageIndex: 0,
+  scheduledFor: "",
   dueDate: "",
   budgetTotal: 0,
   targetJournal: "",
@@ -213,13 +216,23 @@ export function NewProjectDialog({ open, onOpenChange, onCreate }: NewProjectDia
               </Select>
             </FormField>
 
-            <FormField label="Due date" htmlFor="project-due-date" required>
-              <Input
+            <FormField label="Scheduled for" htmlFor="project-scheduled-for">
+              <DatePickerInput
+                id="project-scheduled-for"
+                label="Scheduled for date"
+                value={form.scheduledFor}
+                onChange={(value) =>
+                  setForm((prev) => ({ ...prev, scheduledFor: value }))
+                }
+              />
+            </FormField>
+
+            <FormField label="Due date" htmlFor="project-due-date">
+              <DatePickerInput
                 id="project-due-date"
-                type="date"
+                label="Due date"
                 value={form.dueDate}
-                onChange={(event) => setForm((prev) => ({ ...prev, dueDate: event.target.value }))}
-                required
+                onChange={(value) => setForm((prev) => ({ ...prev, dueDate: value }))}
               />
             </FormField>
 

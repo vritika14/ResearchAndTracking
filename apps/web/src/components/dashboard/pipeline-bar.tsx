@@ -53,14 +53,14 @@ export function PipelineStageRuler() {
   const lastIndex = PIPELINE_STAGES.length - 1;
 
   return (
-    <div className="relative h-4 w-full text-[10px] font-medium uppercase tracking-wide text-muted-foreground">
+    <div className="relative h-9 w-full text-[9px] font-medium uppercase tracking-wide text-muted-foreground">
       {PIPELINE_STAGES.map((stage, index) => (
         <span
           key={stage}
           className={cn(
-            "absolute top-0 whitespace-nowrap",
-            index === 0 && "left-0",
-            index === lastIndex && "right-0",
+            "absolute top-0 w-28 whitespace-normal text-center leading-tight",
+            index === 0 && "left-0 text-left",
+            index === lastIndex && "right-0 text-right",
             index > 0 && index < lastIndex && "-translate-x-1/2",
           )}
           style={index > 0 && index < lastIndex ? { left: `${stagePosition(index)}%` } : undefined}
