@@ -3,6 +3,7 @@ import { Building2, Check, CheckCircle2, ShieldCheck, Users } from "lucide-react
 import { useAuth } from "react-oidc-context";
 import { useNavigate } from "react-router-dom";
 
+import { AuthScreenBackground } from "@/components/layout/auth-screen-background";
 import { Wordmark } from "@/components/layout/wordmark";
 import { Heading } from "@/components/typography/heading";
 import { Button } from "@/components/ui/button";
@@ -63,7 +64,7 @@ export default function WorkspaceOnboardingPage() {
   }
 
   return (
-    <div className="min-h-screen bg-muted/30">
+    <AuthScreenBackground>
       <header className="border-b bg-background/95 px-5 py-4 backdrop-blur sm:px-8">
         <div className="mx-auto flex max-w-6xl items-center justify-between">
           <Wordmark />
@@ -74,7 +75,7 @@ export default function WorkspaceOnboardingPage() {
       </header>
 
       <main className="mx-auto grid min-h-[calc(100vh-65px)] max-w-6xl gap-10 px-5 py-10 lg:grid-cols-[0.8fr_1.2fr] lg:items-center lg:px-8">
-        <aside className="hidden lg:block">
+        <aside className="hidden rounded-xl bg-background/70 p-6 backdrop-blur-sm lg:block">
           <span className="text-xs font-semibold uppercase tracking-[0.18em] text-primary">
             Welcome aboard
           </span>
@@ -111,7 +112,7 @@ export default function WorkspaceOnboardingPage() {
           </ol>
         </aside>
 
-        <section className="mx-auto w-full max-w-2xl rounded-xl border bg-card p-6 shadow-sm sm:p-8">
+        <section className="mx-auto w-full max-w-2xl rounded-xl border bg-card/95 p-6 shadow-lg backdrop-blur-sm sm:p-8">
           {created ? (
             <div className="flex min-h-[420px] flex-col items-center justify-center text-center">
               <span className="flex h-14 w-14 items-center justify-center rounded-full bg-emerald-100 text-emerald-700 dark:bg-emerald-950 dark:text-emerald-300">
@@ -219,6 +220,6 @@ export default function WorkspaceOnboardingPage() {
           )}
         </section>
       </main>
-    </div>
+    </AuthScreenBackground>
   );
 }

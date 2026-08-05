@@ -3,6 +3,7 @@ import { Building2, CheckCircle2, Clock3, Mail, ShieldCheck, Users, XCircle } fr
 import { useAuth } from "react-oidc-context";
 import { useLocation, useNavigate, useParams, useSearchParams } from "react-router-dom";
 
+import { AuthScreenBackground } from "@/components/layout/auth-screen-background";
 import { Wordmark } from "@/components/layout/wordmark";
 import { Heading } from "@/components/typography/heading";
 import { Badge } from "@/components/ui/badge";
@@ -146,14 +147,14 @@ export default function InvitationAcceptancePage() {
 
 function InvitationFrame({ children }: { children: React.ReactNode }) {
   return (
-    <div className="min-h-screen bg-muted/30">
+    <AuthScreenBackground>
       <header className="border-b bg-background/95 px-5 py-4 backdrop-blur sm:px-8">
         <div className="mx-auto max-w-6xl"><Wordmark /></div>
       </header>
       <main className="flex min-h-[calc(100vh-65px)] items-center justify-center px-4 py-10">
-        <section className="w-full max-w-xl rounded-xl border bg-card p-6 shadow-sm sm:p-8">{children}</section>
+        <section className="w-full max-w-xl rounded-xl border bg-card/95 p-6 shadow-lg backdrop-blur-sm sm:p-8">{children}</section>
       </main>
-    </div>
+    </AuthScreenBackground>
   );
 }
 

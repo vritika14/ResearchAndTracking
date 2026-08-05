@@ -1,6 +1,7 @@
 import type { LucideIcon } from "lucide-react";
 import type { ReactNode } from "react";
 
+import { AuthScreenBackground } from "@/components/layout/auth-screen-background";
 import { Wordmark } from "@/components/layout/wordmark";
 import { Heading } from "@/components/typography/heading";
 import { cn } from "@/lib/utils";
@@ -29,7 +30,7 @@ export function AuthStateFrame({
   tone = "primary",
 }: AuthStateFrameProps) {
   return (
-    <div className="min-h-screen bg-muted/30">
+    <AuthScreenBackground>
       <header className="border-b bg-background/95 px-4 py-4 backdrop-blur sm:px-8">
         <div className="mx-auto max-w-6xl">
           <Wordmark />
@@ -37,7 +38,7 @@ export function AuthStateFrame({
       </header>
 
       <main className="flex min-h-[calc(100vh-65px)] items-center justify-center px-4 py-8 sm:py-12">
-        <section className="w-full max-w-xl rounded-xl border bg-card p-5 shadow-sm sm:p-8">
+        <section className="w-full max-w-xl rounded-xl border bg-card/95 p-5 shadow-lg backdrop-blur-sm sm:p-8">
           <div className="flex flex-col items-center text-center">
             <span
               className={cn(
@@ -61,6 +62,6 @@ export function AuthStateFrame({
           {children ? <div className="mt-7">{children}</div> : null}
         </section>
       </main>
-    </div>
+    </AuthScreenBackground>
   );
 }
