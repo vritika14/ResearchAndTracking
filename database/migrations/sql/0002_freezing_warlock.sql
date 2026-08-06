@@ -1,0 +1,1 @@
+ALTER TABLE "tenant_memberships" ALTER COLUMN "invited_at" DROP DEFAULT;
