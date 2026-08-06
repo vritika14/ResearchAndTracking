@@ -174,7 +174,7 @@ describe('HealthController', () => {
         async (indicators: Array<() => Promise<any>>) => {
           // only invoke the postgres indicator (index 0) for this test
           // eslint-disable-next-line @typescript-eslint/no-unsafe-return
-          return indicators[0]();
+          return indicators[0]!();
         },
       );
 

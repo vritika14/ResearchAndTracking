@@ -1,0 +1,32 @@
+import { Injectable, OnModuleInit, OnModuleDestroy } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
+import { Pool } from 'pg';
+import { drizzle, NodePgDatabase } from 'drizzle-orm/node-postgres';
+import * as schema from '@research-tracker/migrations';
+
+@Injectable()
+export class DrizzleService implements OnModuleInit, OnModuleDestroy {
+  private pool!: Pool;
+  public db!: NodePgDatabase<typeof schema>;
+
+  constructor(private readonly configService: ConfigService) {}
+
+  onModuleInit() {
+    this.pool = new Pool({
+      host: this.configService.getOrThrow<string>('POSTGRES_HOST'),
+      port: this.configService.getOrThrow<number>('POSTGRES_PORT'),
+      user: this.configService.getOrThrow<string>('POSTGRES_RUNTIME_USER'),
+      password: this.configService.getOrThrow<string>(
+        'POSTGRES_RUNTIME_PASSWORD',
+      ),
+      database: this.configService.getOrThrow<string>('POSTGRES_DB'),
+      ssl: this.configService.get<string>('POSTGRES_SSL') === 'true',
+    });
+
+    this.db = drizzle(this.pool, { schema });
+  }
+
+  async onModuleDestroy() {
+    await this.pool.end();
+  }
+}
