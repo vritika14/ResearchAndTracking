@@ -1,6 +1,8 @@
 import * as Joi from 'joi';
 
 export const envValidationSchema = Joi.object({
+  PORT: Joi.number().integer().positive().default(3000),
+
   POSTGRES_HOST: Joi.string().required(),
   POSTGRES_PORT: Joi.number().default(5432),
   POSTGRES_DB: Joi.string().required(),
