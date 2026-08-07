@@ -1,4 +1,6 @@
-import { Injectable } from '@nestjs/common';
+/* eslint-disable @typescript-eslint/no-unsafe-return */
+/* eslint-disable @typescript-eslint/no-unsafe-assignment */
+import { Injectable, NotFoundException } from '@nestjs/common';
 import { eq } from 'drizzle-orm';
 import { DrizzleService } from '../../db/drizzle.service';
 import { users } from '@research-tracker/migrations';
@@ -6,6 +8,19 @@ import { users } from '@research-tracker/migrations';
 @Injectable()
 export class UsersService {
   constructor(private readonly drizzle: DrizzleService) {}
+
+  async findByExternalAuthId(externalAuthId: string) {
+    const [existing] = await this.drizzle.db
+      .select()
+      .from(users)
+      .where(eq(users.externalAuthId, externalAuthId));
+
+    if (!existing) {
+      throw new NotFoundException('User not found');
+    }
+
+    return existing;
+  }
 
   async findOrProvisionByExternalAuthId(externalAuthId: string) {
     const [existing] = await this.drizzle.db
