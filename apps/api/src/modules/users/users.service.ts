@@ -1,6 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { eq } from 'drizzle-orm';
-import { DrizzleService } from '../db/drizzle.service';
+import { DrizzleService } from '../../db/drizzle.service';
 import { users } from '@research-tracker/migrations';
 
 @Injectable()
