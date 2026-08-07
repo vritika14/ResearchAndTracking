@@ -1,0 +1,46 @@
+/* eslint-disable @typescript-eslint/no-unsafe-assignment */
+/* eslint-disable @typescript-eslint/no-unsafe-member-access */
+import {
+  CanActivate,
+  ExecutionContext,
+  ForbiddenException,
+  Injectable,
+} from '@nestjs/common';
+import { Request } from 'express';
+import { UsersService } from '../../users/users.service';
+import { MembershipsRepository } from '../repositories/memberships.repository';
+
+interface AuthenticatedRequest extends Request {
+  user: { sub: string; username?: string };
+  params: { tenantId?: string };
+}
+
+@Injectable()
+export class TenantMemberGuard implements CanActivate {
+  constructor(
+    private readonly usersService: UsersService,
+    private readonly repository: MembershipsRepository,
+  ) {}
+
+  async canActivate(context: ExecutionContext): Promise<boolean> {
+    const req = context.switchToHttp().getRequest<AuthenticatedRequest>();
+    const tenantId = req.params.tenantId;
+
+    if (!tenantId) {
+      throw new ForbiddenException('Tenant context is required');
+    }
+
+    const user = await this.usersService.findByExternalAuthId(req.user.sub);
+
+    const membership = await this.repository.findMembershipByTenantAndUser(
+      tenantId,
+      user.id,
+    );
+
+    if (!membership || membership.status !== 'active') {
+      throw new ForbiddenException('You are not a member of this tenant');
+    }
+
+    return true;
+  }
+}
