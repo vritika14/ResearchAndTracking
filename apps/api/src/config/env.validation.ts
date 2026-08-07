@@ -13,4 +13,8 @@ export const envValidationSchema = Joi.object({
   COGNITO_REGION: Joi.string().required(),
   COGNITO_USER_POOL_ID: Joi.string().required(),
   COGNITO_CLIENT_ID: Joi.string().required(),
+
+  APP_URL: Joi.string().uri().required(),
+  INVITATION_TOKEN_TTL_HOURS: Joi.number().integer().positive().default(72),
+  INVITATION_TOKEN_BYTES: Joi.number().integer().min(16).default(32),
 });
