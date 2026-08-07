@@ -12,9 +12,9 @@ export const tenantMemberships = pgTable(
     userId: uuid('user_id')
       .notNull()
       .references(() => users.id, { onDelete: 'cascade' }),
-    role: text('role').notNull(), // e.g. 'owner' | 'member'
+    role: text('role').notNull(), // e.g. 'owner' | 'limited_member'
     status: text('status').default('active').notNull(),
-    invietedAt: timestamp('invited_at', { withTimezone: true }).defaultNow().notNull(),
+    invitedAt: timestamp('invited_at', { withTimezone: true }).notNull(),
     joinedAt: timestamp('joined_at', { withTimezone: true }),
     createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
     updatedAt: timestamp('updated_at', { withTimezone: true }).defaultNow().notNull(),

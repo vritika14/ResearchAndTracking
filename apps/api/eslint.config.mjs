@@ -20,14 +20,17 @@ export default tseslint.config(
       sourceType: 'commonjs',
       parserOptions: {
         projectService: {
-          allowDefaultProject: ['test/*.ts'],
+          allowDefaultProject: ['test/*.ts','test/helpers/*.ts'],
         },
         tsconfigRootDir: import.meta.dirname,
       },
     },
   },
   {
+    files: ['**/*.spec.ts', '**/*.e2e-spec.ts', '**/test/**'],
     rules: {
+      '@typescript-eslint/no-unsafe-assignment': 'off',
+      '@typescript-eslint/no-unsafe-member-access': 'off',
       '@typescript-eslint/no-explicit-any': 'off',
       '@typescript-eslint/no-floating-promises': 'warn',
       '@typescript-eslint/no-unsafe-argument': 'warn',

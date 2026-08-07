@@ -37,8 +37,6 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
     sub: string;
     username?: string;
   } {
-    console.log('=== JWT validate() called ===');
-    console.log(JSON.stringify(payload, null, 2));
     if (payload.token_use !== 'access') {
       throw new Error('Invalid token_use — expected an access token');
     }
