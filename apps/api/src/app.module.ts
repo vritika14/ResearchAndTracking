@@ -9,6 +9,7 @@ import { join } from 'path';
 import { AuthModule } from './modules/auth/auth.module';
 import { DbModule } from './db/db.module';
 import { UsersModule } from './modules/users/users.module';
+import { MembershipsModule } from './modules/memberships/memberships.module';
 
 @Module({
   imports: [
@@ -21,6 +22,7 @@ import { UsersModule } from './modules/users/users.module';
     AuthModule,
     DbModule,
     UsersModule,
+    MembershipsModule,
     LoggerModule.forRoot({
       pinoHttp: {
         level: 'info',
