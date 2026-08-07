@@ -1,4 +1,9 @@
-import { ConflictException, GoneException, Injectable, NotFoundException } from '@nestjs/common';
+import {
+  ConflictException,
+  GoneException,
+  Injectable,
+  NotFoundException,
+} from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { randomBytes } from 'crypto';
 import { eq } from 'drizzle-orm';
@@ -18,14 +23,28 @@ export class MembershipsService {
     return this.repository.findActiveMembersByTenant(tenantId);
   }
 
-  async inviteMember(tenantId: string, invitedBy: string, email: string, role: string) {
-    const existing = await this.repository.findPendingInvitationByEmail(tenantId, email);
+  async inviteMember(
+    tenantId: string,
+    invitedBy: string,
+    email: string,
+    role: string,
+  ) {
+    const existing = await this.repository.findPendingInvitationByEmail(
+      tenantId,
+      email,
+    );
     if (existing) {
-      throw new ConflictException('A pending invitation already exists for this email');
+      throw new ConflictException(
+        'A pending invitation already exists for this email',
+      );
     }
 
-    const tokenBytes = this.configService.getOrThrow<number>('INVITATION_TOKEN_BYTES');
-    const ttlHours = this.configService.getOrThrow<number>('INVITATION_TOKEN_TTL_HOURS');
+    const tokenBytes = this.configService.getOrThrow<number>(
+      'INVITATION_TOKEN_BYTES',
+    );
+    const ttlHours = this.configService.getOrThrow<number>(
+      'INVITATION_TOKEN_TTL_HOURS',
+    );
 
     const token = randomBytes(tokenBytes).toString('hex');
     const expiresAt = new Date(Date.now() + ttlHours * 60 * 60 * 1000);
@@ -48,7 +67,9 @@ export class MembershipsService {
     }
 
     if (invitation.status !== 'pending') {
-      throw new GoneException('This invitation has already been used or revoked');
+      throw new GoneException(
+        'This invitation has already been used or revoked',
+      );
     }
 
     if (invitation.expiresAt.getTime() < Date.now()) {
@@ -78,7 +99,10 @@ export class MembershipsService {
   }
 
   async revokeMember(tenantId: string, membershipId: string) {
-    const membership = await this.repository.findMembershipById(tenantId, membershipId);
+    const membership = await this.repository.findMembershipById(
+      tenantId,
+      membershipId,
+    );
 
     if (!membership) {
       throw new NotFoundException('Membership not found');

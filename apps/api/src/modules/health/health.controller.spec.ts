@@ -155,7 +155,6 @@ describe('HealthController', () => {
 
       const result: any = await controller.checkReadiness();
 
-      // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
       expect(result.results[0]).toEqual({ postgres: { status: 'up' } });
     });
 

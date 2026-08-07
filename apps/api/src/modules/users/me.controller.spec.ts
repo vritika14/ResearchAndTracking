@@ -33,7 +33,6 @@ describe('MeController', () => {
         updatedAt: new Date(),
       });
 
-      // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
       const req = { user: { sub: 'cognito-sub-1' } } as any;
       const result = await controller.getMe(req);
 
@@ -59,7 +58,6 @@ describe('MeController', () => {
         updatedAt: new Date(),
       });
 
-      // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
       const req = { user: { sub: 'cognito-sub-2' } } as any;
       const result = await controller.getMe(req);
 
@@ -70,7 +68,6 @@ describe('MeController', () => {
     it('throws NotFoundException when the user could not be found or provisioned', async () => {
       usersService.findOrProvisionByExternalAuthId.mockResolvedValue(undefined);
 
-      // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
       const req = { user: { sub: 'cognito-sub-3' } } as any;
 
       await expect(controller.getMe(req)).rejects.toThrow(NotFoundException);

@@ -12,7 +12,6 @@ import { AppModule } from '../src/app.module';
 import { DrizzleService } from '../src/db/drizzle.service';
 import { getTestAccessToken } from './helpers/cognito';
 
-
 describe('Memberships (e2e)', () => {
   let app: INestApplication<App>;
   let drizzle: DrizzleService;

@@ -14,7 +14,10 @@ export class MembershipsRepository {
       .select()
       .from(tenantMemberships)
       .where(
-        and(eq(tenantMemberships.tenantId, tenantId), eq(tenantMemberships.status, 'active')),
+        and(
+          eq(tenantMemberships.tenantId, tenantId),
+          eq(tenantMemberships.status, 'active'),
+        ),
       );
   }
 
@@ -22,7 +25,12 @@ export class MembershipsRepository {
     const [membership] = await this.drizzle.db
       .select()
       .from(tenantMemberships)
-      .where(and(eq(tenantMemberships.tenantId, tenantId), eq(tenantMemberships.userId, userId)));
+      .where(
+        and(
+          eq(tenantMemberships.tenantId, tenantId),
+          eq(tenantMemberships.userId, userId),
+        ),
+      );
 
     return membership;
   }
@@ -31,7 +39,12 @@ export class MembershipsRepository {
     const [membership] = await this.drizzle.db
       .select()
       .from(tenantMemberships)
-      .where(and(eq(tenantMemberships.tenantId, tenantId), eq(tenantMemberships.id, membershipId)));
+      .where(
+        and(
+          eq(tenantMemberships.tenantId, tenantId),
+          eq(tenantMemberships.id, membershipId),
+        ),
+      );
 
     return membership;
   }
@@ -55,7 +68,12 @@ export class MembershipsRepository {
     const [membership] = await this.drizzle.db
       .update(tenantMemberships)
       .set({ status: 'revoked', updatedAt: new Date() })
-      .where(and(eq(tenantMemberships.tenantId, tenantId), eq(tenantMemberships.id, membershipId)))
+      .where(
+        and(
+          eq(tenantMemberships.tenantId, tenantId),
+          eq(tenantMemberships.id, membershipId),
+        ),
+      )
       .returning();
 
     return membership;
@@ -95,7 +113,10 @@ export class MembershipsRepository {
     token: string;
     expiresAt: Date;
   }) {
-    const [invitation] = await this.drizzle.db.insert(invitations).values(values).returning();
+    const [invitation] = await this.drizzle.db
+      .insert(invitations)
+      .values(values)
+      .returning();
 
     return invitation;
   }
