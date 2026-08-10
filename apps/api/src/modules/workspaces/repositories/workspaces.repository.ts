@@ -1,6 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { tenantMemberships, tenants } from '@research-tracker/migrations';
-import { eq } from 'drizzle-orm';
+import { eq, and } from 'drizzle-orm';
 import { DrizzleService } from '../../../db/drizzle.service';
 
 @Injectable()
@@ -28,7 +28,12 @@ export class WorkspacesRepository {
       })
       .from(tenantMemberships)
       .innerJoin(tenants, eq(tenants.id, tenantMemberships.tenantId))
-      .where(eq(tenantMemberships.userId, userId));
+      .where(
+        and(
+          eq(tenantMemberships.userId, userId),
+          eq(tenantMemberships.status, 'active'),
+        ),
+      );
     return result;
   }
 }
