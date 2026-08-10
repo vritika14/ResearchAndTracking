@@ -10,6 +10,7 @@ import { AuthModule } from './modules/auth/auth.module';
 import { HealthModule } from './modules/health/health.module';
 import { MembershipsModule } from './modules/memberships/memberships.module';
 import { UsersModule } from './modules/users/users.module';
+import { WorkspacesModule } from './modules/workspaces/workspaces.module';
 
 const invitationTokenPath = /\/api\/v1\/invitations\/[^/]+/g;
 
@@ -56,6 +57,7 @@ const invitationTokenPath = /\/api\/v1\/invitations\/[^/]+/g;
     UsersModule,
     MembershipsModule,
     HealthModule,
+    WorkspacesModule,
   ],
   controllers: [AppController],
   providers: [AppService],

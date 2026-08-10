@@ -15,7 +15,8 @@ import { getTestAccessToken } from './helpers/cognito';
 function getJwtSub(token: string) {
   const payload = token.split('.')[1];
   if (!payload) throw new Error('Invalid JWT returned by Cognito');
-  return JSON.parse(Buffer.from(payload, 'base64url').toString('utf8')).sub as string;
+  return JSON.parse(Buffer.from(payload, 'base64url').toString('utf8'))
+    .sub as string;
 }
 
 describe('Memberships (e2e)', () => {
@@ -162,8 +163,10 @@ describe('Memberships (e2e)', () => {
   });
 
   afterAll(async () => {
-    if (tenantAId) await drizzle.db.delete(tenants).where(eq(tenants.id, tenantAId));
-    if (tenantBId) await drizzle.db.delete(tenants).where(eq(tenants.id, tenantBId));
+    if (tenantAId)
+      await drizzle.db.delete(tenants).where(eq(tenants.id, tenantAId));
+    if (tenantBId)
+      await drizzle.db.delete(tenants).where(eq(tenants.id, tenantBId));
     await app.close();
   });
 
