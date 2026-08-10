@@ -45,12 +45,16 @@ describe('WorkspacesService', () => {
       const mockTx = {
         insert: jest.fn().mockReturnThis(),
         values: jest.fn().mockReturnThis(),
-        returning: jest.fn().mockResolvedValue([{ id: 'new-tenant-id', name: 'My Workspace' }]),
+        returning: jest
+          .fn()
+          .mockResolvedValue([{ id: 'new-tenant-id', name: 'My Workspace' }]),
       };
 
-      drizzle.db.transaction.mockImplementation(async (callback: (tx: unknown) => unknown) => {
-        return callback(mockTx);
-      });
+      drizzle.db.transaction.mockImplementation(
+        async (callback: (tx: unknown) => unknown) => {
+          return await callback(mockTx);
+        },
+      );
 
       const result = await service.createWorkspace('user-1', 'My Workspace');
 
@@ -69,7 +73,10 @@ describe('WorkspacesService', () => {
     });
 
     it('returns the workspace when the user belongs to one', async () => {
-      repository.findByMemberUserId.mockResolvedValue({ id: 'tenant-1', name: 'Existing' });
+      repository.findByMemberUserId.mockResolvedValue({
+        id: 'tenant-1',
+        name: 'Existing',
+      });
 
       const result = await service.getCurrentWorkspace('user-1');
 

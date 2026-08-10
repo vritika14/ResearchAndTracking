@@ -49,18 +49,24 @@ describe('MembershipsController', () => {
 
   describe('inviteMember', () => {
     it('resolves the caller and delegates to the service without a role field', async () => {
-      usersService.findByExternalAuthId.mockResolvedValue({ id: 'inviter-user-id' });
+      usersService.findByExternalAuthId.mockResolvedValue({
+        id: 'inviter-user-id',
+      });
       membershipsService.inviteMember.mockResolvedValue({
         invitation: { id: 'invitation-1' },
         acceptanceToken: 'raw-token',
       });
 
-      const req = { user: { sub: 'cognito-sub-1', accessToken: 'token-1' } } as any;
+      const req = {
+        user: { sub: 'cognito-sub-1', accessToken: 'token-1' },
+      } as any;
       const dto = { email: 'new@example.com' };
 
-      const result = await controller.inviteMember('tenant-1', req, dto as any);
+      const result = await controller.inviteMember('tenant-1', req, dto);
 
-      expect(usersService.findByExternalAuthId).toHaveBeenCalledWith('cognito-sub-1');
+      expect(usersService.findByExternalAuthId).toHaveBeenCalledWith(
+        'cognito-sub-1',
+      );
       expect(membershipsService.inviteMember).toHaveBeenCalledWith(
         'tenant-1',
         'inviter-user-id',
@@ -75,11 +81,17 @@ describe('MembershipsController', () => {
 
   describe('revokeMember', () => {
     it('delegates to the service with tenantId and membershipId', async () => {
-      membershipsService.revokeMember.mockResolvedValue({ id: 'm1', status: 'revoked' });
+      membershipsService.revokeMember.mockResolvedValue({
+        id: 'm1',
+        status: 'revoked',
+      });
 
       const result = await controller.revokeMember('tenant-1', 'membership-1');
 
-      expect(membershipsService.revokeMember).toHaveBeenCalledWith('tenant-1', 'membership-1');
+      expect(membershipsService.revokeMember).toHaveBeenCalledWith(
+        'tenant-1',
+        'membership-1',
+      );
       expect(result).toEqual({ id: 'm1', status: 'revoked' });
     });
   });

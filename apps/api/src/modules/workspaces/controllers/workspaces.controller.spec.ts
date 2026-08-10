@@ -34,52 +34,78 @@ describe('WorkspacesController', () => {
 
   describe('create', () => {
     it('resolves the caller and delegates to the service', async () => {
-      usersService.findOrProvisionFromAccessToken.mockResolvedValue({ id: 'user-1' });
-      workspacesService.createWorkspace.mockResolvedValue({ id: 'tenant-1', name: 'New Co' });
+      usersService.findOrProvisionFromAccessToken.mockResolvedValue({
+        id: 'user-1',
+      });
+      workspacesService.createWorkspace.mockResolvedValue({
+        id: 'tenant-1',
+        name: 'New Co',
+      });
 
-      const req = { user: { sub: 'cognito-sub-1', accessToken: 'token-1' } } as any;
+      const req = {
+        user: { sub: 'cognito-sub-1', accessToken: 'token-1' },
+      } as any;
       const dto = { name: 'New Co' };
 
-      const result = await controller.create(req, dto as any);
+      const result = await controller.create(req, dto);
 
       expect(usersService.findOrProvisionFromAccessToken).toHaveBeenCalledWith(
         'cognito-sub-1',
         'token-1',
       );
-      expect(workspacesService.createWorkspace).toHaveBeenCalledWith('user-1', 'New Co');
+      expect(workspacesService.createWorkspace).toHaveBeenCalledWith(
+        'user-1',
+        'New Co',
+      );
       expect(result).toEqual({ id: 'tenant-1', name: 'New Co' });
     });
 
     it('throws NotFoundException if the user could not be found or provisioned', async () => {
       usersService.findOrProvisionFromAccessToken.mockResolvedValue(undefined);
 
-      const req = { user: { sub: 'cognito-sub-2', accessToken: 'token-2' } } as any;
+      const req = {
+        user: { sub: 'cognito-sub-2', accessToken: 'token-2' },
+      } as any;
       const dto = { name: 'New Co' };
 
-      await expect(controller.create(req, dto as any)).rejects.toThrow(NotFoundException);
+      await expect(controller.create(req, dto as any)).rejects.toThrow(
+        NotFoundException,
+      );
       expect(workspacesService.createWorkspace).not.toHaveBeenCalled();
     });
   });
 
   describe('getCurrent', () => {
     it('resolves the caller and delegates to the service', async () => {
-      usersService.findOrProvisionFromAccessToken.mockResolvedValue({ id: 'user-1' });
-      workspacesService.getCurrentWorkspace.mockResolvedValue({ id: 'tenant-1' });
+      usersService.findOrProvisionFromAccessToken.mockResolvedValue({
+        id: 'user-1',
+      });
+      workspacesService.getCurrentWorkspace.mockResolvedValue({
+        id: 'tenant-1',
+      });
 
-      const req = { user: { sub: 'cognito-sub-1', accessToken: 'token-1' } } as any;
+      const req = {
+        user: { sub: 'cognito-sub-1', accessToken: 'token-1' },
+      } as any;
 
       const result = await controller.getCurrent(req);
 
-      expect(workspacesService.getCurrentWorkspace).toHaveBeenCalledWith('user-1');
+      expect(workspacesService.getCurrentWorkspace).toHaveBeenCalledWith(
+        'user-1',
+      );
       expect(result).toEqual({ id: 'tenant-1' });
     });
 
     it('throws NotFoundException if the user could not be found or provisioned', async () => {
       usersService.findOrProvisionFromAccessToken.mockResolvedValue(undefined);
 
-      const req = { user: { sub: 'cognito-sub-2', accessToken: 'token-2' } } as any;
+      const req = {
+        user: { sub: 'cognito-sub-2', accessToken: 'token-2' },
+      } as any;
 
-      await expect(controller.getCurrent(req)).rejects.toThrow(NotFoundException);
+      await expect(controller.getCurrent(req)).rejects.toThrow(
+        NotFoundException,
+      );
       expect(workspacesService.getCurrentWorkspace).not.toHaveBeenCalled();
     });
   });
