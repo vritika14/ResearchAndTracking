@@ -1,15 +1,35 @@
+/* eslint-disable @typescript-eslint/no-unsafe-call */
+/* eslint-disable @typescript-eslint/no-unsafe-argument */
+/* eslint-disable @typescript-eslint/no-unsafe-assignment */
+/* eslint-disable @typescript-eslint/no-unsafe-member-access */
+/* eslint-disable @typescript-eslint/no-unsafe-return */
 import {
   ConflictException,
+  ForbiddenException,
   GoneException,
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
-import { randomBytes } from 'crypto';
-import { eq } from 'drizzle-orm';
-import { tenantMemberships, invitations } from '@research-tracker/migrations';
+import { invitations, tenantMemberships } from '@research-tracker/migrations';
+import { and, eq } from 'drizzle-orm';
+import { createHash, randomBytes } from 'crypto';
 import { DrizzleService } from '../../../db/drizzle.service';
 import { MembershipsRepository } from '../repositories/memberships.repository';
+
+function normaliseEmail(value: string) {
+  return value.trim().toLowerCase();
+}
+
+function hashInvitationToken(rawToken: string) {
+  return createHash('sha256').update(rawToken, 'utf8').digest('hex');
+}
+
+function maskEmail(value: string) {
+  const [local = '', domain = ''] = value.split('@');
+  const visible = local.slice(0, Math.min(2, local.length));
+  return `${visible}${'*'.repeat(Math.max(1, local.length - visible.length))}@${domain}`;
+}
 
 @Injectable()
 export class MembershipsService {
@@ -23,15 +43,11 @@ export class MembershipsService {
     return this.repository.findActiveMembersByTenant(tenantId);
   }
 
-  async inviteMember(
-    tenantId: string,
-    invitedBy: string,
-    email: string,
-    role: string,
-  ) {
+  async inviteMember(tenantId: string, invitedBy: string, email: string) {
+    const normalisedEmail = normaliseEmail(email);
     const existing = await this.repository.findPendingInvitationByEmail(
       tenantId,
-      email,
+      normalisedEmail,
     );
     if (existing) {
       throw new ConflictException(
@@ -46,55 +62,114 @@ export class MembershipsService {
       'INVITATION_TOKEN_TTL_HOURS',
     );
 
-    const token = randomBytes(tokenBytes).toString('hex');
+    const rawToken = randomBytes(tokenBytes).toString('base64url');
+    const tokenHash = hashInvitationToken(rawToken);
     const expiresAt = new Date(Date.now() + ttlHours * 60 * 60 * 1000);
 
-    return this.repository.createInvitation({
+    const invitation = await this.repository.createInvitation({
       tenantId,
-      email,
-      role,
+      email: normalisedEmail,
+      role: 'limited_member',
       invitedBy,
-      token,
+      tokenHash,
       expiresAt,
     });
+
+    if (!invitation) {
+      throw new ConflictException('Failed to create invitation');
+    }
+
+    // The raw token is returned once so the caller can construct/send the invitation URL.
+    // Only the hash is stored in PostgreSQL.
+    const { token: _storedHash, ...safeInvitation } = invitation;
+    return { invitation: safeInvitation, acceptanceToken: rawToken };
   }
 
-  async acceptInvitation(token: string, userId: string) {
-    const invitation = await this.repository.findInvitationByToken(token);
+  async previewInvitation(rawToken: string) {
+    const invitation = await this.repository.findInvitationByTokenHash(
+      hashInvitationToken(rawToken),
+    );
 
     if (!invitation) {
       throw new NotFoundException('Invitation not found');
     }
+    if (invitation.status !== 'pending') {
+      throw new GoneException('This invitation is no longer active');
+    }
+    if (invitation.expiresAt.getTime() < Date.now()) {
+      throw new GoneException('This invitation has expired');
+    }
 
+    return {
+      workspaceName: invitation.tenantName,
+      invitedEmail: maskEmail(invitation.email),
+      role: invitation.role,
+      expiresAt: invitation.expiresAt,
+    };
+  }
+
+  async acceptInvitation(rawToken: string, userId: string, userEmail: string) {
+    const tokenHash = hashInvitationToken(rawToken);
+    const invitation =
+      await this.repository.findInvitationByTokenHash(tokenHash);
+
+    if (!invitation) {
+      throw new NotFoundException('Invitation not found');
+    }
     if (invitation.status !== 'pending') {
       throw new GoneException(
         'This invitation has already been used or revoked',
       );
     }
-
     if (invitation.expiresAt.getTime() < Date.now()) {
       throw new GoneException('This invitation has expired');
+    }
+    if (normaliseEmail(invitation.email) !== normaliseEmail(userEmail)) {
+      throw new ForbiddenException(
+        'Sign in with the email address that received this invitation',
+      );
     }
 
     return this.drizzle.db.transaction(async (tx) => {
       const [updatedInvitation] = await tx
         .update(invitations)
         .set({ status: 'accepted', updatedAt: new Date() })
-        .where(eq(invitations.id, invitation.id))
+        .where(
+          and(
+            eq(invitations.id, invitation.id),
+            eq(invitations.status, 'pending'),
+          ),
+        )
         .returning();
+
+      if (!updatedInvitation) {
+        throw new ConflictException(
+          'Invitation was accepted by another request',
+        );
+      }
 
       const [membership] = await tx
         .insert(tenantMemberships)
         .values({
           tenantId: invitation.tenantId,
           userId,
-          role: invitation.role,
+          role: 'limited_member',
+          status: 'active',
           invitedAt: invitation.createdAt,
           joinedAt: new Date(),
         })
+        .onConflictDoUpdate({
+          target: [tenantMemberships.tenantId, tenantMemberships.userId],
+          set: {
+            role: 'limited_member',
+            status: 'active',
+            joinedAt: new Date(),
+            updatedAt: new Date(),
+          },
+        })
         .returning();
 
-      return { invitation: updatedInvitation, membership };
+      return { membership };
     });
   }
 
@@ -106,6 +181,11 @@ export class MembershipsService {
 
     if (!membership) {
       throw new NotFoundException('Membership not found');
+    }
+    if (membership.role === 'owner') {
+      throw new ForbiddenException(
+        'The primary workspace owner cannot be revoked through the member API',
+      );
     }
 
     return this.repository.revokeMembership(tenantId, membershipId);

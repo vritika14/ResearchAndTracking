@@ -20,7 +20,7 @@ describe('HealthController', () => {
   const mockConfigService = {
     getOrThrow: jest.fn((key: string) => {
       const values: Record<string, string> = {
-        MINIO_ENDPOINT: 'http://localhost:9000/minio/health/live',
+        MINIO_ENDPOINT: 'http://localhost:9000',
         POSTGRES_HOST: 'localhost',
         POSTGRES_RUNTIME_USER: 'testuser',
         POSTGRES_RUNTIME_PASSWORD: 'testpassword',

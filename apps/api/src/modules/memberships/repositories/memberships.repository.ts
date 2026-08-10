@@ -1,13 +1,15 @@
 import { Injectable } from '@nestjs/common';
+import {
+  invitations,
+  tenantMemberships,
+  tenants,
+} from '@research-tracker/migrations';
 import { and, eq } from 'drizzle-orm';
 import { DrizzleService } from '../../../db/drizzle.service';
-import { tenantMemberships, invitations } from '@research-tracker/migrations';
 
 @Injectable()
 export class MembershipsRepository {
   constructor(private readonly drizzle: DrizzleService) {}
-
-  // --- Memberships ---
 
   async findActiveMembersByTenant(tenantId: string) {
     return this.drizzle.db
@@ -31,7 +33,6 @@ export class MembershipsRepository {
           eq(tenantMemberships.userId, userId),
         ),
       );
-
     return membership;
   }
 
@@ -45,22 +46,6 @@ export class MembershipsRepository {
           eq(tenantMemberships.id, membershipId),
         ),
       );
-
-    return membership;
-  }
-
-  async createMembership(values: {
-    tenantId: string;
-    userId: string;
-    role: string;
-    invitedAt: Date;
-    joinedAt: Date;
-  }) {
-    const [membership] = await this.drizzle.db
-      .insert(tenantMemberships)
-      .values(values)
-      .returning();
-
     return membership;
   }
 
@@ -75,11 +60,8 @@ export class MembershipsRepository {
         ),
       )
       .returning();
-
     return membership;
   }
-
-  // --- Invitations ---
 
   async findPendingInvitationByEmail(tenantId: string, email: string) {
     const [invitation] = await this.drizzle.db
@@ -92,42 +74,49 @@ export class MembershipsRepository {
           eq(invitations.status, 'pending'),
         ),
       );
-
     return invitation;
   }
 
-  async findInvitationByToken(token: string) {
-    const [invitation] = await this.drizzle.db
-      .select()
+  async findInvitationByTokenHash(tokenHash: string) {
+    const [result] = await this.drizzle.db
+      .select({
+        id: invitations.id,
+        tenantId: invitations.tenantId,
+        tenantName: tenants.name,
+        email: invitations.email,
+        role: invitations.role,
+        invitedBy: invitations.invitedBy,
+        token: invitations.token,
+        status: invitations.status,
+        expiresAt: invitations.expiresAt,
+        createdAt: invitations.createdAt,
+        updatedAt: invitations.updatedAt,
+      })
       .from(invitations)
-      .where(eq(invitations.token, token));
-
-    return invitation;
+      .innerJoin(tenants, eq(tenants.id, invitations.tenantId))
+      .where(eq(invitations.token, tokenHash));
+    return result;
   }
 
   async createInvitation(values: {
     tenantId: string;
     email: string;
-    role: string;
+    role: 'limited_member';
     invitedBy: string;
-    token: string;
+    tokenHash: string;
     expiresAt: Date;
   }) {
     const [invitation] = await this.drizzle.db
       .insert(invitations)
-      .values(values)
+      .values({
+        tenantId: values.tenantId,
+        email: values.email,
+        role: values.role,
+        invitedBy: values.invitedBy,
+        token: values.tokenHash,
+        expiresAt: values.expiresAt,
+      })
       .returning();
-
-    return invitation;
-  }
-
-  async markInvitationAccepted(invitationId: string) {
-    const [invitation] = await this.drizzle.db
-      .update(invitations)
-      .set({ status: 'accepted', updatedAt: new Date() })
-      .where(eq(invitations.id, invitationId))
-      .returning();
-
     return invitation;
   }
 }

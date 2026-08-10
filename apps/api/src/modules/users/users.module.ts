@@ -1,8 +1,10 @@
+import { HttpModule } from '@nestjs/axios';
 import { Module } from '@nestjs/common';
-import { UsersService } from './users.service';
 import { MeController } from './me.controller';
+import { UsersService } from './users.service';
 
 @Module({
+  imports: [HttpModule],
   controllers: [MeController],
   providers: [UsersService],
   exports: [UsersService],

@@ -1,11 +1,11 @@
 import { Controller, Get } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
 import {
   HealthCheck,
   HealthCheckService,
   HealthIndicatorResult,
   HttpHealthIndicator,
 } from '@nestjs/terminus';
-import { ConfigService } from '@nestjs/config';
 import { Client } from 'pg';
 
 @Controller('health')
@@ -25,31 +25,34 @@ export class HealthController {
   @Get('ready')
   @HealthCheck()
   checkReadiness() {
+    const minioBase = this.config
+      .getOrThrow<string>('MINIO_ENDPOINT')
+      .replace(/\/$/, '');
+
     return this.health.check([
       () => this.checkPostgres(),
-      () =>
-        this.http.pingCheck('minio', this.config.getOrThrow('MINIO_ENDPOINT')),
+      () => this.http.pingCheck('minio', `${minioBase}/minio/health/live`),
     ]);
   }
 
-  //opens a new connection to the Postgres database, runs a simple query, and returns the result. If the connection or query fails, it throws an error with a message indicating the failure.
   private async checkPostgres(): Promise<HealthIndicatorResult> {
     const client = new Client({
-      host: this.config.getOrThrow('POSTGRES_HOST'),
-      port: this.config.get<number>('POSTGRES_PORT'),
-      user: this.config.get<string>('POSTGRES_RUNTIME_USER'),
-      password: this.config.get<string>('POSTGRES_RUNTIME_PASSWORD'),
-      database: this.config.get<string>('POSTGRES_DB'),
+      host: this.config.getOrThrow<string>('POSTGRES_HOST'),
+      port: this.config.getOrThrow<number>('POSTGRES_PORT'),
+      user: this.config.getOrThrow<string>('POSTGRES_RUNTIME_USER'),
+      password: this.config.getOrThrow<string>('POSTGRES_RUNTIME_PASSWORD'),
+      database: this.config.getOrThrow<string>('POSTGRES_DB'),
+      ssl: this.config.get<boolean>('POSTGRES_SSL', false),
     });
 
     try {
       await client.connect();
       await client.query('SELECT 1');
-      await client.end();
       return { postgres: { status: 'up' } };
     } catch (error) {
-      await client.end().catch(() => undefined);
       throw new Error(`Postgres check failed: ${(error as Error).message}`);
+    } finally {
+      await client.end().catch(() => undefined);
     }
   }
 }
