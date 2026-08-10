@@ -1,6 +1,5 @@
 import {
   Body,
-  NotFoundException,
   Controller,
   Delete,
   Get,
@@ -16,16 +15,17 @@ import {
   ApiTags,
 } from '@nestjs/swagger';
 import { Request } from 'express';
+import type { AuthenticatedPrincipal } from '../../auth/jwt.strategy';
 import { JwtAuthGuard } from '../../auth/jwt-auth.guard';
 import { UsersService } from '../../users/users.service';
+import { CreateInvitationDto } from '../dto/create-invitation.dto';
+import { MembershipResponseDto } from '../dto/membership-response.dto';
 import { TenantMemberGuard } from '../policies/tenant-member.guard';
 import { TenantOwnerGuard } from '../policies/tenant-owner.guard';
 import { MembershipsService } from '../services/memberships.service';
-import { CreateInvitationDto } from '../dto/create-invitation.dto';
-import { MembershipResponseDto } from '../dto/membership-response.dto';
 
 interface AuthenticatedRequest extends Request {
-  user: { sub: string; username?: string };
+  user: AuthenticatedPrincipal;
 }
 
 @ApiTags('memberships')
@@ -45,7 +45,11 @@ export class MembershipsController {
     return this.membershipsService.listMembers(tenantId);
   }
 
-  @ApiOperation({ summary: 'Invite a new member to the tenant (owner only)' })
+  @ApiOperation({
+    summary: 'Invite a limited workspace member (owner only)',
+    description:
+      'Workspace invitations never create another owner. Project editor/viewer access is added later through project_members.',
+  })
   @ApiResponse({ status: 201 })
   @UseGuards(JwtAuthGuard, TenantOwnerGuard)
   @Post('invitations')
@@ -61,29 +65,10 @@ export class MembershipsController {
       tenantId,
       invitedByUser.id,
       dto.email,
-      dto.role,
     );
   }
 
-  @ApiOperation({ summary: 'Accept a pending invitation' })
-  @ApiResponse({ status: 200, type: MembershipResponseDto })
-  @UseGuards(JwtAuthGuard)
-  @Post('invitations/:token/accept')
-  async acceptInvitation(
-    @Param('token') token: string,
-    @Req() req: AuthenticatedRequest,
-  ) {
-    const acceptingUser =
-      await this.usersService.findOrProvisionByExternalAuthId(req.user.sub);
-
-    if (!acceptingUser) {
-      throw new NotFoundException('User could not be found or provisioned');
-    }
-
-    return this.membershipsService.acceptInvitation(token, acceptingUser.id);
-  }
-
-  @ApiOperation({ summary: 'Revoke a member (owner only)' })
+  @ApiOperation({ summary: 'Revoke a non-owner workspace member' })
   @ApiResponse({ status: 200, type: MembershipResponseDto })
   @UseGuards(JwtAuthGuard, TenantOwnerGuard)
   @Delete('members/:membershipId')

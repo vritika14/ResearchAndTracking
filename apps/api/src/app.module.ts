@@ -1,15 +1,18 @@
 import { Module } from '@nestjs/common';
+import { ConfigModule } from '@nestjs/config';
+import { join } from 'path';
+import { LoggerModule } from 'nestjs-pino';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
-import { ConfigModule } from '@nestjs/config';
-import { HealthModule } from './modules/health/health.module';
-import { LoggerModule } from 'nestjs-pino';
 import { envValidationSchema } from './config/env.validation';
-import { join } from 'path';
-import { AuthModule } from './modules/auth/auth.module';
 import { DbModule } from './db/db.module';
-import { UsersModule } from './modules/users/users.module';
+import { AuthModule } from './modules/auth/auth.module';
+import { HealthModule } from './modules/health/health.module';
 import { MembershipsModule } from './modules/memberships/memberships.module';
+import { UsersModule } from './modules/users/users.module';
+import { WorkspacesModule } from './modules/workspaces/workspaces.module';
+
+const invitationTokenPath = /\/api\/v1\/invitations\/[^/]+/g;
 
 @Module({
   imports: [
@@ -18,11 +21,6 @@ import { MembershipsModule } from './modules/memberships/memberships.module';
       envFilePath: [join(__dirname, '..', '..', '..', '.env')],
       validationSchema: envValidationSchema,
     }),
-    HealthModule,
-    AuthModule,
-    DbModule,
-    UsersModule,
-    MembershipsModule,
     LoggerModule.forRoot({
       pinoHttp: {
         level: 'info',
@@ -30,19 +28,36 @@ import { MembershipsModule } from './modules/memberships/memberships.module';
           paths: [
             'req.headers.authorization',
             'req.headers.cookie',
-            'req.headers["set-cookie"]',
-            'req.body.*.password',
-            '*.token',
-            'req.body.accesstoken',
-            'req.body.refreshtoken',
-            'req.body.apikey',
+            'req.body.password',
+            'req.body.confirmPassword',
+            'req.body.accessToken',
+            'req.body.refreshToken',
+            'req.body.apiKey',
             'req.body.secret',
             'res.headers["set-cookie"]',
           ],
           censor: '[Redacted]',
         },
+        serializers: {
+          req(req: { method?: string; url?: string; id?: string }) {
+            return {
+              id: req.id,
+              method: req.method,
+              url: req.url?.replace(
+                invitationTokenPath,
+                '/api/v1/invitations/[Redacted]',
+              ),
+            };
+          },
+        },
       },
     }),
+    DbModule,
+    AuthModule,
+    UsersModule,
+    MembershipsModule,
+    HealthModule,
+    WorkspacesModule,
   ],
   controllers: [AppController],
   providers: [AppService],

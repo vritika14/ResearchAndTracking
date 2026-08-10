@@ -1,8 +1,8 @@
-import { Injectable, OnModuleInit, OnModuleDestroy } from '@nestjs/common';
+import { Injectable, OnModuleDestroy, OnModuleInit } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
-import { Pool } from 'pg';
-import { drizzle, NodePgDatabase } from 'drizzle-orm/node-postgres';
 import * as schema from '@research-tracker/migrations';
+import { drizzle, NodePgDatabase } from 'drizzle-orm/node-postgres';
+import { Pool } from 'pg';
 
 @Injectable()
 export class DrizzleService implements OnModuleInit, OnModuleDestroy {
@@ -20,7 +20,7 @@ export class DrizzleService implements OnModuleInit, OnModuleDestroy {
         'POSTGRES_RUNTIME_PASSWORD',
       ),
       database: this.configService.getOrThrow<string>('POSTGRES_DB'),
-      ssl: this.configService.get<string>('POSTGRES_SSL') === 'true',
+      ssl: this.configService.get<boolean>('POSTGRES_SSL', false),
     });
 
     this.db = drizzle(this.pool, { schema });
