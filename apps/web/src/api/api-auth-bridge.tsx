@@ -1,9 +1,10 @@
 import { useState, type ReactNode } from "react";
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { QueryClientProvider } from "@tanstack/react-query";
 import { useAuth } from "react-oidc-context";
 
 import { setApiAccessToken } from "@/api/client";
 import { useMe } from "@/api/hooks";
+import { createQueryClient } from "@/api/query-client";
 
 export function ApiAuthBridge({ children }: { children: ReactNode }) {
   const auth = useAuth();
@@ -16,9 +17,7 @@ export function ApiAuthBridge({ children }: { children: ReactNode }) {
 }
 
 function SubjectQueryClient({ children, enabled }: { children: ReactNode; enabled: boolean }) {
-  const [queryClient] = useState(() => new QueryClient({
-    defaultOptions: { queries: { staleTime: 30_000, refetchOnWindowFocus: false } },
-  }));
+  const [queryClient] = useState(createQueryClient);
   return <QueryClientProvider client={queryClient}><AuthenticatedAccountBootstrap enabled={enabled}>{children}</AuthenticatedAccountBootstrap></QueryClientProvider>;
 }
 
