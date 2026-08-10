@@ -11,6 +11,7 @@ WHERE NOT EXISTS (SELECT FROM pg_roles WHERE rolname = :'runtime_role')
 \gexec
 
 -- Migration role: owns the schema, can run DDL.
+GRANT CREATE ON DATABASE :"dbname" TO :"migration_role";
 GRANT ALL PRIVILEGES ON SCHEMA public TO :"migration_role";
 
 -- Runtime role: no DDL rights, connect-only for now — DML grants happen

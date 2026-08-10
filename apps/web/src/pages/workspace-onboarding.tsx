@@ -1,21 +1,20 @@
-import { useState, type FormEvent } from "react";
+import { useForm } from "react-hook-form";
 import { Building2, Check, CheckCircle2, ShieldCheck, Users } from "lucide-react";
-import { useAuth } from "react-oidc-context";
 import { useNavigate } from "react-router-dom";
+import { z } from "zod";
 
+import { useCreateWorkspace } from "@/api/hooks";
 import { AuthScreenBackground } from "@/components/layout/auth-screen-background";
 import { Wordmark } from "@/components/layout/wordmark";
 import { Heading } from "@/components/typography/heading";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 
-function slugify(value: string) {
-  return value
-    .toLowerCase()
-    .trim()
-    .replace(/[^a-z0-9]+/g, "-")
-    .replace(/^-+|-+$/g, "");
-}
+const workspaceSchema = z.object({
+  name: z.string().trim().min(2, "Use at least 2 characters.").max(100, "Use 100 characters or fewer."),
+});
+
+type WorkspaceForm = z.infer<typeof workspaceSchema>;
 
 const onboardingSteps = [
   {
@@ -39,28 +38,17 @@ const onboardingSteps = [
 ];
 
 export default function WorkspaceOnboardingPage() {
-  const auth = useAuth();
   const navigate = useNavigate();
-  const suggestedName = auth.user?.profile.name ?? auth.user?.profile.email?.split("@")[0] ?? "";
-  const [displayName, setDisplayName] = useState(suggestedName);
-  const [workspaceName, setWorkspaceName] = useState("");
-  const [workspaceSlug, setWorkspaceSlug] = useState("");
-  const [slugEdited, setSlugEdited] = useState(false);
-  const [created, setCreated] = useState(false);
+  const createWorkspace = useCreateWorkspace();
+  const form = useForm<WorkspaceForm>({ defaultValues: { name: "" } });
 
-  function updateWorkspaceName(value: string) {
-    setWorkspaceName(value);
-    if (!slugEdited) setWorkspaceSlug(slugify(value));
-  }
-
-  function updateSlug(value: string) {
-    setSlugEdited(true);
-    setWorkspaceSlug(slugify(value));
-  }
-
-  function createWorkspace(event: FormEvent<HTMLFormElement>) {
-    event.preventDefault();
-    setCreated(true);
+  async function submit(values: WorkspaceForm) {
+    const parsed = workspaceSchema.safeParse(values);
+    if (!parsed.success) {
+      form.setError("name", { message: parsed.error.issues[0]?.message });
+      return;
+    }
+    await createWorkspace.mutateAsync(parsed.data.name).catch(() => undefined);
   }
 
   return (
@@ -90,7 +78,7 @@ export default function WorkspaceOnboardingPage() {
           <ol className="mt-9 grid gap-5">
             {onboardingSteps.map((step, index) => {
               const Icon = step.icon;
-              const active = index === 1 && !created;
+              const active = index === 1 && !createWorkspace.data;
               return (
                 <li key={step.title} className="flex items-start gap-4">
                   <span
@@ -113,7 +101,7 @@ export default function WorkspaceOnboardingPage() {
         </aside>
 
         <section className="mx-auto w-full max-w-2xl rounded-xl border bg-card/95 p-6 shadow-lg backdrop-blur-sm sm:p-8">
-          {created ? (
+          {createWorkspace.data ? (
             <div className="flex min-h-[420px] flex-col items-center justify-center text-center">
               <span className="flex h-14 w-14 items-center justify-center rounded-full bg-emerald-100 text-emerald-700 dark:bg-emerald-950 dark:text-emerald-300">
                 <CheckCircle2 className="h-7 w-7" />
@@ -122,8 +110,8 @@ export default function WorkspaceOnboardingPage() {
                 Your workspace is ready
               </Heading>
               <p className="mt-3 max-w-md text-sm leading-6 text-muted-foreground">
-                <span className="font-semibold text-foreground">{workspaceName}</span> has been set
-                up for {displayName}. You can now begin adding projects and inviting collaborators.
+                <span className="font-semibold text-foreground">{createWorkspace.data.name}</span> has
+                been set up. You can now begin adding projects and inviting collaborators.
               </p>
               <Button className="mt-7 min-w-44" onClick={() => navigate("/", { replace: true })}>
                 Open Workspace
@@ -143,60 +131,24 @@ export default function WorkspaceOnboardingPage() {
                 </p>
               </div>
 
-              <form onSubmit={createWorkspace} className="mt-6 grid gap-5">
-                <div className="grid gap-2">
-                  <label htmlFor="onboarding-display-name" className="text-sm font-medium">
-                    Your display name <span className="text-destructive">*</span>
-                  </label>
-                  <Input
-                    id="onboarding-display-name"
-                    value={displayName}
-                    onChange={(event) => setDisplayName(event.target.value)}
-                    placeholder="e.g. Dr. Emma Jepsen"
-                    className="h-11"
-                    required
-                  />
-                  <p className="text-xs text-muted-foreground">
-                    Shown to collaborators and alongside your activity.
-                  </p>
-                </div>
-
+              <form onSubmit={form.handleSubmit(submit)} className="mt-6 grid gap-5">
                 <div className="grid gap-2">
                   <label htmlFor="onboarding-workspace-name" className="text-sm font-medium">
                     Workspace name <span className="text-destructive">*</span>
                   </label>
                   <Input
                     id="onboarding-workspace-name"
-                    value={workspaceName}
-                    onChange={(event) => updateWorkspaceName(event.target.value)}
+                    {...form.register("name")}
                     placeholder="e.g. Translational Research Lab"
                     className="h-11"
                     autoFocus
                     required
                   />
-                </div>
-
-                <div className="grid gap-2">
-                  <label htmlFor="onboarding-workspace-slug" className="text-sm font-medium">
-                    Workspace identifier <span className="text-destructive">*</span>
-                  </label>
-                  <div className="flex h-11 overflow-hidden rounded-md border border-input bg-background shadow-sm focus-within:ring-1 focus-within:ring-ring">
-                    <span className="flex items-center border-r bg-muted/60 px-3 text-sm text-muted-foreground">
-                      research.app/
-                    </span>
-                    <input
-                      id="onboarding-workspace-slug"
-                      value={workspaceSlug}
-                      onChange={(event) => updateSlug(event.target.value)}
-                      className="min-w-0 flex-1 bg-transparent px-3 text-sm outline-none"
-                      placeholder="translational-research-lab"
-                      pattern="[a-z0-9]+(?:-[a-z0-9]+)*"
-                      required
-                    />
-                  </div>
-                  <p className="text-xs text-muted-foreground">
-                    Lowercase letters, numbers and hyphens only. You can change this before saving.
-                  </p>
+                  {form.formState.errors.name ? (
+                    <p role="alert" className="text-xs text-destructive">
+                      {form.formState.errors.name.message}
+                    </p>
+                  ) : null}
                 </div>
 
                 <div className="rounded-lg border bg-muted/35 p-4">
@@ -212,8 +164,13 @@ export default function WorkspaceOnboardingPage() {
                   </div>
                 </div>
 
-                <Button type="submit" size="lg" className="mt-1 w-full">
-                  Create Workspace
+                {createWorkspace.isError ? (
+                  <p role="alert" className="text-sm text-destructive">
+                    {createWorkspace.error.message}
+                  </p>
+                ) : null}
+                <Button type="submit" size="lg" className="mt-1 w-full" disabled={createWorkspace.isPending}>
+                  {createWorkspace.isPending ? "Creating Workspace…" : "Create Workspace"}
                 </Button>
               </form>
             </>

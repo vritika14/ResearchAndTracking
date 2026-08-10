@@ -2,6 +2,7 @@ import { useState, type FormEvent, type ReactNode } from "react";
 import { Check } from "lucide-react";
 
 import { Heading } from "@/components/typography/heading";
+import { WorkspaceMembers } from "@/components/settings/workspace-members";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
@@ -230,6 +231,7 @@ export default function SettingsPage() {
           </div>
         </div>
       </form>
+      <WorkspaceMembers />
     </div>
   );
 }
