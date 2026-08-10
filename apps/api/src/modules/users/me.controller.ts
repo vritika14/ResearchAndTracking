@@ -1,4 +1,10 @@
-import { Controller, Get, NotFoundException, Req, UseGuards } from '@nestjs/common';
+import {
+  Controller,
+  Get,
+  NotFoundException,
+  Req,
+  UseGuards,
+} from '@nestjs/common';
 import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
 import { Request } from 'express';
 import type { AuthenticatedPrincipal } from '../auth/jwt.strategy';
@@ -15,7 +21,9 @@ interface AuthenticatedRequest extends Request {
 export class MeController {
   constructor(private readonly usersService: UsersService) {}
 
-  @ApiOperation({ summary: 'Return or provision the authenticated user profile' })
+  @ApiOperation({
+    summary: 'Return or provision the authenticated user profile',
+  })
   @UseGuards(JwtAuthGuard)
   @Get()
   async getMe(@Req() req: AuthenticatedRequest) {

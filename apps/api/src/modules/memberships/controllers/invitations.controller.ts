@@ -1,4 +1,12 @@
-import { Controller, Get, NotFoundException, Param, Post, Req, UseGuards } from '@nestjs/common';
+import {
+  Controller,
+  Get,
+  NotFoundException,
+  Param,
+  Post,
+  Req,
+  UseGuards,
+} from '@nestjs/common';
 import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
 import { Request } from 'express';
 import { JwtAuthGuard } from '../../auth/jwt-auth.guard';
@@ -25,7 +33,9 @@ export class InvitationsController {
   }
 
   @ApiBearerAuth()
-  @ApiOperation({ summary: 'Accept the invitation for the authenticated email' })
+  @ApiOperation({
+    summary: 'Accept the invitation for the authenticated email',
+  })
   @UseGuards(JwtAuthGuard)
   @Post(':token/accept')
   async accept(
@@ -41,10 +51,6 @@ export class InvitationsController {
       throw new NotFoundException('User could not be found or provisioned');
     }
 
-    return this.membershipsService.acceptInvitation(
-      token,
-      user.id,
-      user.email,
-    );
+    return this.membershipsService.acceptInvitation(token, user.id, user.email);
   }
 }

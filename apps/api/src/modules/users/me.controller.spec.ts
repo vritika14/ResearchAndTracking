@@ -32,7 +32,9 @@ describe('MeController', () => {
         updatedAt: new Date(),
       });
 
-      const req = { user: { sub: 'cognito-sub-1', accessToken: 'access-token-1' } } as any;
+      const req = {
+        user: { sub: 'cognito-sub-1', accessToken: 'access-token-1' },
+      } as any;
       const result = await controller.getMe(req);
 
       expect(usersService.findOrProvisionFromAccessToken).toHaveBeenCalledWith(
@@ -58,7 +60,9 @@ describe('MeController', () => {
         updatedAt: new Date(),
       });
 
-      const req = { user: { sub: 'cognito-sub-2', accessToken: 'access-token-2' } } as any;
+      const req = {
+        user: { sub: 'cognito-sub-2', accessToken: 'access-token-2' },
+      } as any;
       const result = await controller.getMe(req);
 
       expect(result.email).toBe('real2@example.com');
@@ -68,7 +72,9 @@ describe('MeController', () => {
     it('throws NotFoundException when the user could not be found or provisioned', async () => {
       usersService.findOrProvisionFromAccessToken.mockResolvedValue(undefined);
 
-      const req = { user: { sub: 'cognito-sub-3', accessToken: 'access-token-3' } } as any;
+      const req = {
+        user: { sub: 'cognito-sub-3', accessToken: 'access-token-3' },
+      } as any;
 
       await expect(controller.getMe(req)).rejects.toThrow(NotFoundException);
     });
