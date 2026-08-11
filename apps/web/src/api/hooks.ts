@@ -41,12 +41,20 @@ export function useCurrentWorkspace() {
 export function useCreateWorkspace() {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: async (name: string) =>
-      responseData(
-        await apiClient.POST("/api/v1/workspaces", {
-          body: { name },
-        }),
-      ),
+    mutationFn: async (name: string) => {
+      const result = await apiClient.POST("/api/v1/workspaces", {
+        body: { name },
+      });
+
+      if (result.response.status !== 201) {
+        throw new ApiError(
+          result.response.status,
+          `Workspace creation returned unexpected status ${result.response.status}`,
+        );
+      }
+
+      return responseData(result);
+    },
     async onSuccess(workspace) {
       queryClient.setQueryData(apiKeys.currentWorkspace, workspace);
       await queryClient.invalidateQueries({ queryKey: apiKeys.me });
@@ -58,12 +66,21 @@ export function useInvitationPreview(token: string | undefined) {
   return useQuery({
     queryKey: apiKeys.invitation(token ?? ""),
     enabled: Boolean(token),
-    queryFn: async () =>
-      responseData(
-        await apiClient.GET("/api/v1/invitations/{token}", {
-          params: { path: { token: token! } },
-        }),
-      ),
+    queryFn: async () => {
+      const result = await apiClient.GET("/api/v1/invitations/{token}", {
+        params: { path: { token: token! } },
+      });
+
+      if (result.response.status !== 200) {
+        await responseData(result);
+        throw new ApiError(
+          result.response.status,
+          `Invitation preview returned status ${result.response.status}`,
+        );
+      }
+
+      return responseData(result);
+    },
     retry: false,
   });
 }
@@ -71,12 +88,21 @@ export function useInvitationPreview(token: string | undefined) {
 export function useAcceptInvitation(token: string) {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: async () =>
-      responseData(
-        await apiClient.POST("/api/v1/invitations/{token}/accept", {
-          params: { path: { token } },
-        }),
-      ),
+    mutationFn: async () => {
+      const result = await apiClient.POST("/api/v1/invitations/{token}/accept", {
+        params: { path: { token } },
+      });
+
+      if (result.response.status !== 201) {
+        await responseData(result);
+        throw new ApiError(
+          result.response.status,
+          `Invitation acceptance returned status ${result.response.status}`,
+        );
+      }
+
+      return responseData(result);
+    },
     async onSuccess() {
       await Promise.all([
         queryClient.invalidateQueries({ queryKey: apiKeys.me }),
