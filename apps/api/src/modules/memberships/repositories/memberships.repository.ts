@@ -3,6 +3,7 @@ import {
   invitations,
   tenantMemberships,
   tenants,
+  users,
 } from '@research-tracker/migrations';
 import { and, eq } from 'drizzle-orm';
 import { DrizzleService } from '../../../db/drizzle.service';
@@ -13,8 +14,21 @@ export class MembershipsRepository {
 
   async findActiveMembersByTenant(tenantId: string) {
     return this.drizzle.db
-      .select()
+      .select({
+        id: tenantMemberships.id,
+        tenantId: tenantMemberships.tenantId,
+        userId: tenantMemberships.userId,
+        email: users.email,
+        displayName: users.displayName,
+        role: tenantMemberships.role,
+        status: tenantMemberships.status,
+        invitedAt: tenantMemberships.invitedAt,
+        joinedAt: tenantMemberships.joinedAt,
+        createdAt: tenantMemberships.createdAt,
+        updatedAt: tenantMemberships.updatedAt,
+      })
       .from(tenantMemberships)
+      .innerJoin(users, eq(users.id, tenantMemberships.userId))
       .where(
         and(
           eq(tenantMemberships.tenantId, tenantId),
@@ -38,8 +52,21 @@ export class MembershipsRepository {
 
   async findMembershipById(tenantId: string, membershipId: string) {
     const [membership] = await this.drizzle.db
-      .select()
+      .select({
+        id: tenantMemberships.id,
+        tenantId: tenantMemberships.tenantId,
+        userId: tenantMemberships.userId,
+        email: users.email,
+        displayName: users.displayName,
+        role: tenantMemberships.role,
+        status: tenantMemberships.status,
+        invitedAt: tenantMemberships.invitedAt,
+        joinedAt: tenantMemberships.joinedAt,
+        createdAt: tenantMemberships.createdAt,
+        updatedAt: tenantMemberships.updatedAt,
+      })
       .from(tenantMemberships)
+      .innerJoin(users, eq(users.id, tenantMemberships.userId))
       .where(
         and(
           eq(tenantMemberships.tenantId, tenantId),

@@ -1,236 +1,133 @@
-import { useState, type FormEvent, type ReactNode } from "react";
-import { Check } from "lucide-react";
+import { Building2, Mail, ShieldCheck, UserRound } from "lucide-react";
 
-import { Heading } from "@/components/typography/heading";
+import { useCurrentWorkspace, useMe } from "@/api/hooks";
 import { WorkspaceMembers } from "@/components/settings/workspace-members";
-import { Button } from "@/components/ui/button";
+import { ErrorState } from "@/components/shared/error-state";
+import { LoadingState } from "@/components/shared/loading-state";
+import { Heading } from "@/components/typography/heading";
+import { Badge } from "@/components/ui/badge";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
-import { cn } from "@/lib/utils";
-
-interface SettingToggleProps {
-  checked: boolean;
-  onCheckedChange: (checked: boolean) => void;
-  label: string;
-}
-
-function SettingToggle({ checked, onCheckedChange, label }: SettingToggleProps) {
-  return (
-    <button
-      type="button"
-      role="switch"
-      aria-checked={checked}
-      aria-label={label}
-      onClick={() => onCheckedChange(!checked)}
-      className={cn(
-        "relative h-5 w-9 shrink-0 rounded-full transition-colors",
-        "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2",
-        checked ? "bg-primary" : "bg-slate-200 dark:bg-slate-700",
-      )}
-    >
-      <span
-        className={cn(
-          "absolute top-0.5 h-4 w-4 rounded-full bg-white shadow-sm transition-transform",
-          checked ? "translate-x-[18px]" : "translate-x-0.5",
-        )}
-      />
-    </button>
-  );
-}
-
-interface SettingRowProps {
-  title: string;
-  description: string;
-  children: ReactNode;
-}
-
-function SettingRow({ title, description, children }: SettingRowProps) {
-  return (
-    <div className="flex min-h-20 items-center justify-between gap-8 border-b py-5 last:border-b-0">
-      <div className="min-w-0">
-        <p className="text-sm font-semibold text-slate-950 dark:text-slate-100">{title}</p>
-        <p className="mt-1 text-sm leading-5 text-muted-foreground">{description}</p>
-      </div>
-      {children}
-    </div>
-  );
-}
 
 export default function SettingsPage() {
-  const [displayName, setDisplayName] = useState("Dr Emma Jepsen");
-  const [email, setEmail] = useState("emma.jepsen@university.edu.au");
-  const [dailyDigest, setDailyDigest] = useState(true);
-  const [digestTime, setDigestTime] = useState("4:30 pm");
-  const [twoFactor, setTwoFactor] = useState(true);
-  const [publicProfile, setPublicProfile] = useState(false);
-  const [saved, setSaved] = useState(false);
+  const me = useMe();
+  const workspace = useCurrentWorkspace();
 
-  function saveChanges(event: FormEvent<HTMLFormElement>) {
-    event.preventDefault();
-    setSaved(true);
-    window.setTimeout(() => setSaved(false), 2000);
+  if (me.isPending || workspace.isPending) {
+    return (
+      <LoadingState title="Loading your settings" className="min-h-[50vh]" />
+    );
+  }
+  if (me.isError) {
+    return (
+      <ErrorState
+        title="Your profile could not be loaded"
+        description={me.error.message}
+        onRetry={() => void me.refetch()}
+      />
+    );
   }
 
   return (
-    <div className="min-h-full">
-      <form onSubmit={saveChanges} className="mx-auto w-full max-w-5xl pb-12">
-        <div className="border-b pb-7">
-          <Heading level="h1" className="text-slate-950 dark:text-slate-50">
-            Settings
-          </Heading>
-          <p className="mt-2 max-w-2xl text-sm leading-6 text-muted-foreground">
-            Manage your account and preferences.
-          </p>
-        </div>
+    <div className="min-h-full pb-12">
+      <div className="mx-auto w-full max-w-5xl border-b pb-7">
+        <Heading level="h1">Settings</Heading>
+        <p className="mt-2 max-w-2xl text-sm leading-6 text-muted-foreground">
+          Review your authenticated account and manage the active workspace.
+        </p>
+      </div>
 
-        <section
-          aria-labelledby="profile-settings"
-          className="mt-7 rounded-xl border bg-card p-6 shadow-sm sm:p-7"
-        >
-          <div className="mb-6">
-            <h2
-              id="profile-settings"
-              className="text-base font-semibold text-slate-950 dark:text-slate-100"
-            >
+      <div className="mx-auto mt-7 grid w-full max-w-5xl gap-6 lg:grid-cols-[1.2fr_0.8fr]">
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <UserRound className="h-5 w-5 text-primary" />
               Profile
-            </h2>
-            <p className="mt-1 text-sm text-muted-foreground">
-              Update the account information shown throughout the workspace.
-            </p>
-          </div>
-
-          <div className="grid gap-6 md:grid-cols-2">
+            </CardTitle>
+            <CardDescription>
+              These details come from your authenticated Cognito account.
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="grid gap-5">
             <div className="grid gap-2">
-              <label
-                htmlFor="display-name"
-                className="text-sm font-medium text-slate-700 dark:text-slate-300"
-              >
+              <label htmlFor="display-name" className="text-sm font-medium">
                 Display name
               </label>
               <Input
                 id="display-name"
-                value={displayName}
-                onChange={(event) => setDisplayName(event.target.value)}
-                className="h-11 bg-background"
+                value={me.data.displayName}
+                readOnly
+                className="bg-muted/30"
               />
             </div>
-
             <div className="grid gap-2">
-              <label
-                htmlFor="email"
-                className="text-sm font-medium text-slate-700 dark:text-slate-300"
-              >
+              <label htmlFor="email" className="text-sm font-medium">
                 Email
               </label>
-              <Input
-                id="email"
-                type="email"
-                value={email}
-                onChange={(event) => setEmail(event.target.value)}
-                className="h-11 bg-background"
-              />
+              <div className="relative">
+                <Mail className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+                <Input
+                  id="email"
+                  type="email"
+                  value={me.data.email}
+                  readOnly
+                  className="bg-muted/30 pl-9"
+                />
+              </div>
             </div>
-          </div>
-        </section>
-
-        <div className="mt-6 grid items-start gap-6 lg:grid-cols-2">
-          <section
-            aria-labelledby="notification-settings"
-            className="rounded-xl border bg-card p-6 shadow-sm sm:p-7"
-          >
-            <div className="border-b pb-5">
-              <h2
-                id="notification-settings"
-                className="text-base font-semibold text-slate-950 dark:text-slate-100"
-              >
-                Notifications
-              </h2>
-              <p className="mt-1 text-sm text-muted-foreground">
-                Choose when and how you receive research updates.
-              </p>
-            </div>
-
-            <SettingRow
-              title="Daily email digest"
-              description="Receive a summary of tasks and notes each day."
-            >
-              <SettingToggle
-                checked={dailyDigest}
-                onCheckedChange={setDailyDigest}
-                label="Daily email digest"
-              />
-            </SettingRow>
-
-            <SettingRow title="Digest time" description="Time to send the daily digest.">
-              <Input
-                value={digestTime}
-                onChange={(event) => setDigestTime(event.target.value)}
-                aria-label="Digest time"
-                disabled={!dailyDigest}
-                className="h-10 w-28 bg-background text-center"
-              />
-            </SettingRow>
-          </section>
-
-          <section
-            aria-labelledby="security-settings"
-            className="rounded-xl border bg-card p-6 shadow-sm sm:p-7"
-          >
-            <div className="border-b pb-5">
-              <h2
-                id="security-settings"
-                className="text-base font-semibold text-slate-950 dark:text-slate-100"
-              >
-                Security and visibility
-              </h2>
-              <p className="mt-1 text-sm text-muted-foreground">
-                Control account protection and profile discoverability.
-              </p>
-            </div>
-
-            <SettingRow
-              title="Two-factor authentication"
-              description="Require 2FA on every sign-in."
-            >
-              <SettingToggle
-                checked={twoFactor}
-                onCheckedChange={setTwoFactor}
-                label="Two-factor authentication"
-              />
-            </SettingRow>
-
-            <SettingRow title="Public profile" description="Allow others to find your profile.">
-              <SettingToggle
-                checked={publicProfile}
-                onCheckedChange={setPublicProfile}
-                label="Public profile"
-              />
-            </SettingRow>
-          </section>
-        </div>
-
-        <div className="mt-6 flex flex-col gap-4 rounded-xl border bg-card px-6 py-5 shadow-sm sm:flex-row sm:items-center sm:justify-between">
-          <div>
-            <p className="text-sm font-medium text-slate-950 dark:text-slate-100">
-              Save your preferences
+            <p className="text-xs leading-5 text-muted-foreground">
+              Profile changes are managed by the identity provider. Contact an
+              administrator if these details are incorrect.
             </p>
-            <p className="mt-1 text-sm text-muted-foreground">
-              Changes apply to your account across this workspace.
-            </p>
-          </div>
+          </CardContent>
+        </Card>
 
-          <div className="flex items-center gap-3">
-            {saved ? (
-              <span role="status" className="text-sm text-emerald-600 dark:text-emerald-400">
-                Preferences updated.
-              </span>
-            ) : null}
-            <Button type="submit" className="h-10 px-5">
-              {saved ? <Check /> : null}
-              {saved ? "Changes saved" : "Save Changes"}
-            </Button>
-          </div>
+        <div className="grid gap-6">
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <ShieldCheck className="h-5 w-5 text-primary" />
+                Account status
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <Badge variant="outline" className="capitalize">
+                {me.data.status}
+              </Badge>
+              <p className="mt-3 break-all font-mono text-xs text-muted-foreground">
+                User ID: {me.data.id}
+              </p>
+            </CardContent>
+          </Card>
+
+          {workspace.data ? (
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <Building2 className="h-5 w-5 text-primary" />
+                  Active workspace
+                </CardTitle>
+                <CardDescription>{workspace.data.name}</CardDescription>
+              </CardHeader>
+              <CardContent className="flex items-center justify-between gap-3">
+                <Badge variant="outline" className="capitalize">
+                  {workspace.data.membershipRole.replace("_", " ")}
+                </Badge>
+                <span className="truncate text-xs text-muted-foreground">
+                  {workspace.data.slug}
+                </span>
+              </CardContent>
+            </Card>
+          ) : null}
         </div>
-      </form>
+      </div>
+
       <WorkspaceMembers />
     </div>
   );

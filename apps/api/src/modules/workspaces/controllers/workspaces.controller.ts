@@ -4,6 +4,7 @@ import {
   Get,
   NotFoundException,
   Post,
+  Put,
   Req,
   UseGuards,
 } from '@nestjs/common';
@@ -18,6 +19,7 @@ import type { AuthenticatedPrincipal } from '../../auth/jwt.strategy';
 import { JwtAuthGuard } from '../../auth/jwt-auth.guard';
 import { UsersService } from '../../users/users.service';
 import { CreateWorkspaceDto } from '../dto/create-workspace.dto';
+import { SwitchWorkspaceDto } from '../dto/switch-workspace.dto';
 import { WorkspacesService } from '../services/workspaces.service';
 
 interface AuthenticatedRequest extends Request {
@@ -55,6 +57,25 @@ export class WorkspacesController {
     return this.workspacesService.createWorkspace(user.id, dto.name);
   }
 
+  @ApiOperation({
+    summary: 'List workspaces available to the authenticated user',
+  })
+  @ApiResponse({ status: 200 })
+  @UseGuards(JwtAuthGuard)
+  @Get()
+  async list(@Req() req: AuthenticatedRequest) {
+    const user = await this.usersService.findOrProvisionFromAccessToken(
+      req.user.sub,
+      req.user.accessToken,
+    );
+
+    if (!user) {
+      throw new NotFoundException('User could not be found or provisioned');
+    }
+
+    return this.workspacesService.listWorkspaces(user.id);
+  }
+
   @ApiOperation({ summary: "Get the authenticated user's current workspace" })
   @ApiResponse({ status: 200 })
   @UseGuards(JwtAuthGuard)
@@ -70,5 +91,30 @@ export class WorkspacesController {
     }
 
     return this.workspacesService.getCurrentWorkspace(user.id);
+  }
+
+  @ApiOperation({
+    summary: "Switch the authenticated user's current workspace",
+  })
+  @ApiResponse({ status: 200 })
+  @UseGuards(JwtAuthGuard)
+  @Put('current')
+  async switchCurrent(
+    @Req() req: AuthenticatedRequest,
+    @Body() dto: SwitchWorkspaceDto,
+  ) {
+    const user = await this.usersService.findOrProvisionFromAccessToken(
+      req.user.sub,
+      req.user.accessToken,
+    );
+
+    if (!user) {
+      throw new NotFoundException('User could not be found or provisioned');
+    }
+
+    return this.workspacesService.switchCurrentWorkspace(
+      user.id,
+      dto.workspaceId,
+    );
   }
 }

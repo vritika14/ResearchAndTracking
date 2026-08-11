@@ -6,7 +6,11 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
-import { invitations, tenantMemberships } from '@research-tracker/migrations';
+import {
+  invitations,
+  tenantMemberships,
+  workspaceContexts,
+} from '@research-tracker/migrations';
 import { and, eq } from 'drizzle-orm';
 import { createHash, randomBytes } from 'crypto';
 import { DrizzleService } from '../../../db/drizzle.service';
@@ -164,6 +168,18 @@ export class MembershipsService {
         })
         .returning();
 
+      await tx
+        .insert(workspaceContexts)
+        .values({
+          userId,
+          tenantId: invitation.tenantId,
+          updatedAt: new Date(),
+        })
+        .onConflictDoUpdate({
+          target: workspaceContexts.userId,
+          set: { tenantId: invitation.tenantId, updatedAt: new Date() },
+        });
+
       return { membership };
     });
   }
@@ -183,6 +199,10 @@ export class MembershipsService {
       );
     }
 
-    return this.repository.revokeMembership(tenantId, membershipId);
+    const revoked = await this.repository.revokeMembership(
+      tenantId,
+      membershipId,
+    );
+    return revoked ? { ...membership, ...revoked } : revoked;
   }
 }

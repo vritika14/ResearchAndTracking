@@ -8,14 +8,18 @@ describe('WorkspacesController', () => {
   let controller: WorkspacesController;
   let workspacesService: {
     createWorkspace: jest.Mock;
+    listWorkspaces: jest.Mock;
     getCurrentWorkspace: jest.Mock;
+    switchCurrentWorkspace: jest.Mock;
   };
   let usersService: { findOrProvisionFromAccessToken: jest.Mock };
 
   beforeEach(async () => {
     workspacesService = {
       createWorkspace: jest.fn(),
+      listWorkspaces: jest.fn(),
       getCurrentWorkspace: jest.fn(),
+      switchCurrentWorkspace: jest.fn(),
     };
     usersService = {
       findOrProvisionFromAccessToken: jest.fn(),
@@ -30,6 +34,23 @@ describe('WorkspacesController', () => {
     }).compile();
 
     controller = moduleRef.get<WorkspacesController>(WorkspacesController);
+  });
+
+  describe('list', () => {
+    it('lists workspaces for the provisioned caller', async () => {
+      usersService.findOrProvisionFromAccessToken.mockResolvedValue({
+        id: 'user-1',
+      });
+      const available = [{ id: 'tenant-1' }, { id: 'tenant-2' }];
+      workspacesService.listWorkspaces.mockResolvedValue(available);
+
+      const req = {
+        user: { sub: 'cognito-sub-1', accessToken: 'token-1' },
+      } as any;
+
+      await expect(controller.list(req)).resolves.toBe(available);
+      expect(workspacesService.listWorkspaces).toHaveBeenCalledWith('user-1');
+    });
   });
 
   describe('create', () => {
@@ -107,6 +128,28 @@ describe('WorkspacesController', () => {
         NotFoundException,
       );
       expect(workspacesService.getCurrentWorkspace).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('switchCurrent', () => {
+    it('switches to an available workspace for the provisioned caller', async () => {
+      usersService.findOrProvisionFromAccessToken.mockResolvedValue({
+        id: 'user-1',
+      });
+      workspacesService.switchCurrentWorkspace.mockResolvedValue({
+        id: 'tenant-2',
+      });
+      const req = {
+        user: { sub: 'cognito-sub-1', accessToken: 'token-1' },
+      } as any;
+
+      await expect(
+        controller.switchCurrent(req, { workspaceId: 'tenant-2' }),
+      ).resolves.toEqual({ id: 'tenant-2' });
+      expect(workspacesService.switchCurrentWorkspace).toHaveBeenCalledWith(
+        'user-1',
+        'tenant-2',
+      );
     });
   });
 });
