@@ -10,6 +10,12 @@ export class MembershipResponseDto {
   @ApiProperty()
   userId!: string;
 
+  @ApiProperty({ format: 'email' })
+  email!: string;
+
+  @ApiProperty()
+  displayName!: string;
+
   @ApiProperty({ enum: ['owner', 'limited_member'] })
   role!: string;
 

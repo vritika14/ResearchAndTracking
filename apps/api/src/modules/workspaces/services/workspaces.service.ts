@@ -3,7 +3,11 @@ import {
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
-import { tenantMemberships, tenants } from '@research-tracker/migrations';
+import {
+  tenantMemberships,
+  tenants,
+  workspaceContexts,
+} from '@research-tracker/migrations';
 import { DrizzleService } from '../../../db/drizzle.service';
 import { WorkspacesRepository } from '../repositories/workspaces.repository';
 
@@ -23,11 +27,6 @@ export class WorkspacesService {
   ) {}
 
   async createWorkspace(ownerUserId: string, name: string) {
-    const existing = await this.repository.findByOwnerUserId(ownerUserId);
-    if (existing) {
-      throw new ConflictException('You already own a workspace');
-    }
-
     const slug = `${slugify(name)}-${Date.now()}`;
 
     return this.drizzle.db.transaction(async (tx) => {
@@ -54,15 +53,51 @@ export class WorkspacesService {
         joinedAt: new Date(),
       });
 
-      return tenant;
+      await tx
+        .insert(workspaceContexts)
+        .values({
+          userId: ownerUserId,
+          tenantId: tenant.id,
+          updatedAt: new Date(),
+        })
+        .onConflictDoUpdate({
+          target: workspaceContexts.userId,
+          set: { tenantId: tenant.id, updatedAt: new Date() },
+        });
+
+      return { ...tenant, membershipRole: 'owner' as const };
     });
   }
 
+  async listWorkspaces(userId: string) {
+    return this.repository.findAllByMemberUserId(userId);
+  }
+
   async getCurrentWorkspace(userId: string) {
-    const tenant = await this.repository.findByMemberUserId(userId);
-    if (!tenant) {
+    const current = await this.repository.findCurrentByUserId(userId);
+    if (current) {
+      return current;
+    }
+
+    const [fallback] = await this.repository.findAllByMemberUserId(userId);
+    if (!fallback) {
       throw new NotFoundException('You do not belong to any workspace yet');
     }
-    return tenant;
+
+    await this.repository.setCurrentWorkspace(userId, fallback.id);
+    return fallback;
+  }
+
+  async switchCurrentWorkspace(userId: string, tenantId: string) {
+    const workspace = await this.repository.findWorkspaceForMember(
+      userId,
+      tenantId,
+    );
+    if (!workspace) {
+      throw new NotFoundException('Workspace is unavailable to this user');
+    }
+
+    await this.repository.setCurrentWorkspace(userId, tenantId);
+    return workspace;
   }
 }

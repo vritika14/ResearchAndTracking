@@ -1,5 +1,8 @@
-import { useState, type FormEvent, type ReactNode } from "react";
+import { useMemo, useState, type FormEvent, type ReactNode } from "react";
+import { LockKeyhole, Search, UserRound, X } from "lucide-react";
 
+import type { Membership } from "@/api/hooks";
+import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { DatePickerInput } from "@/components/ui/date-picker-input";
 import {
@@ -22,7 +25,6 @@ import {
 import { PIPELINE_STAGES } from "@/data/pipeline-projects";
 import type { ProjectPriority, ProjectRole, ProjectStatus } from "@/data/projects";
 
-const PROJECT_ROLES: ProjectRole[] = ["Owner", "Lead", "Collaborator", "Supervisor"];
 const PROJECT_PRIORITIES: ProjectPriority[] = ["Low", "Medium", "High", "Critical"];
 const PROJECT_STATUSES: ProjectStatus[] = ["Active", "Review", "Stalled", "Complete"];
 
@@ -45,6 +47,10 @@ interface NewProjectDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   onCreate: (project: NewProjectInput) => void;
+  principalInvestigator: string;
+  currentUserId: string;
+  members: Membership[];
+  membersLoading: boolean;
 }
 
 const INITIAL_FORM: NewProjectInput = {
@@ -79,11 +85,47 @@ function FormField({ label, htmlFor, required, children }: {
   );
 }
 
-export function NewProjectDialog({ open, onOpenChange, onCreate }: NewProjectDialogProps) {
+export function NewProjectDialog({
+  open,
+  onOpenChange,
+  onCreate,
+  principalInvestigator,
+  currentUserId,
+  members,
+  membersLoading,
+}: NewProjectDialogProps) {
   const [form, setForm] = useState<NewProjectInput>(INITIAL_FORM);
+  const [memberSearch, setMemberSearch] = useState("");
+  const [memberPickerOpen, setMemberPickerOpen] = useState(false);
+  const [selectedMembers, setSelectedMembers] = useState<Membership[]>([]);
+
+  const matchingMembers = useMemo(() => {
+    const query = memberSearch.trim().toLowerCase();
+    const selectedIds = new Set(selectedMembers.map((member) => member.userId));
+
+    return members
+      .filter(
+        (member) =>
+          member.userId !== currentUserId && !selectedIds.has(member.userId),
+      )
+      .filter(
+        (member) =>
+          !query ||
+          member.displayName.toLowerCase().includes(query) ||
+          member.email.toLowerCase().includes(query),
+      )
+      .slice(0, 8);
+  }, [currentUserId, memberSearch, members, selectedMembers]);
+
+  function resetForm() {
+    setForm(INITIAL_FORM);
+    setMemberSearch("");
+    setMemberPickerOpen(false);
+    setSelectedMembers([]);
+  }
 
   function handleOpenChange(nextOpen: boolean) {
-    if (!nextOpen) setForm(INITIAL_FORM);
+    if (!nextOpen) resetForm();
     onOpenChange(nextOpen);
   }
 
@@ -92,12 +134,15 @@ export function NewProjectDialog({ open, onOpenChange, onCreate }: NewProjectDia
     onCreate({
       ...form,
       title: form.title.trim(),
-      pi: form.pi.trim(),
+      pi: principalInvestigator,
       funder: form.funder.trim() || "Not specified",
-      collaborators: form.collaborators.trim() || "None listed",
+      collaborators:
+        selectedMembers.map((member) => member.displayName).join(", ") ||
+        "None listed",
+      myRole: "Owner",
       targetJournal: form.targetJournal.trim() || "Not specified",
     });
-    setForm(INITIAL_FORM);
+    resetForm();
     onOpenChange(false);
   }
 
@@ -125,13 +170,17 @@ export function NewProjectDialog({ open, onOpenChange, onCreate }: NewProjectDia
             </FormField>
 
             <FormField label="Principal investigator" htmlFor="project-pi" required>
-              <Input
-                id="project-pi"
-                value={form.pi}
-                onChange={(event) => setForm((prev) => ({ ...prev, pi: event.target.value }))}
-                placeholder="e.g. Dr. Maria Chen"
-                required
-              />
+              <div className="relative">
+                <UserRound className="pointer-events-none absolute left-3 top-2.5 h-4 w-4 text-muted-foreground" />
+                <Input
+                  id="project-pi"
+                  value={principalInvestigator}
+                  readOnly
+                  required
+                  className="bg-muted/60 pl-9 pr-9"
+                />
+                <LockKeyhole className="pointer-events-none absolute right-3 top-2.5 h-4 w-4 text-muted-foreground" />
+              </div>
             </FormField>
 
             <FormField label="Funder" htmlFor="project-funder">
@@ -143,30 +192,118 @@ export function NewProjectDialog({ open, onOpenChange, onCreate }: NewProjectDia
               />
             </FormField>
 
-            <FormField label="Collaborators" htmlFor="project-collaborators">
-              <Input
-                id="project-collaborators"
-                value={form.collaborators}
-                onChange={(event) =>
-                  setForm((prev) => ({ ...prev, collaborators: event.target.value }))
-                }
-                placeholder="Names separated by commas"
-              />
+            <FormField label="My role" htmlFor="project-role">
+              <div className="relative">
+                <Input
+                  id="project-role"
+                  value="Owner"
+                  readOnly
+                  className="bg-muted/60 pr-9"
+                />
+                <LockKeyhole className="pointer-events-none absolute right-3 top-2.5 h-4 w-4 text-muted-foreground" />
+              </div>
             </FormField>
 
-            <FormField label="My role" htmlFor="project-role">
-              <Select
-                value={form.myRole}
-                onValueChange={(value) =>
-                  setForm((prev) => ({ ...prev, myRole: value as ProjectRole }))
-                }
-              >
-                <SelectTrigger id="project-role"><SelectValue /></SelectTrigger>
-                <SelectContent>
-                  {PROJECT_ROLES.map((role) => <SelectItem key={role} value={role}>{role}</SelectItem>)}
-                </SelectContent>
-              </Select>
-            </FormField>
+            <div className="sm:col-span-2">
+              <FormField label="With whom" htmlFor="project-members">
+                <div
+                  className="relative"
+                  onBlur={(event) => {
+                    if (!event.currentTarget.contains(event.relatedTarget)) {
+                      setMemberPickerOpen(false);
+                    }
+                  }}
+                >
+                  <Search className="pointer-events-none absolute left-3 top-2.5 h-4 w-4 text-muted-foreground" />
+                  <Input
+                    id="project-members"
+                    role="combobox"
+                    aria-expanded={memberPickerOpen}
+                    aria-controls="project-member-options"
+                    aria-autocomplete="list"
+                    value={memberSearch}
+                    onFocus={() => setMemberPickerOpen(true)}
+                    onChange={(event) => {
+                      setMemberSearch(event.target.value);
+                      setMemberPickerOpen(true);
+                    }}
+                    placeholder="Type a workspace member's name or email"
+                    className="pl-9"
+                    autoComplete="off"
+                  />
+                  {memberPickerOpen ? (
+                    <div
+                      id="project-member-options"
+                      role="listbox"
+                      className="absolute z-50 mt-1 max-h-56 w-full overflow-y-auto rounded-md border bg-popover p-1 text-popover-foreground shadow-lg"
+                    >
+                      {membersLoading ? (
+                        <p className="px-3 py-2 text-sm text-muted-foreground">
+                          Loading workspace members…
+                        </p>
+                      ) : matchingMembers.length ? (
+                        matchingMembers.map((member) => (
+                          <button
+                            key={member.id}
+                            type="button"
+                            role="option"
+                            aria-selected="false"
+                            className="flex w-full items-center justify-between gap-3 rounded-sm px-3 py-2 text-left hover:bg-accent focus:bg-accent focus:outline-none"
+                            onClick={() => {
+                              setSelectedMembers((current) => [
+                                ...current,
+                                member,
+                              ]);
+                              setMemberSearch("");
+                            }}
+                          >
+                            <span className="min-w-0">
+                              <span className="block truncate text-sm font-medium">
+                                {member.displayName}
+                              </span>
+                              <span className="block truncate text-xs text-muted-foreground">
+                                {member.email}
+                              </span>
+                            </span>
+                            <Badge variant="outline" className="shrink-0 capitalize">
+                              {member.role.replace("_", " ")}
+                            </Badge>
+                          </button>
+                        ))
+                      ) : (
+                        <p className="px-3 py-2 text-sm text-muted-foreground">
+                          No matching workspace members.
+                        </p>
+                      )}
+                    </div>
+                  ) : null}
+                </div>
+                {selectedMembers.length ? (
+                  <div className="mt-2 flex flex-wrap gap-2" aria-label="Selected project members">
+                    {selectedMembers.map((member) => (
+                      <Badge key={member.id} variant="secondary" className="gap-1.5 py-1">
+                        {member.displayName}
+                        <button
+                          type="button"
+                          aria-label={`Remove ${member.displayName}`}
+                          onClick={() =>
+                            setSelectedMembers((current) =>
+                              current.filter((item) => item.id !== member.id),
+                            )
+                          }
+                          className="rounded-full hover:text-destructive focus:outline-none focus:ring-1 focus:ring-ring"
+                        >
+                          <X className="h-3 w-3" />
+                        </button>
+                      </Badge>
+                    ))}
+                  </div>
+                ) : null}
+                <p className="mt-1 text-xs text-muted-foreground">
+                  Search active members of the current workspace.
+                </p>
+              </FormField>
+            </div>
 
             <FormField label="Importance" htmlFor="project-priority">
               <Select

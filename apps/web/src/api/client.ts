@@ -2,7 +2,10 @@ import createClient from "openapi-fetch";
 
 import type { paths } from "@/api/schema";
 
-const apiBaseUrl = import.meta.env.VITE_API_BASE_URL ?? "http://localhost:3000";
+const apiBaseUrl =
+  import.meta.env.VITE_API_URL ??
+  import.meta.env.VITE_API_BASE_URL ??
+  "http://localhost:3000";
 let accessToken: string | undefined;
 
 export class ApiError extends Error {

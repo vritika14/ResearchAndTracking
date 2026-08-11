@@ -1,21 +1,41 @@
 import { Injectable } from '@nestjs/common';
-import { tenantMemberships, tenants } from '@research-tracker/migrations';
-import { eq, and } from 'drizzle-orm';
+import {
+  tenantMemberships,
+  tenants,
+  workspaceContexts,
+} from '@research-tracker/migrations';
+import { and, asc, eq } from 'drizzle-orm';
 import { DrizzleService } from '../../../db/drizzle.service';
 
 @Injectable()
 export class WorkspacesRepository {
   constructor(private readonly drizzle: DrizzleService) {}
 
-  async findByOwnerUserId(ownerUserId: string) {
-    const [tenant] = await this.drizzle.db
-      .select()
-      .from(tenants)
-      .where(eq(tenants.ownerUserId, ownerUserId));
-    return tenant;
+  async findAllByMemberUserId(userId: string) {
+    return this.drizzle.db
+      .select({
+        id: tenants.id,
+        name: tenants.name,
+        slug: tenants.slug,
+        ownerUserId: tenants.ownerUserId,
+        status: tenants.status,
+        createdAt: tenants.createdAt,
+        updatedAt: tenants.updatedAt,
+        membershipRole: tenantMemberships.role,
+      })
+      .from(tenantMemberships)
+      .innerJoin(tenants, eq(tenants.id, tenantMemberships.tenantId))
+      .where(
+        and(
+          eq(tenantMemberships.userId, userId),
+          eq(tenantMemberships.status, 'active'),
+          eq(tenants.status, 'active'),
+        ),
+      )
+      .orderBy(asc(tenants.name));
   }
 
-  async findByMemberUserId(userId: string) {
+  async findWorkspaceForMember(userId: string, tenantId: string) {
     const [result] = await this.drizzle.db
       .select({
         id: tenants.id,
@@ -25,15 +45,59 @@ export class WorkspacesRepository {
         status: tenants.status,
         createdAt: tenants.createdAt,
         updatedAt: tenants.updatedAt,
+        membershipRole: tenantMemberships.role,
       })
       .from(tenantMemberships)
       .innerJoin(tenants, eq(tenants.id, tenantMemberships.tenantId))
       .where(
         and(
           eq(tenantMemberships.userId, userId),
+          eq(tenantMemberships.tenantId, tenantId),
           eq(tenantMemberships.status, 'active'),
+          eq(tenants.status, 'active'),
         ),
       );
     return result;
+  }
+
+  async findCurrentByUserId(userId: string) {
+    const [result] = await this.drizzle.db
+      .select({
+        id: tenants.id,
+        name: tenants.name,
+        slug: tenants.slug,
+        ownerUserId: tenants.ownerUserId,
+        status: tenants.status,
+        createdAt: tenants.createdAt,
+        updatedAt: tenants.updatedAt,
+        membershipRole: tenantMemberships.role,
+      })
+      .from(workspaceContexts)
+      .innerJoin(tenants, eq(tenants.id, workspaceContexts.tenantId))
+      .innerJoin(
+        tenantMemberships,
+        and(
+          eq(tenantMemberships.tenantId, tenants.id),
+          eq(tenantMemberships.userId, workspaceContexts.userId),
+        ),
+      )
+      .where(
+        and(
+          eq(workspaceContexts.userId, userId),
+          eq(tenantMemberships.status, 'active'),
+          eq(tenants.status, 'active'),
+        ),
+      );
+    return result;
+  }
+
+  async setCurrentWorkspace(userId: string, tenantId: string) {
+    await this.drizzle.db
+      .insert(workspaceContexts)
+      .values({ userId, tenantId, updatedAt: new Date() })
+      .onConflictDoUpdate({
+        target: workspaceContexts.userId,
+        set: { tenantId, updatedAt: new Date() },
+      });
   }
 }

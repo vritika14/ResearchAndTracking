@@ -27,7 +27,7 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        get?: never;
+        get: operations["WorkspacesController_list"];
         put?: never;
         post: operations["WorkspacesController_create"];
         delete?: never;
@@ -44,7 +44,7 @@ export interface paths {
             cookie?: never;
         };
         get: operations["WorkspacesController_getCurrent"];
-        put?: never;
+        put: operations["WorkspacesController_switchCurrent"];
         post?: never;
         delete?: never;
         options?: never;
@@ -100,6 +100,22 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/tenant/{tenantId}/members/{membershipId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        delete: operations["MembershipsController_revokeMember"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/tenant/{tenantId}/invitations": {
         parameters: {
             query?: never;
@@ -131,6 +147,10 @@ export interface components {
         CreateWorkspace: {
             name: string;
         };
+        SwitchWorkspace: {
+            /** Format: uuid */
+            workspaceId: string;
+        };
         Workspace: {
             /** Format: uuid */
             id: string;
@@ -139,6 +159,8 @@ export interface components {
             status: string;
             /** Format: uuid */
             ownerUserId: string;
+            /** @enum {string} */
+            membershipRole: "owner" | "limited_member";
             /** Format: date-time */
             createdAt: string;
             /** Format: date-time */
@@ -159,6 +181,9 @@ export interface components {
             tenantId: string;
             /** Format: uuid */
             userId: string;
+            /** Format: email */
+            email: string;
+            displayName: string;
             /** @enum {string} */
             role: "owner" | "limited_member";
             /** @enum {string} */
@@ -205,6 +230,7 @@ export interface components {
     parameters: {
         InvitationToken: string;
         TenantId: string;
+        MembershipId: string;
     };
     requestBodies: never;
     headers: never;
@@ -228,6 +254,26 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["Me"];
+                };
+            };
+        };
+    };
+    WorkspacesController_list: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Available workspaces */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Workspace"][];
                 };
             };
         };
@@ -275,6 +321,37 @@ export interface operations {
                 };
             };
             /** @description User has no workspace */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    WorkspacesController_switchCurrent: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["SwitchWorkspace"];
+            };
+        };
+        responses: {
+            /** @description Current workspace switched */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Workspace"];
+                };
+            };
+            /** @description Workspace unavailable to user */
             404: {
                 headers: {
                     [name: string]: unknown;
@@ -383,6 +460,43 @@ export interface operations {
                 content: {
                     "application/json": components["schemas"]["Membership"][];
                 };
+            };
+        };
+    };
+    MembershipsController_revokeMember: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                tenantId: components["parameters"]["TenantId"];
+                membershipId: components["parameters"]["MembershipId"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Membership revoked */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Membership"];
+                };
+            };
+            /** @description Owner access required */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Membership not found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
             };
         };
     };

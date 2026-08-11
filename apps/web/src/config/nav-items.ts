@@ -1,6 +1,7 @@
 import type { LucideIcon } from "lucide-react";
 import {
   Activity,
+  Building2,
   BookOpen,
   Calendar,
   ClipboardCheck,
@@ -54,6 +55,7 @@ export const navGroups: NavGroup[] = [
   {
     label: "Account",
     items: [
+      { label: "Workspaces", to: "/workspaces", icon: Building2 },
       { label: "Settings", to: "/settings", icon: Settings },
       {
         label: "Account Audit",

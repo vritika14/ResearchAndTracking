@@ -22,6 +22,20 @@
       "when": 1786059272579,
       "tag": "0002_freezing_warlock",
       "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "7",
+      "when": 1786419103237,
+      "tag": "0003_loose_dazzler",
+      "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "7",
+      "when": 1786425196925,
+      "tag": "0004_grant_workspace_contexts_runtime",
+      "breakpoints": true
     }
   ]
 }

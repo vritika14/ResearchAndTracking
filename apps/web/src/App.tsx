@@ -17,6 +17,7 @@ import SignInPage from "@/pages/sign-in";
 import AuthCallbackPage from "@/pages/auth-callback";
 import InvitationAcceptancePage from "@/pages/invitation-acceptance";
 import WorkspaceOnboardingPage from "@/pages/workspace-onboarding";
+import WorkspacesPage from "@/pages/workspaces";
 import SessionExpiredPage from "@/pages/session-expired";
 import AccessDeniedPage from "@/pages/access-denied";
 import MembershipStatusPage from "@/pages/membership-status";
@@ -33,7 +34,10 @@ export default function App() {
 
       <Route element={<RequireAuth />}>
         <Route element={<RequireApiSession />}>
-          <Route path="membership-status/:status" element={<MembershipStatusPage />} />
+          <Route
+            path="membership-status/:status"
+            element={<MembershipStatusPage />}
+          />
           <Route element={<RequireWorkspace shouldExist={false} />}>
             <Route path="onboarding" element={<WorkspaceOnboardingPage />} />
           </Route>
@@ -41,12 +45,19 @@ export default function App() {
             <Route element={<AppLayout />}>
               <Route index element={<DashboardPage />} />
               <Route path="projects" element={<ProjectsPage />} />
-              <Route path="projects/:projectId" element={<ProjectDetailPage />} />
+              <Route
+                path="projects/:projectId"
+                element={<ProjectDetailPage />}
+              />
               <Route path="tasks" element={<TasksPage />} />
               <Route path="daily-notes" element={<DailyNotesPage />} />
               <Route path="pipeline" element={<PipelinePage />} />
               <Route path="settings" element={<SettingsPage />} />
-              <Route path="settings/account-audit" element={<AccountAuditPage />} />
+              <Route path="workspaces" element={<WorkspacesPage />} />
+              <Route
+                path="settings/account-audit"
+                element={<AccountAuditPage />}
+              />
               <Route path="future/:feature" element={<FutureFeaturePage />} />
               <Route path="*" element={<NotFoundPage />} />
             </Route>
