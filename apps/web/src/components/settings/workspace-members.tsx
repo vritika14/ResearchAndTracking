@@ -1,4 +1,4 @@
-import { Copy, MailPlus, Trash2, Users } from "lucide-react";
+import { Copy, MailPlus, Send, Trash2, Users } from "lucide-react";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
 
@@ -9,6 +9,7 @@ import {
   useMembers,
   useRevokeMember,
 } from "@/api/hooks";
+import { buildInvitationEmailHref } from "@/components/settings/invitation-email";
 import { ErrorState } from "@/components/shared/error-state";
 import { LoadingState } from "@/components/shared/loading-state";
 import { Badge } from "@/components/ui/badge";
@@ -64,6 +65,15 @@ export function WorkspaceMembers() {
   const invitationUrl = createdInvitation
     ? `${window.location.origin}/invitations/${encodeURIComponent(createdInvitation.acceptanceToken)}`
     : undefined;
+  const invitationEmailHref =
+    createdInvitation && invitationUrl
+      ? buildInvitationEmailHref({
+          email: createdInvitation.invitation.email,
+          workspaceName: workspace.data.name,
+          invitationUrl,
+          expiresAt: createdInvitation.invitation.expiresAt,
+        })
+      : undefined;
 
   function removeMember(membershipId: string, memberEmail: string) {
     if (!window.confirm(`Remove ${memberEmail} from ${workspace.data?.name}?`))
@@ -178,7 +188,8 @@ export function WorkspaceMembers() {
               Invite a member
             </CardTitle>
             <CardDescription>
-              Invited users always join as limited members.
+              Invited users always join as limited members. Create the link,
+              then send it using your email application.
             </CardDescription>
           </CardHeader>
           <CardContent>
@@ -218,23 +229,33 @@ export function WorkspaceMembers() {
                   This link is shown once. Send it only to{" "}
                   {createdInvitation?.invitation.email}.
                 </p>
-                <div className="mt-3 flex gap-2">
+                <div className="mt-3 flex flex-col gap-2 sm:flex-row">
                   <Input
                     aria-label="Invitation link"
                     readOnly
                     value={invitationUrl}
-                    className="font-mono text-xs"
+                    className="min-w-0 font-mono text-xs"
                   />
-                  <Button
-                    type="button"
-                    variant="outline"
-                    aria-label="Copy invitation link"
-                    onClick={() =>
-                      void navigator.clipboard.writeText(invitationUrl)
-                    }
-                  >
-                    <Copy className="h-4 w-4" />
-                  </Button>
+                  <div className="flex shrink-0 gap-2">
+                    <Button
+                      type="button"
+                      variant="outline"
+                      aria-label="Copy invitation link"
+                      onClick={() =>
+                        void navigator.clipboard.writeText(invitationUrl)
+                      }
+                    >
+                      <Copy className="h-4 w-4" />
+                    </Button>
+                    {invitationEmailHref ? (
+                      <Button asChild>
+                        <a href={invitationEmailHref}>
+                          <Send className="h-4 w-4" />
+                          Email invitation
+                        </a>
+                      </Button>
+                    ) : null}
+                  </div>
                 </div>
               </div>
             ) : null}

@@ -2,6 +2,7 @@ import { useMemo, useState } from "react";
 import { ChevronRight, Pencil } from "lucide-react";
 import { Link } from "react-router-dom";
 
+import { useCurrentWorkspace, useMe, useMembers } from "@/api/hooks";
 import { PageHeading } from "@/components/typography/heading";
 import {
   NewProjectDialog,
@@ -161,6 +162,12 @@ export default function ProjectsPage() {
   const [role, setRole] = useState<RoleFilter>("All roles");
   const [sortBy, setSortBy] = useState<SortOption>("Due date");
   const [expandedId, setExpandedId] = useState<string | null>(null);
+  const me = useMe();
+  const workspace = useCurrentWorkspace();
+  const workspaceMembers = useMembers(
+    workspace.data?.id ?? "",
+    isNewProjectOpen,
+  );
 
   function toggleExpanded(id: string) {
     setExpandedId((prev) => (prev === id ? null : id));
@@ -228,6 +235,10 @@ export default function ProjectsPage() {
         open={isNewProjectOpen}
         onOpenChange={setIsNewProjectOpen}
         onCreate={createProject}
+        principalInvestigator={me.data?.displayName ?? me.data?.email ?? ""}
+        currentUserId={me.data?.id ?? ""}
+        members={workspaceMembers.data ?? []}
+        membersLoading={workspaceMembers.isPending}
       />
 
       <div className="flex flex-col gap-4 rounded-lg border p-4 lg:flex-row lg:items-start lg:justify-between">
