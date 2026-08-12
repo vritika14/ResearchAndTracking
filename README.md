@@ -117,6 +117,13 @@ Both scripts are idempotent and environment-agnostic — the same commands run i
 
 ### 8. Run the API
 
+Invitation emails are delivered by Amazon SES. Verify the sender identity in
+the same AWS region, set `INVITATION_EMAIL_FROM` in `.env`, and make AWS
+credentials available through the normal SDK credential chain (for example,
+`AWS_PROFILE=research-dev` locally or an IAM role in deployment). The identity
+needs `ses:SendEmail` permission. While an SES account is in
+sandbox mode, recipient addresses must also be verified.
+
 ```bash
 pnpm dev
 ```

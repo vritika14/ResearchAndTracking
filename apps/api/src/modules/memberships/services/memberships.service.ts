@@ -15,6 +15,7 @@ import { and, eq } from 'drizzle-orm';
 import { createHash, randomBytes } from 'crypto';
 import { DrizzleService } from '../../../db/drizzle.service';
 import { MembershipsRepository } from '../repositories/memberships.repository';
+import { InvitationEmailService } from './invitation-email.service';
 
 function normaliseEmail(value: string) {
   return value.trim().toLowerCase();
@@ -36,6 +37,7 @@ export class MembershipsService {
     private readonly repository: MembershipsRepository,
     private readonly drizzle: DrizzleService,
     private readonly configService: ConfigService,
+    private readonly invitationEmailService: InvitationEmailService,
   ) {}
 
   async listMembers(tenantId: string) {
@@ -52,6 +54,11 @@ export class MembershipsService {
       throw new ConflictException(
         'A pending invitation already exists for this email',
       );
+    }
+
+    const tenant = await this.repository.findTenantById(tenantId);
+    if (!tenant) {
+      throw new NotFoundException('Workspace not found');
     }
 
     const tokenBytes = this.configService.getOrThrow<number>(
@@ -78,10 +85,26 @@ export class MembershipsService {
       throw new ConflictException('Failed to create invitation');
     }
 
-    // The raw token is returned once so the caller can construct/send the invitation URL.
-    // Only the hash is stored in PostgreSQL.
+    try {
+      await this.invitationEmailService.sendInvitation({
+        email: normalisedEmail,
+        workspaceName: tenant.name,
+        acceptanceToken: rawToken,
+        expiresAt,
+      });
+    } catch (error) {
+      await this.repository.deleteInvitation(invitation.id);
+      throw error;
+    }
+
+    // The raw token is sent through SES and returned once for API compatibility.
+    // Only the hash is stored in PostgreSQL and request logging masks token paths.
     const { token: _storedHash, ...safeInvitation } = invitation;
-    return { invitation: safeInvitation, acceptanceToken: rawToken };
+    return {
+      invitation: safeInvitation,
+      acceptanceToken: rawToken,
+      emailSent: true,
+    };
   }
 
   async previewInvitation(rawToken: string) {

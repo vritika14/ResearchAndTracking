@@ -1,4 +1,4 @@
-import { Copy, MailPlus, Send, Trash2, Users } from "lucide-react";
+import { CheckCircle2, MailPlus, Trash2, Users } from "lucide-react";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
 
@@ -9,7 +9,6 @@ import {
   useMembers,
   useRevokeMember,
 } from "@/api/hooks";
-import { buildInvitationEmailHref } from "@/components/settings/invitation-email";
 import { ErrorState } from "@/components/shared/error-state";
 import { LoadingState } from "@/components/shared/loading-state";
 import { Badge } from "@/components/ui/badge";
@@ -54,6 +53,7 @@ export function WorkspaceMembers() {
       form.setError("email", { message: parsed.error.issues[0]?.message });
       return;
     }
+    createInvitation.reset();
     await createInvitation
       .mutateAsync(parsed.data.email)
       .then(() => form.reset())
@@ -62,18 +62,6 @@ export function WorkspaceMembers() {
 
   if (!workspace.data) return null;
   const createdInvitation = createInvitation.data;
-  const invitationUrl = createdInvitation
-    ? `${window.location.origin}/invitations/${encodeURIComponent(createdInvitation.acceptanceToken)}`
-    : undefined;
-  const invitationEmailHref =
-    createdInvitation && invitationUrl
-      ? buildInvitationEmailHref({
-          email: createdInvitation.invitation.email,
-          workspaceName: workspace.data.name,
-          invitationUrl,
-          expiresAt: createdInvitation.invitation.expiresAt,
-        })
-      : undefined;
 
   function removeMember(membershipId: string, memberEmail: string) {
     if (!window.confirm(`Remove ${memberEmail} from ${workspace.data?.name}?`))
@@ -188,8 +176,8 @@ export function WorkspaceMembers() {
               Invite a member
             </CardTitle>
             <CardDescription>
-              Invited users always join as limited members. Create the link,
-              then send it using your email application.
+              Invited users always join as limited members. The acceptance
+              link is delivered directly by email.
             </CardDescription>
           </CardHeader>
           <CardContent>
@@ -214,7 +202,10 @@ export function WorkspaceMembers() {
                 ) : null}
               </div>
               <Button type="submit" disabled={createInvitation.isPending}>
-                {createInvitation.isPending ? "Creating…" : "Create invitation"}
+                <MailPlus className="h-4 w-4" />
+                {createInvitation.isPending
+                  ? "Sending invitation…"
+                  : "Send invitation"}
               </Button>
             </form>
             {createInvitation.isError ? (
@@ -222,40 +213,15 @@ export function WorkspaceMembers() {
                 {createInvitation.error.message}
               </p>
             ) : null}
-            {invitationUrl ? (
-              <div className="mt-4 rounded-lg border bg-muted/30 p-4">
-                <p className="text-sm font-semibold">Invitation link created</p>
-                <p className="mt-1 text-xs text-muted-foreground">
-                  This link is shown once. Send it only to{" "}
-                  {createdInvitation?.invitation.email}.
-                </p>
-                <div className="mt-3 flex flex-col gap-2 sm:flex-row">
-                  <Input
-                    aria-label="Invitation link"
-                    readOnly
-                    value={invitationUrl}
-                    className="min-w-0 font-mono text-xs"
-                  />
-                  <div className="flex shrink-0 gap-2">
-                    <Button
-                      type="button"
-                      variant="outline"
-                      aria-label="Copy invitation link"
-                      onClick={() =>
-                        void navigator.clipboard.writeText(invitationUrl)
-                      }
-                    >
-                      <Copy className="h-4 w-4" />
-                    </Button>
-                    {invitationEmailHref ? (
-                      <Button asChild>
-                        <a href={invitationEmailHref}>
-                          <Send className="h-4 w-4" />
-                          Email invitation
-                        </a>
-                      </Button>
-                    ) : null}
-                  </div>
+            {createdInvitation?.emailSent ? (
+              <div className="mt-4 flex items-start gap-3 rounded-lg border border-emerald-200 bg-emerald-50 p-4 text-emerald-900">
+                <CheckCircle2 className="mt-0.5 h-5 w-5 shrink-0 text-emerald-600" />
+                <div>
+                  <p className="text-sm font-semibold">Invitation sent</p>
+                  <p className="mt-1 text-xs text-emerald-800">
+                    The acceptance link was emailed to{" "}
+                    {createdInvitation.invitation.email}.
+                  </p>
                 </div>
               </div>
             ) : null}

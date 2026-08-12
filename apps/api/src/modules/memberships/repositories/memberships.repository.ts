@@ -104,6 +104,14 @@ export class MembershipsRepository {
     return invitation;
   }
 
+  async findTenantById(tenantId: string) {
+    const [tenant] = await this.drizzle.db
+      .select({ id: tenants.id, name: tenants.name })
+      .from(tenants)
+      .where(eq(tenants.id, tenantId));
+    return tenant;
+  }
+
   async findInvitationByTokenHash(tokenHash: string) {
     const [result] = await this.drizzle.db
       .select({
@@ -145,5 +153,11 @@ export class MembershipsRepository {
       })
       .returning();
     return invitation;
+  }
+
+  async deleteInvitation(invitationId: string) {
+    await this.drizzle.db
+      .delete(invitations)
+      .where(eq(invitations.id, invitationId));
   }
 }

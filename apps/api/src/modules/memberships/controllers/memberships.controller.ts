@@ -46,11 +46,12 @@ export class MembershipsController {
   }
 
   @ApiOperation({
-    summary: 'Invite a limited workspace member (owner only)',
+    summary: 'Invite and email a limited workspace member (owner only)',
     description:
-      'Workspace invitations never create another owner. Project editor/viewer access is added later through project_members.',
+      'Creates a one-time invitation and delivers its acceptance link through Amazon SES. Workspace invitations never create another owner.',
   })
   @ApiResponse({ status: 201 })
+  @ApiResponse({ status: 503, description: 'Email delivery unavailable' })
   @UseGuards(JwtAuthGuard, TenantOwnerGuard)
   @Post('invitations')
   async inviteMember(
