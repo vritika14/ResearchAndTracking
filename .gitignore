@@ -9,6 +9,7 @@ dist/
 build/
 .next/
 *.tsbuildinfo
+*.timestamp-*.mjs
 
 #environmnet variables
 .env

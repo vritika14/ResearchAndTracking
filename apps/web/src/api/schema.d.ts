@@ -224,6 +224,8 @@ export interface components {
         CreatedInvitation: {
             invitation: components["schemas"]["Invitation"];
             acceptanceToken: string;
+            /** @enum {boolean} */
+            emailSent: true;
         };
     };
     responses: never;

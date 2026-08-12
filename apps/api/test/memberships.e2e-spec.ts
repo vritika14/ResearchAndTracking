@@ -10,6 +10,7 @@ import request from 'supertest';
 import { App } from 'supertest/types';
 import { AppModule } from '../src/app.module';
 import { DrizzleService } from '../src/db/drizzle.service';
+import { InvitationEmailService } from '../src/modules/memberships/services/invitation-email.service';
 import { getTestAccessToken } from './helpers/cognito';
 
 function getJwtSub(token: string) {
@@ -37,7 +38,10 @@ describe('Memberships (e2e)', () => {
   beforeAll(async () => {
     const moduleFixture: TestingModule = await Test.createTestingModule({
       imports: [AppModule],
-    }).compile();
+    })
+      .overrideProvider(InvitationEmailService)
+      .useValue({ sendInvitation: jest.fn().mockResolvedValue('test-message') })
+      .compile();
 
     app = moduleFixture.createNestApplication();
     app.useGlobalPipes(
@@ -181,6 +185,7 @@ describe('Memberships (e2e)', () => {
     expect(res.body.invitation.email).toBe('limited-member@example.com');
     expect(res.body.invitation.token).toBeUndefined();
     expect(typeof res.body.acceptanceToken).toBe('string');
+    expect(res.body.emailSent).toBe(true);
     acceptanceToken = res.body.acceptanceToken;
   });
 
