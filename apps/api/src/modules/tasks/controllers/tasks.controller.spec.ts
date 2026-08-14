@@ -37,7 +37,10 @@ describe('TasksController', () => {
 
       const result = await controller.list('tenant-1', 'project-1');
 
-      expect(tasksService.listByProject).toHaveBeenCalledWith('tenant-1', 'project-1');
+      expect(tasksService.listByProject).toHaveBeenCalledWith(
+        'tenant-1',
+        'project-1',
+      );
       expect(result).toBe(tasks);
     });
   });
@@ -58,13 +61,22 @@ describe('TasksController', () => {
       usersService.findByExternalAuthId.mockResolvedValue({ id: 'user-1' });
       tasksService.create.mockResolvedValue({ id: 't1' });
 
-      const req = { user: { sub: 'cognito-sub-1', accessToken: 'token-1' } } as any;
+      const req = {
+        user: { sub: 'cognito-sub-1', accessToken: 'token-1' },
+      } as any;
       const dto = { title: 'New Task' };
 
-      const result = await controller.create('tenant-1', 'project-1', req, dto as any);
+      const result = await controller.create('tenant-1', 'project-1', req, dto);
 
-      expect(usersService.findByExternalAuthId).toHaveBeenCalledWith('cognito-sub-1');
-      expect(tasksService.create).toHaveBeenCalledWith('project-1', 'tenant-1', 'user-1', dto);
+      expect(usersService.findByExternalAuthId).toHaveBeenCalledWith(
+        'cognito-sub-1',
+      );
+      expect(tasksService.create).toHaveBeenCalledWith(
+        'project-1',
+        'tenant-1',
+        'user-1',
+        dto,
+      );
       expect(result).toEqual({ id: 't1' });
     });
   });
@@ -74,7 +86,7 @@ describe('TasksController', () => {
       tasksService.update.mockResolvedValue({ id: 't1', title: 'Updated' });
       const dto = { title: 'Updated' };
 
-      const result = await controller.update('tenant-1', 't1', dto as any);
+      const result = await controller.update('tenant-1', 't1', dto);
 
       expect(tasksService.update).toHaveBeenCalledWith('tenant-1', 't1', dto);
       expect(result).toEqual({ id: 't1', title: 'Updated' });

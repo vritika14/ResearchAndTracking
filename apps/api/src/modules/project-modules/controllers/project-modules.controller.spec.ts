@@ -20,7 +20,9 @@ describe('ProjectModulesController', () => {
       update: jest.fn(),
       archive: jest.fn(),
     };
-    controller = new ProjectModulesController(modulesService as unknown as ProjectModulesService);
+    controller = new ProjectModulesController(
+      modulesService as unknown as ProjectModulesService,
+    );
   });
 
   describe('list', () => {
@@ -30,7 +32,10 @@ describe('ProjectModulesController', () => {
 
       const result = await controller.list('tenant-1', 'project-1');
 
-      expect(modulesService.listActive).toHaveBeenCalledWith('tenant-1', 'project-1');
+      expect(modulesService.listActive).toHaveBeenCalledWith(
+        'tenant-1',
+        'project-1',
+      );
       expect(result).toBe(modules);
     });
   });
@@ -51,9 +56,13 @@ describe('ProjectModulesController', () => {
       modulesService.create.mockResolvedValue({ id: 'm1' });
       const dto = { title: 'New Module' };
 
-      const result = await controller.create('tenant-1', 'project-1', dto as any);
+      const result = await controller.create('tenant-1', 'project-1', dto);
 
-      expect(modulesService.create).toHaveBeenCalledWith('project-1', 'tenant-1', dto);
+      expect(modulesService.create).toHaveBeenCalledWith(
+        'project-1',
+        'tenant-1',
+        dto,
+      );
       expect(result).toEqual({ id: 'm1' });
     });
   });
@@ -63,7 +72,7 @@ describe('ProjectModulesController', () => {
       modulesService.update.mockResolvedValue({ id: 'm1', title: 'Updated' });
       const dto = { title: 'Updated' };
 
-      const result = await controller.update('tenant-1', 'm1', dto as any);
+      const result = await controller.update('tenant-1', 'm1', dto);
 
       expect(modulesService.update).toHaveBeenCalledWith('tenant-1', 'm1', dto);
       expect(result).toEqual({ id: 'm1', title: 'Updated' });
@@ -72,7 +81,10 @@ describe('ProjectModulesController', () => {
 
   describe('archive', () => {
     it('delegates to the service with tenantId and moduleId', async () => {
-      modulesService.archive.mockResolvedValue({ module: { id: 'm1' }, warning: '14 days' });
+      modulesService.archive.mockResolvedValue({
+        module: { id: 'm1' },
+        warning: '14 days',
+      });
 
       const result = await controller.archive('tenant-1', 'm1');
 

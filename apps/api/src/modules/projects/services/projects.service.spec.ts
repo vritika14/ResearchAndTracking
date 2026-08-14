@@ -34,7 +34,9 @@ describe('ProjectsService', () => {
   describe('findOne', () => {
     it('throws NotFoundException when the project does not exist', async () => {
       repository.findById.mockResolvedValue(undefined);
-      await expect(service.findOne('tenant-1', 'project-1')).rejects.toThrow(NotFoundException);
+      await expect(service.findOne('tenant-1', 'project-1')).rejects.toThrow(
+        NotFoundException,
+      );
     });
 
     it('returns the project when found', async () => {
@@ -46,8 +48,9 @@ describe('ProjectsService', () => {
 
   describe('create', () => {
     it('resolves status/pipelineStage/importance to enum ids', async () => {
-      enumRepository.findByCategoryAndValue.mockImplementation((category: string, value: string) =>
-        Promise.resolve({ id: `${category}-${value}-id` }),
+      enumRepository.findByCategoryAndValue.mockImplementation(
+        (category: string, value: string) =>
+          Promise.resolve({ id: `${category}-${value}-id` }),
       );
       repository.create.mockResolvedValue({ id: 'project-1' });
 
@@ -71,7 +74,10 @@ describe('ProjectsService', () => {
       enumRepository.findByCategoryAndValue.mockResolvedValue(undefined);
 
       await expect(
-        service.create('user-1', 'tenant-1', { title: 'New Project', status: 'NotReal' }),
+        service.create('user-1', 'tenant-1', {
+          title: 'New Project',
+          status: 'NotReal',
+        }),
       ).rejects.toThrow(NotFoundException);
     });
 
@@ -82,7 +88,11 @@ describe('ProjectsService', () => {
 
       expect(enumRepository.findByCategoryAndValue).not.toHaveBeenCalled();
       expect(repository.create).toHaveBeenCalledWith(
-        expect.objectContaining({ statusId: undefined, pipelineStageId: undefined, importanceId: undefined }),
+        expect.objectContaining({
+          statusId: undefined,
+          pipelineStageId: undefined,
+          importanceId: undefined,
+        }),
       );
     });
   });
@@ -90,8 +100,13 @@ describe('ProjectsService', () => {
   describe('update', () => {
     it('only resolves enum fields that were actually provided', async () => {
       repository.findById.mockResolvedValue({ id: 'project-1' });
-      enumRepository.findByCategoryAndValue.mockResolvedValue({ id: 'status-id' });
-      repository.update.mockResolvedValue({ id: 'project-1', title: 'Updated' });
+      enumRepository.findByCategoryAndValue.mockResolvedValue({
+        id: 'status-id',
+      });
+      repository.update.mockResolvedValue({
+        id: 'project-1',
+        title: 'Updated',
+      });
 
       await service.update('tenant-1', 'project-1', { title: 'Updated' });
 
@@ -109,18 +124,29 @@ describe('ProjectsService', () => {
   describe('archive', () => {
     it('resolves the Archived status and sets archivedAt, returning a warning', async () => {
       repository.findById.mockResolvedValue({ id: 'project-1' });
-      enumRepository.findByCategoryAndValue.mockResolvedValue({ id: 'archived-status-id' });
-      repository.archive.mockResolvedValue({ id: 'project-1', statusId: 'archived-status-id' });
+      enumRepository.findByCategoryAndValue.mockResolvedValue({
+        id: 'archived-status-id',
+      });
+      repository.archive.mockResolvedValue({
+        id: 'project-1',
+        statusId: 'archived-status-id',
+      });
 
       const result = await service.archive('tenant-1', 'project-1');
 
-      expect(repository.archive).toHaveBeenCalledWith('tenant-1', 'project-1', 'archived-status-id');
+      expect(repository.archive).toHaveBeenCalledWith(
+        'tenant-1',
+        'project-1',
+        'archived-status-id',
+      );
       expect(result.warning).toContain('14 days');
     });
 
     it('throws NotFoundException if the project does not exist', async () => {
       repository.findById.mockResolvedValue(undefined);
-      await expect(service.archive('tenant-1', 'project-1')).rejects.toThrow(NotFoundException);
+      await expect(service.archive('tenant-1', 'project-1')).rejects.toThrow(
+        NotFoundException,
+      );
     });
   });
 });

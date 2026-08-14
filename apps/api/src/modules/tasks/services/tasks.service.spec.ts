@@ -33,8 +33,9 @@ describe('TasksService', () => {
 
   describe('create', () => {
     it('resolves status (task_status) and priority (importance) to enum ids', async () => {
-      enumRepository.findByCategoryAndValue.mockImplementation((category: string, value: string) =>
-        Promise.resolve({ id: `${category}-${value}-id` }),
+      enumRepository.findByCategoryAndValue.mockImplementation(
+        (category: string, value: string) =>
+          Promise.resolve({ id: `${category}-${value}-id` }),
       );
       repository.create.mockResolvedValue({ id: 'task-1' });
 
@@ -56,7 +57,9 @@ describe('TasksService', () => {
   describe('delete', () => {
     it('throws NotFoundException if the task does not exist', async () => {
       repository.delete.mockResolvedValue(undefined);
-      await expect(service.delete('tenant-1', 'task-1')).rejects.toThrow(NotFoundException);
+      await expect(service.delete('tenant-1', 'task-1')).rejects.toThrow(
+        NotFoundException,
+      );
     });
 
     it('returns the deleted task on success', async () => {
@@ -69,7 +72,9 @@ describe('TasksService', () => {
   describe('findOne', () => {
     it('throws NotFoundException when the task does not exist', async () => {
       repository.findById.mockResolvedValue(undefined);
-      await expect(service.findOne('tenant-1', 'task-1')).rejects.toThrow(NotFoundException);
+      await expect(service.findOne('tenant-1', 'task-1')).rejects.toThrow(
+        NotFoundException,
+      );
     });
   });
 });

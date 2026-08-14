@@ -1,5 +1,4 @@
 // apps/api/src/modules/projects/controllers/projects.controller.spec.ts
-import { NotFoundException } from '@nestjs/common';
 import { ProjectsController } from './projects.controller';
 import { ProjectsService } from '../services/projects.service';
 import { UsersService } from '../../users/users.service';
@@ -59,13 +58,21 @@ describe('ProjectsController', () => {
       usersService.findByExternalAuthId.mockResolvedValue({ id: 'user-1' });
       projectsService.create.mockResolvedValue({ id: 'p1' });
 
-      const req = { user: { sub: 'cognito-sub-1', accessToken: 'token-1' } } as any;
+      const req = {
+        user: { sub: 'cognito-sub-1', accessToken: 'token-1' },
+      } as any;
       const dto = { title: 'New Project' };
 
-      const result = await controller.create('tenant-1', req, dto as any);
+      const result = await controller.create('tenant-1', req, dto);
 
-      expect(usersService.findByExternalAuthId).toHaveBeenCalledWith('cognito-sub-1');
-      expect(projectsService.create).toHaveBeenCalledWith('user-1', 'tenant-1', dto);
+      expect(usersService.findByExternalAuthId).toHaveBeenCalledWith(
+        'cognito-sub-1',
+      );
+      expect(projectsService.create).toHaveBeenCalledWith(
+        'user-1',
+        'tenant-1',
+        dto,
+      );
       expect(result).toEqual({ id: 'p1' });
     });
   });
@@ -75,16 +82,23 @@ describe('ProjectsController', () => {
       projectsService.update.mockResolvedValue({ id: 'p1', title: 'Updated' });
       const dto = { title: 'Updated' };
 
-      const result = await controller.update('tenant-1', 'p1', dto as any);
+      const result = await controller.update('tenant-1', 'p1', dto);
 
-      expect(projectsService.update).toHaveBeenCalledWith('tenant-1', 'p1', dto);
+      expect(projectsService.update).toHaveBeenCalledWith(
+        'tenant-1',
+        'p1',
+        dto,
+      );
       expect(result).toEqual({ id: 'p1', title: 'Updated' });
     });
   });
 
   describe('archive', () => {
     it('delegates to the service with tenantId and projectId', async () => {
-      projectsService.archive.mockResolvedValue({ project: { id: 'p1' }, warning: '14 days' });
+      projectsService.archive.mockResolvedValue({
+        project: { id: 'p1' },
+        warning: '14 days',
+      });
 
       const result = await controller.archive('tenant-1', 'p1');
 

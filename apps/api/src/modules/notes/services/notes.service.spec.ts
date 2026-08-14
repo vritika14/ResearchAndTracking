@@ -48,7 +48,9 @@ describe('NotesService', () => {
   describe('findOne', () => {
     it('throws NotFoundException when the note does not exist', async () => {
       repository.findById.mockResolvedValue(undefined);
-      await expect(service.findOne('tenant-1', 'note-1')).rejects.toThrow(NotFoundException);
+      await expect(service.findOne('tenant-1', 'note-1')).rejects.toThrow(
+        NotFoundException,
+      );
     });
   });
 
@@ -64,7 +66,9 @@ describe('NotesService', () => {
   describe('delete', () => {
     it('throws NotFoundException if the note does not exist', async () => {
       repository.delete.mockResolvedValue(undefined);
-      await expect(service.delete('tenant-1', 'note-1')).rejects.toThrow(NotFoundException);
+      await expect(service.delete('tenant-1', 'note-1')).rejects.toThrow(
+        NotFoundException,
+      );
     });
   });
 });
