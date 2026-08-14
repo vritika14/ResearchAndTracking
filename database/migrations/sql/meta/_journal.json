@@ -36,6 +36,41 @@
       "when": 1786425196925,
       "tag": "0004_grant_workspace_contexts_runtime",
       "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "7",
+      "when": 1786665511301,
+      "tag": "0005_magical_rocket_racer",
+      "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "7",
+      "when": 1786666818236,
+      "tag": "0006_fair_nicolaos",
+      "breakpoints": true
+    },
+    {
+      "idx": 7,
+      "version": "7",
+      "when": 1786668428424,
+      "tag": "0007_dazzling_nocturne",
+      "breakpoints": true
+    },
+    {
+      "idx": 8,
+      "version": "7",
+      "when": 1786669125058,
+      "tag": "0008_icy_paladin",
+      "breakpoints": true
+    },
+    {
+      "idx": 9,
+      "version": "7",
+      "when": 1786670789670,
+      "tag": "0009_amused_rocket_raccoon",
+      "breakpoints": true
     }
   ]
 }

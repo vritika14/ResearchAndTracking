@@ -1,0 +1,23 @@
+import { pgTable, uuid, text, timestamp } from 'drizzle-orm/pg-core';
+import { projects } from './projects';
+import { modules } from './modules';
+import { tenants } from './tenants';
+import { users } from './users';
+
+export const notes = pgTable('notes', {
+  id: uuid('id').defaultRandom().primaryKey(),
+  tenantId: uuid('tenant_id')
+    .notNull()
+    .references(() => tenants.id, { onDelete: 'cascade' }),
+  projectId: uuid('project_id')
+    .notNull()
+    .references(() => projects.id, { onDelete: 'cascade' }),
+  moduleId: uuid('module_id').references(() => modules.id, { onDelete: 'cascade' }),
+  createdBy: uuid('created_by')
+    .notNull()
+    .references(() => users.id, { onDelete: 'cascade' }),
+  title: text('title').notNull(),
+  content: text('content'),
+  noteDate: timestamp('note_date', { withTimezone: true }).defaultNow().notNull(),
+  updatedAt: timestamp('updated_at', { withTimezone: true }).defaultNow().notNull(),
+});
