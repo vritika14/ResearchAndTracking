@@ -21,6 +21,7 @@ export const projects = pgTable('projects', {
   dueDate: date('due_date'),
   totalBudget: numeric('total_budget', { precision: 12, scale: 2 }),
   targetJournals: text('target_journals'),
+  archivedAt: timestamp('archived_at', { withTimezone: true }),
   createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
   updatedAt: timestamp('updated_at', { withTimezone: true }).defaultNow().notNull(),
 });
