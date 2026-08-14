@@ -11,6 +11,7 @@ import { HealthModule } from './modules/health/health.module';
 import { MembershipsModule } from './modules/memberships/memberships.module';
 import { UsersModule } from './modules/users/users.module';
 import { WorkspacesModule } from './modules/workspaces/workspaces.module';
+import { EnumModule } from './modules/enum/enum.module';
 
 const invitationTokenPath = /\/api\/v1\/invitations\/[^/]+/g;
 
@@ -58,6 +59,7 @@ const invitationTokenPath = /\/api\/v1\/invitations\/[^/]+/g;
     MembershipsModule,
     HealthModule,
     WorkspacesModule,
+    EnumModule,
   ],
   controllers: [AppController],
   providers: [AppService],
