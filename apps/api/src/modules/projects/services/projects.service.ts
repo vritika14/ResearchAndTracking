@@ -1,4 +1,4 @@
-import { Injectable, NotFoundException, ForbiddenException } from '@nestjs/common';
+import { Injectable, NotFoundException } from '@nestjs/common';
 import { EnumRepository } from '../../enum/repositories/enum.repository';
 import { ProjectsRepository } from '../repositories/projects.repository';
 
@@ -80,9 +80,15 @@ export class ProjectsService {
     await this.findOne(tenantId, projectId);
 
     const [statusId, pipelineStageId, importanceId] = await Promise.all([
-      input.status ? this.resolveEnum('project_status', input.status) : undefined,
-      input.pipelineStage ? this.resolveEnum('pipeline_stage', input.pipelineStage) : undefined,
-      input.importance ? this.resolveEnum('importance', input.importance) : undefined,
+      input.status
+        ? this.resolveEnum('project_status', input.status)
+        : undefined,
+      input.pipelineStage
+        ? this.resolveEnum('pipeline_stage', input.pipelineStage)
+        : undefined,
+      input.importance
+        ? this.resolveEnum('importance', input.importance)
+        : undefined,
     ]);
 
     const project = await this.repository.update(tenantId, projectId, {
@@ -106,29 +112,41 @@ export class ProjectsService {
 
   async archive(tenantId: string, projectId: string) {
     await this.findOne(tenantId, projectId);
-  
-    const archivedStatusId = await this.resolveEnum('project_status', 'Archived');
+
+    const archivedStatusId = await this.resolveEnum(
+      'project_status',
+      'Archived',
+    );
     if (!archivedStatusId) {
-      throw new NotFoundException('Archived status is not configured in the enum table');
+      throw new NotFoundException(
+        'Archived status is not configured in the enum table',
+      );
     }
-  
-    const project = await this.repository.archive(tenantId, projectId, archivedStatusId);
+
+    const project = await this.repository.archive(
+      tenantId,
+      projectId,
+      archivedStatusId,
+    );
     if (!project) {
       throw new NotFoundException('Project not found');
     }
-  
+
     return {
       project,
       warning: `This project has been archived and will be permanently deleted in ${ARCHIVE_RETENTION_DAYS} days.`,
     };
   }
-  
-  
-  
 
-  private async resolveEnum(category: string, value?: string): Promise<string | undefined> {
+  private async resolveEnum(
+    category: string,
+    value?: string,
+  ): Promise<string | undefined> {
     if (!value) return undefined;
-    const match = await this.enumRepository.findByCategoryAndValue(category, value);
+    const match = await this.enumRepository.findByCategoryAndValue(
+      category,
+      value,
+    );
     if (!match) {
       throw new NotFoundException(`Unknown ${category} value: "${value}"`);
     }

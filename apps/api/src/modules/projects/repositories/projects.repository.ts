@@ -36,7 +36,10 @@ export class ProjectsRepository {
     totalBudget?: string;
     targetJournals?: string;
   }) {
-    const [project] = await this.drizzle.db.insert(projects).values(values).returning();
+    const [project] = await this.drizzle.db
+      .insert(projects)
+      .values(values)
+      .returning();
     return project;
   }
 
@@ -67,7 +70,11 @@ export class ProjectsRepository {
   async archive(tenantId: string, projectId: string, archivedStatusId: string) {
     const [project] = await this.drizzle.db
       .update(projects)
-      .set({ statusId: archivedStatusId, archivedAt: new Date(), updatedAt: new Date() })
+      .set({
+        statusId: archivedStatusId,
+        archivedAt: new Date(),
+        updatedAt: new Date(),
+      })
       .where(and(eq(projects.tenantId, tenantId), eq(projects.id, projectId)))
       .returning();
     return project;
