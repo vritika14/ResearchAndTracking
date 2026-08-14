@@ -13,6 +13,7 @@ import { UsersModule } from './modules/users/users.module';
 import { WorkspacesModule } from './modules/workspaces/workspaces.module';
 import { EnumModule } from './modules/enum/enum.module';
 import { ProjectsModule } from './modules/projects/project.module';
+import { ProjectModulesModule } from './modules/project-modules/project-modules.module';
 
 const invitationTokenPath = /\/api\/v1\/invitations\/[^/]+/g;
 
@@ -62,6 +63,7 @@ const invitationTokenPath = /\/api\/v1\/invitations\/[^/]+/g;
     WorkspacesModule,
     EnumModule,
     ProjectsModule,
+    ProjectModulesModule,
   ],
   controllers: [AppController],
   providers: [AppService],
