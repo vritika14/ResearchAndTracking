@@ -1,5 +1,9 @@
 // apps/api/src/modules/module-collaborators/services/module-collaborators.service.ts
-import { ConflictException, Injectable, NotFoundException } from '@nestjs/common';
+import {
+  ConflictException,
+  Injectable,
+  NotFoundException,
+} from '@nestjs/common';
 import { EnumRepository } from '../../enum/repositories/enum.repository';
 import { ProjectModulesRepository } from '../../project-modules/repositories/project-modules.repository';
 import { ModuleCollaboratorsRepository } from '../repositories/module-collaborators.repository';
@@ -22,9 +26,15 @@ export class ModuleCollaboratorsService {
       throw new NotFoundException('Module not found');
     }
 
-    const existing = await this.repository.findByModuleAndUser(tenantId, moduleId, userId);
+    const existing = await this.repository.findByModuleAndUser(
+      tenantId,
+      moduleId,
+      userId,
+    );
     if (existing) {
-      throw new ConflictException('This user is already a collaborator on this module');
+      throw new ConflictException(
+        'This user is already a collaborator on this module',
+      );
     }
 
     const roleId = await this.resolveRole(role);
@@ -38,10 +48,20 @@ export class ModuleCollaboratorsService {
     });
   }
 
-  async updateRole(tenantId: string, moduleId: string, userId: string, role: string) {
+  async updateRole(
+    tenantId: string,
+    moduleId: string,
+    userId: string,
+    role: string,
+  ) {
     const roleId = await this.resolveRole(role);
 
-    const row = await this.repository.updateRole(tenantId, moduleId, userId, roleId);
+    const row = await this.repository.updateRole(
+      tenantId,
+      moduleId,
+      userId,
+      roleId,
+    );
     if (!row) {
       throw new NotFoundException('Collaborator not found on this module');
     }
@@ -57,7 +77,10 @@ export class ModuleCollaboratorsService {
   }
 
   private async resolveRole(role: string): Promise<string> {
-    const match = await this.enumRepository.findByCategoryAndValue('project_role', role);
+    const match = await this.enumRepository.findByCategoryAndValue(
+      'project_role',
+      role,
+    );
     if (!match) {
       throw new NotFoundException(`Unknown project role: "${role}"`);
     }

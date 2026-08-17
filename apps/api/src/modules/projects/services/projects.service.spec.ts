@@ -13,7 +13,10 @@ describe('ProjectsService', () => {
     update: jest.Mock;
     archive: jest.Mock;
   };
-  let enumRepository: { findByCategoryAndValue: jest.Mock; findValuesByIds: jest.Mock };
+  let enumRepository: {
+    findByCategoryAndValue: jest.Mock;
+    findValuesByIds: jest.Mock;
+  };
   let collaboratorsRepository: { findByProjectAndUser: jest.Mock };
 
   beforeEach(() => {
@@ -42,9 +45,9 @@ describe('ProjectsService', () => {
   describe('findOne', () => {
     it('throws NotFoundException when the project does not exist', async () => {
       repository.findById.mockResolvedValue(undefined);
-      await expect(service.findOne('tenant-1', 'project-1', 'user-1')).rejects.toThrow(
-        NotFoundException,
-      );
+      await expect(
+        service.findOne('tenant-1', 'project-1', 'user-1'),
+      ).rejects.toThrow(NotFoundException);
     });
 
     it('returns the project when found', async () => {
@@ -64,8 +67,9 @@ describe('ProjectsService', () => {
 
   describe('create', () => {
     it('resolves status/pipelineStage/importance to enum ids', async () => {
-      enumRepository.findByCategoryAndValue.mockImplementation((category: string, value: string) =>
-        Promise.resolve({ id: `${category}-${value}-id` }),
+      enumRepository.findByCategoryAndValue.mockImplementation(
+        (category: string, value: string) =>
+          Promise.resolve({ id: `${category}-${value}-id` }),
       );
       repository.create.mockResolvedValue({
         id: 'project-1',
@@ -95,13 +99,19 @@ describe('ProjectsService', () => {
       enumRepository.findByCategoryAndValue.mockResolvedValue(undefined);
 
       await expect(
-        service.create('user-1', 'tenant-1', { title: 'New Project', status: 'NotReal' }),
+        service.create('user-1', 'tenant-1', {
+          title: 'New Project',
+          status: 'NotReal',
+        }),
       ).rejects.toThrow(NotFoundException);
     });
 
     it('leaves enum fields undefined when not provided', async () => {
-      enumRepository.findByCategoryAndValue.mockImplementation((category: string, value: string) =>
-        category === 'project_role' ? Promise.resolve({ id: 'owner-role-id' }) : Promise.resolve(undefined),
+      enumRepository.findByCategoryAndValue.mockImplementation(
+        (category: string, _value: string) =>
+          category === 'project_role'
+            ? Promise.resolve({ id: 'owner-role-id' })
+            : Promise.resolve(undefined),
       );
       repository.create.mockResolvedValue({
         id: 'project-1',
@@ -113,7 +123,11 @@ describe('ProjectsService', () => {
       await service.create('user-1', 'tenant-1', { title: 'New Project' });
 
       expect(repository.create).toHaveBeenCalledWith(
-        expect.objectContaining({ statusId: undefined, pipelineStageId: undefined, importanceId: undefined }),
+        expect.objectContaining({
+          statusId: undefined,
+          pipelineStageId: undefined,
+          importanceId: undefined,
+        }),
         'owner-role-id',
       );
     });
@@ -135,7 +149,9 @@ describe('ProjectsService', () => {
         importanceId: null,
       });
 
-      await service.update('tenant-1', 'project-1', 'user-1', { title: 'Updated' });
+      await service.update('tenant-1', 'project-1', 'user-1', {
+        title: 'Updated',
+      });
 
       expect(enumRepository.findByCategoryAndValue).not.toHaveBeenCalled();
     });
@@ -156,7 +172,9 @@ describe('ProjectsService', () => {
         pipelineStageId: null,
         importanceId: null,
       });
-      enumRepository.findByCategoryAndValue.mockResolvedValue({ id: 'archived-status-id' });
+      enumRepository.findByCategoryAndValue.mockResolvedValue({
+        id: 'archived-status-id',
+      });
       repository.archive.mockResolvedValue({
         id: 'project-1',
         statusId: 'archived-status-id',
@@ -166,15 +184,19 @@ describe('ProjectsService', () => {
 
       const result = await service.archive('tenant-1', 'project-1', 'user-1');
 
-      expect(repository.archive).toHaveBeenCalledWith('tenant-1', 'project-1', 'archived-status-id');
+      expect(repository.archive).toHaveBeenCalledWith(
+        'tenant-1',
+        'project-1',
+        'archived-status-id',
+      );
       expect(result.warning).toContain('14 days');
     });
 
     it('throws NotFoundException if the project does not exist', async () => {
       repository.findById.mockResolvedValue(undefined);
-      await expect(service.archive('tenant-1', 'project-1', 'user-1')).rejects.toThrow(
-        NotFoundException,
-      );
+      await expect(
+        service.archive('tenant-1', 'project-1', 'user-1'),
+      ).rejects.toThrow(NotFoundException);
     });
   });
 });

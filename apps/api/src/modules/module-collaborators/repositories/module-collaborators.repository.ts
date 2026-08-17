@@ -12,10 +12,19 @@ export class ModuleCollaboratorsRepository {
     return this.drizzle.db
       .select()
       .from(moduleCollaborators)
-      .where(and(eq(moduleCollaborators.tenantId, tenantId), eq(moduleCollaborators.moduleId, moduleId)));
+      .where(
+        and(
+          eq(moduleCollaborators.tenantId, tenantId),
+          eq(moduleCollaborators.moduleId, moduleId),
+        ),
+      );
   }
 
-  async findByModuleAndUser(tenantId: string, moduleId: string, userId: string) {
+  async findByModuleAndUser(
+    tenantId: string,
+    moduleId: string,
+    userId: string,
+  ) {
     const [row] = await this.drizzle.db
       .select()
       .from(moduleCollaborators)
@@ -36,11 +45,19 @@ export class ModuleCollaboratorsRepository {
     userId: string;
     roleId: string;
   }) {
-    const [row] = await this.drizzle.db.insert(moduleCollaborators).values(values).returning();
+    const [row] = await this.drizzle.db
+      .insert(moduleCollaborators)
+      .values(values)
+      .returning();
     return row;
   }
 
-  async updateRole(tenantId: string, moduleId: string, userId: string, roleId: string) {
+  async updateRole(
+    tenantId: string,
+    moduleId: string,
+    userId: string,
+    roleId: string,
+  ) {
     const [row] = await this.drizzle.db
       .update(moduleCollaborators)
       .set({ roleId, updatedAt: new Date() })

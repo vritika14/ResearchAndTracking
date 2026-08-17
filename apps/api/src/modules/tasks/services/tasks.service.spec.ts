@@ -13,7 +13,10 @@ describe('TasksService', () => {
     update: jest.Mock;
     delete: jest.Mock;
   };
-  let enumRepository: { findByCategoryAndValue: jest.Mock; findValuesByIds: jest.Mock };
+  let enumRepository: {
+    findByCategoryAndValue: jest.Mock;
+    findValuesByIds: jest.Mock;
+  };
 
   beforeEach(() => {
     repository = {

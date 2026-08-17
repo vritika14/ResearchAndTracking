@@ -1,6 +1,20 @@
 // apps/api/src/modules/project-collaborators/controllers/project-collaborators.controller.ts
-import { Body, Controller, Delete, Get, Param, Patch, Post, UseGuards } from '@nestjs/common';
-import { ApiBearerAuth, ApiOperation, ApiResponse, ApiTags } from '@nestjs/swagger';
+import {
+  Body,
+  Controller,
+  Delete,
+  Get,
+  Param,
+  Patch,
+  Post,
+  UseGuards,
+} from '@nestjs/common';
+import {
+  ApiBearerAuth,
+  ApiOperation,
+  ApiResponse,
+  ApiTags,
+} from '@nestjs/swagger';
 import { JwtAuthGuard } from '../../auth/jwt-auth.guard';
 import { AddCollaboratorDto } from '../dto/add-collaborator.dto';
 import { UpdateRoleDto } from '../dto/update-role.dto';
@@ -15,7 +29,10 @@ export class ProjectCollaboratorsController {
   @ApiOperation({ summary: 'List collaborators on a project' })
   @UseGuards(JwtAuthGuard)
   @Get()
-  async list(@Param('tenantId') tenantId: string, @Param('projectId') projectId: string) {
+  async list(
+    @Param('tenantId') tenantId: string,
+    @Param('projectId') projectId: string,
+  ) {
     return this.service.list(tenantId, projectId);
   }
 

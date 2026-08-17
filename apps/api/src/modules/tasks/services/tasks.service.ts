@@ -83,7 +83,9 @@ export class TasksService {
 
     const [statusId, priorityId] = await Promise.all([
       input.status ? this.resolveEnum('task_status', input.status) : undefined,
-      input.priority ? this.resolveEnum('importance', input.priority) : undefined,
+      input.priority
+        ? this.resolveEnum('importance', input.priority)
+        : undefined,
     ]);
 
     const task = await this.repository.update(tenantId, taskId, {
@@ -128,9 +130,15 @@ export class TasksService {
     }));
   }
 
-  private async resolveEnum(category: string, value?: string): Promise<string | undefined> {
+  private async resolveEnum(
+    category: string,
+    value?: string,
+  ): Promise<string | undefined> {
     if (!value) return undefined;
-    const match = await this.enumRepository.findByCategoryAndValue(category, value);
+    const match = await this.enumRepository.findByCategoryAndValue(
+      category,
+      value,
+    );
     if (!match) {
       throw new NotFoundException(`Unknown ${category} value: "${value}"`);
     }

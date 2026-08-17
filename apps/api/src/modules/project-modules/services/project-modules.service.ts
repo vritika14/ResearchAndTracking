@@ -24,7 +24,11 @@ export class ProjectModulesService {
     if (!module) {
       throw new NotFoundException('Module not found');
     }
-    const [shaped] = await this.withDisplayValues(tenantId, [module], callerUserId);
+    const [shaped] = await this.withDisplayValues(
+      tenantId,
+      [module],
+      callerUserId,
+    );
     return shaped;
   }
 
@@ -59,7 +63,11 @@ export class ProjectModulesService {
       throw new NotFoundException('Failed to create module');
     }
 
-    const [shaped] = await this.withDisplayValues(tenantId, [module], callerUserId);
+    const [shaped] = await this.withDisplayValues(
+      tenantId,
+      [module],
+      callerUserId,
+    );
     return shaped;
   }
 
@@ -79,7 +87,9 @@ export class ProjectModulesService {
 
     const [tagId, statusId] = await Promise.all([
       input.tag ? this.resolveEnum('module_type', input.tag) : undefined,
-      input.status ? this.resolveEnum('project_status', input.status) : undefined,
+      input.status
+        ? this.resolveEnum('project_status', input.status)
+        : undefined,
     ]);
 
     const module = await this.repository.update(tenantId, moduleId, {
@@ -94,24 +104,41 @@ export class ProjectModulesService {
       throw new NotFoundException('Module not found');
     }
 
-    const [shaped] = await this.withDisplayValues(tenantId, [module], callerUserId);
+    const [shaped] = await this.withDisplayValues(
+      tenantId,
+      [module],
+      callerUserId,
+    );
     return shaped;
   }
 
   async archive(tenantId: string, moduleId: string, callerUserId: string) {
     await this.findOne(tenantId, moduleId, callerUserId);
 
-    const archivedStatusId = await this.resolveEnum('project_status', 'Archived');
+    const archivedStatusId = await this.resolveEnum(
+      'project_status',
+      'Archived',
+    );
     if (!archivedStatusId) {
-      throw new NotFoundException('Archived status is not configured in the enum table');
+      throw new NotFoundException(
+        'Archived status is not configured in the enum table',
+      );
     }
 
-    const module = await this.repository.archive(tenantId, moduleId, archivedStatusId);
+    const module = await this.repository.archive(
+      tenantId,
+      moduleId,
+      archivedStatusId,
+    );
     if (!module) {
       throw new NotFoundException('Module not found');
     }
 
-    const [shaped] = await this.withDisplayValues(tenantId, [module], callerUserId);
+    const [shaped] = await this.withDisplayValues(
+      tenantId,
+      [module],
+      callerUserId,
+    );
 
     return {
       module: shaped,
@@ -122,16 +149,26 @@ export class ProjectModulesService {
   private async withDisplayValues<
     T extends { id: string; tagId: string | null; statusId: string | null },
   >(tenantId: string, rows: T[], callerUserId: string) {
-    const enumIds = rows.flatMap((r) => [r.tagId, r.statusId]).filter((id): id is string => id !== null);
+    const enumIds = rows
+      .flatMap((r) => [r.tagId, r.statusId])
+      .filter((id): id is string => id !== null);
 
     const [valuesById, roleRows] = await Promise.all([
       this.enumRepository.findValuesByIds(enumIds),
       Promise.all(
-        rows.map((r) => this.collaboratorsRepository.findByModuleAndUser(tenantId, r.id, callerUserId)),
+        rows.map((r) =>
+          this.collaboratorsRepository.findByModuleAndUser(
+            tenantId,
+            r.id,
+            callerUserId,
+          ),
+        ),
       ),
     ]);
 
-    const roleIds = roleRows.map((r) => r?.roleId).filter((id): id is string => !!id);
+    const roleIds = roleRows
+      .map((r) => r?.roleId)
+      .filter((id): id is string => !!id);
     const roleValuesById = await this.enumRepository.findValuesByIds(roleIds);
 
     return rows.map(({ tagId, statusId, ...rest }, index) => ({
@@ -139,14 +176,20 @@ export class ProjectModulesService {
       tag: tagId ? (valuesById.get(tagId) ?? null) : null,
       status: statusId ? (valuesById.get(statusId) ?? null) : null,
       role: roleRows[index]?.roleId
-        ? (roleValuesById.get(roleRows[index]!.roleId) ?? null)
+        ? (roleValuesById.get(roleRows[index].roleId) ?? null)
         : null,
     }));
   }
 
-  private async resolveEnum(category: string, value?: string): Promise<string | undefined> {
+  private async resolveEnum(
+    category: string,
+    value?: string,
+  ): Promise<string | undefined> {
     if (!value) return undefined;
-    const match = await this.enumRepository.findByCategoryAndValue(category, value);
+    const match = await this.enumRepository.findByCategoryAndValue(
+      category,
+      value,
+    );
     if (!match) {
       throw new NotFoundException(`Unknown ${category} value: "${value}"`);
     }

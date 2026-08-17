@@ -21,7 +21,9 @@ describe('ProjectsController', () => {
       update: jest.fn(),
       archive: jest.fn(),
     };
-    usersService = { findByExternalAuthId: jest.fn().mockResolvedValue({ id: 'user-1' }) };
+    usersService = {
+      findByExternalAuthId: jest.fn().mockResolvedValue({ id: 'user-1' }),
+    };
 
     controller = new ProjectsController(
       projectsService as unknown as ProjectsService,
@@ -38,7 +40,10 @@ describe('ProjectsController', () => {
 
       const result = await controller.list('tenant-1', req);
 
-      expect(projectsService.listActive).toHaveBeenCalledWith('tenant-1', 'user-1');
+      expect(projectsService.listActive).toHaveBeenCalledWith(
+        'tenant-1',
+        'user-1',
+      );
       expect(result).toBe(projects);
     });
   });
@@ -49,7 +54,11 @@ describe('ProjectsController', () => {
 
       const result = await controller.findOne('tenant-1', 'p1', req);
 
-      expect(projectsService.findOne).toHaveBeenCalledWith('tenant-1', 'p1', 'user-1');
+      expect(projectsService.findOne).toHaveBeenCalledWith(
+        'tenant-1',
+        'p1',
+        'user-1',
+      );
       expect(result).toEqual({ id: 'p1' });
     });
   });
@@ -59,10 +68,16 @@ describe('ProjectsController', () => {
       projectsService.create.mockResolvedValue({ id: 'p1' });
       const dto = { title: 'New Project' };
 
-      const result = await controller.create('tenant-1', req, dto as any);
+      const result = await controller.create('tenant-1', req, dto);
 
-      expect(usersService.findByExternalAuthId).toHaveBeenCalledWith('cognito-sub-1');
-      expect(projectsService.create).toHaveBeenCalledWith('user-1', 'tenant-1', dto);
+      expect(usersService.findByExternalAuthId).toHaveBeenCalledWith(
+        'cognito-sub-1',
+      );
+      expect(projectsService.create).toHaveBeenCalledWith(
+        'user-1',
+        'tenant-1',
+        dto,
+      );
       expect(result).toEqual({ id: 'p1' });
     });
   });
@@ -72,20 +87,32 @@ describe('ProjectsController', () => {
       projectsService.update.mockResolvedValue({ id: 'p1', title: 'Updated' });
       const dto = { title: 'Updated' };
 
-      const result = await controller.update('tenant-1', 'p1', req, dto as any);
+      const result = await controller.update('tenant-1', 'p1', req, dto);
 
-      expect(projectsService.update).toHaveBeenCalledWith('tenant-1', 'p1', 'user-1', dto);
+      expect(projectsService.update).toHaveBeenCalledWith(
+        'tenant-1',
+        'p1',
+        'user-1',
+        dto,
+      );
       expect(result).toEqual({ id: 'p1', title: 'Updated' });
     });
   });
 
   describe('archive', () => {
     it('resolves the caller and delegates to the service', async () => {
-      projectsService.archive.mockResolvedValue({ project: { id: 'p1' }, warning: '14 days' });
+      projectsService.archive.mockResolvedValue({
+        project: { id: 'p1' },
+        warning: '14 days',
+      });
 
       const result = await controller.archive('tenant-1', 'p1', req);
 
-      expect(projectsService.archive).toHaveBeenCalledWith('tenant-1', 'p1', 'user-1');
+      expect(projectsService.archive).toHaveBeenCalledWith(
+        'tenant-1',
+        'p1',
+        'user-1',
+      );
       expect(result.warning).toBe('14 days');
     });
   });

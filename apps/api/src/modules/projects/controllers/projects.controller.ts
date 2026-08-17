@@ -9,7 +9,12 @@ import {
   Req,
   UseGuards,
 } from '@nestjs/common';
-import { ApiBearerAuth, ApiOperation, ApiResponse, ApiTags } from '@nestjs/swagger';
+import {
+  ApiBearerAuth,
+  ApiOperation,
+  ApiResponse,
+  ApiTags,
+} from '@nestjs/swagger';
 import { Request } from 'express';
 import type { AuthenticatedPrincipal } from '../../auth/jwt.strategy';
 import { JwtAuthGuard } from '../../auth/jwt-auth.guard';
@@ -31,10 +36,15 @@ export class ProjectsController {
     private readonly usersService: UsersService,
   ) {}
 
-  @ApiOperation({ summary: 'List active (non-archived) projects for a workspace' })
+  @ApiOperation({
+    summary: 'List active (non-archived) projects for a workspace',
+  })
   @UseGuards(JwtAuthGuard)
   @Get()
-  async list(@Param('tenantId') tenantId: string, @Req() req: AuthenticatedRequest) {
+  async list(
+    @Param('tenantId') tenantId: string,
+    @Req() req: AuthenticatedRequest,
+  ) {
     const user = await this.usersService.findByExternalAuthId(req.user.sub);
     return this.projectsService.listActive(tenantId, user.id);
   }

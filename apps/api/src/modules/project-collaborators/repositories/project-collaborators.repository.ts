@@ -12,10 +12,19 @@ export class ProjectCollaboratorsRepository {
     return this.drizzle.db
       .select()
       .from(projectCollaborators)
-      .where(and(eq(projectCollaborators.tenantId, tenantId), eq(projectCollaborators.projectId, projectId)));
+      .where(
+        and(
+          eq(projectCollaborators.tenantId, tenantId),
+          eq(projectCollaborators.projectId, projectId),
+        ),
+      );
   }
 
-  async findByProjectAndUser(tenantId: string, projectId: string, userId: string) {
+  async findByProjectAndUser(
+    tenantId: string,
+    projectId: string,
+    userId: string,
+  ) {
     const [row] = await this.drizzle.db
       .select()
       .from(projectCollaborators)
@@ -35,11 +44,19 @@ export class ProjectCollaboratorsRepository {
     userId: string;
     roleId: string;
   }) {
-    const [row] = await this.drizzle.db.insert(projectCollaborators).values(values).returning();
+    const [row] = await this.drizzle.db
+      .insert(projectCollaborators)
+      .values(values)
+      .returning();
     return row;
   }
 
-  async updateRole(tenantId: string, projectId: string, userId: string, roleId: string) {
+  async updateRole(
+    tenantId: string,
+    projectId: string,
+    userId: string,
+    roleId: string,
+  ) {
     const [row] = await this.drizzle.db
       .update(projectCollaborators)
       .set({ roleId, updatedAt: new Date() })
