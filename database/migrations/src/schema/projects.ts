@@ -5,6 +5,7 @@ import { enumTable } from './enum';
 
 export const projects = pgTable('projects', {
   id: uuid('id').defaultRandom().primaryKey(),
+  displayId: text('display_id').unique(),
   userId: uuid('user_id')
     .notNull()
     .references(() => users.id, { onDelete: 'cascade' }),

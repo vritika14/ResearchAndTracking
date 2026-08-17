@@ -3,6 +3,7 @@ import { ProjectModulesService } from './project-modules.service';
 import { ProjectModulesRepository } from '../repositories/project-modules.repository';
 import { EnumRepository } from '../../enum/repositories/enum.repository';
 import { ModuleCollaboratorsRepository } from '../../module-collaborators/repositories/module-collaborators.repository';
+import { TenantSequencesRepository } from '../../tenant-sequences/repositories/tenant-sequences.repository';
 
 describe('ProjectModulesService', () => {
   let service: ProjectModulesService;
@@ -18,6 +19,7 @@ describe('ProjectModulesService', () => {
     findValuesByIds: jest.Mock;
   };
   let collaboratorsRepository: { findByModuleAndUser: jest.Mock };
+  let sequences: { nextDisplayId: jest.Mock };
 
   beforeEach(() => {
     repository = {
@@ -34,11 +36,15 @@ describe('ProjectModulesService', () => {
     collaboratorsRepository = {
       findByModuleAndUser: jest.fn().mockResolvedValue(undefined),
     };
+    sequences = {
+      nextDisplayId: jest.fn().mockResolvedValue('MOD-0001'),
+    };
 
     service = new ProjectModulesService(
       repository as unknown as ProjectModulesRepository,
       enumRepository as unknown as EnumRepository,
       collaboratorsRepository as unknown as ModuleCollaboratorsRepository,
+      sequences as unknown as TenantSequencesRepository,
     );
   });
 

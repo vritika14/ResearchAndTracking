@@ -36,6 +36,7 @@ export class ProjectModulesRepository {
     tagId?: string;
     statusId?: string;
     assignedToUserId?: string;
+    displayId?: string;
   }) {
     const [module] = await this.drizzle.db
       .insert(modules)

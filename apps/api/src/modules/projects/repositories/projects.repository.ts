@@ -36,6 +36,7 @@ export class ProjectsRepository {
       dueDate?: string;
       totalBudget?: string;
       targetJournals?: string;
+      displayId?: string;
     },
     ownerRoleId: string,
   ) {

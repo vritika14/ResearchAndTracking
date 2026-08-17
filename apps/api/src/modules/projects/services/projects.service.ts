@@ -1,6 +1,7 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { EnumRepository } from '../../enum/repositories/enum.repository';
 import { ProjectCollaboratorsRepository } from '../../project-collaborators/repositories/project-collaborators.repository';
+import { TenantSequencesRepository } from '../../tenant-sequences/repositories/tenant-sequences.repository';
 import { ProjectsRepository } from '../repositories/projects.repository';
 
 const ARCHIVE_RETENTION_DAYS = 14;
@@ -11,6 +12,7 @@ export class ProjectsService {
     private readonly repository: ProjectsRepository,
     private readonly enumRepository: EnumRepository,
     private readonly collaboratorsRepository: ProjectCollaboratorsRepository,
+    private readonly sequences: TenantSequencesRepository,
   ) {}
 
   async listActive(tenantId: string, callerUserId: string) {
@@ -47,12 +49,13 @@ export class ProjectsService {
       targetJournals?: string;
     },
   ) {
-    const [statusId, pipelineStageId, importanceId, ownerRoleId] =
+    const [statusId, pipelineStageId, importanceId, ownerRoleId, displayId] =
       await Promise.all([
         this.resolveEnum('project_status', input.status),
         this.resolveEnum('pipeline_stage', input.pipelineStage),
         this.resolveEnum('importance', input.importance),
         this.resolveEnum('project_role', 'Owner'),
+        this.sequences.nextDisplayId(tenantId, 'project'),
       ]);
 
     if (!ownerRoleId) {
@@ -75,6 +78,7 @@ export class ProjectsService {
         dueDate: input.dueDate,
         totalBudget: input.totalBudget,
         targetJournals: input.targetJournals,
+        displayId,
       },
       ownerRoleId,
     );

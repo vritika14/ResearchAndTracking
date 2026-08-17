@@ -15,7 +15,8 @@ export class ProjectCollaboratorsService {
   ) {}
 
   async list(tenantId: string, projectId: string) {
-    return this.repository.findByProject(tenantId, projectId);
+    const rows = await this.repository.findByProject(tenantId, projectId);
+    return this.withDisplayValues(rows);
   }
 
   async add(tenantId: string, projectId: string, userId: string, role: string) {
@@ -32,7 +33,17 @@ export class ProjectCollaboratorsService {
 
     const roleId = await this.resolveRole(role);
 
-    return this.repository.create({ tenantId, projectId, userId, roleId });
+    const row = await this.repository.create({
+      tenantId,
+      projectId,
+      userId,
+      roleId,
+    });
+    if (!row) {
+      throw new NotFoundException('Failed to add collaborator ');
+    }
+    const [shaped] = await this.withDisplayValues([row]);
+    return shaped;
   }
 
   async updateRole(
@@ -52,7 +63,8 @@ export class ProjectCollaboratorsService {
     if (!row) {
       throw new NotFoundException('Collaborator not found on this project');
     }
-    return row;
+    const [shaped] = await this.withDisplayValues([row]);
+    return shaped;
   }
 
   async remove(tenantId: string, projectId: string, userId: string) {
@@ -61,6 +73,16 @@ export class ProjectCollaboratorsService {
       throw new NotFoundException('Collaborator not found on this project');
     }
     return row;
+  }
+
+  private async withDisplayValues<T extends { roleId: string }>(rows: T[]) {
+    const roleIds = rows.map((r) => r.roleId);
+    const valuesById = await this.enumRepository.findValuesByIds(roleIds);
+
+    return rows.map(({ roleId, ...rest }) => ({
+      ...rest,
+      role: valuesById.get(roleId) ?? null,
+    }));
   }
 
   private async resolveRole(role: string): Promise<string> {

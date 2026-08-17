@@ -3,6 +3,7 @@ import { NotFoundException } from '@nestjs/common';
 import { TasksService } from './tasks.service';
 import { TasksRepository } from '../repositories/tasks.repository';
 import { EnumRepository } from '../../enum/repositories/enum.repository';
+import { TenantSequencesRepository } from '../../tenant-sequences/repositories/tenant-sequences.repository';
 
 describe('TasksService', () => {
   let service: TasksService;
@@ -17,6 +18,7 @@ describe('TasksService', () => {
     findByCategoryAndValue: jest.Mock;
     findValuesByIds: jest.Mock;
   };
+  let sequences: { nextDisplayId: jest.Mock };
 
   beforeEach(() => {
     repository = {
@@ -30,10 +32,14 @@ describe('TasksService', () => {
       findByCategoryAndValue: jest.fn(),
       findValuesByIds: jest.fn().mockResolvedValue(new Map()),
     };
+    sequences = {
+      nextDisplayId: jest.fn().mockResolvedValue('TSK-0001'),
+    };
 
     service = new TasksService(
       repository as unknown as TasksRepository,
       enumRepository as unknown as EnumRepository,
+      sequences as unknown as TenantSequencesRepository,
     );
   });
 
@@ -45,7 +51,7 @@ describe('TasksService', () => {
       );
       repository.create.mockResolvedValue({ id: 'task-1' });
 
-      await service.create('project-1', 'tenant-1', 'user-1', {
+      await service.create('tenant-1', 'user-1', {
         title: 'New Task',
         status: 'To_do',
         priority: 'High',

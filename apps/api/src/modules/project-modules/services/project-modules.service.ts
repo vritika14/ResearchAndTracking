@@ -1,7 +1,7 @@
-// apps/api/src/modules/project-modules/services/project-modules.service.ts
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { EnumRepository } from '../../enum/repositories/enum.repository';
 import { ModuleCollaboratorsRepository } from '../../module-collaborators/repositories/module-collaborators.repository';
+import { TenantSequencesRepository } from '../../tenant-sequences/repositories/tenant-sequences.repository';
 import { ProjectModulesRepository } from '../repositories/project-modules.repository';
 
 const ARCHIVE_RETENTION_DAYS = 14;
@@ -12,6 +12,7 @@ export class ProjectModulesService {
     private readonly repository: ProjectModulesRepository,
     private readonly enumRepository: EnumRepository,
     private readonly collaboratorsRepository: ModuleCollaboratorsRepository,
+    private readonly sequences: TenantSequencesRepository,
   ) {}
 
   async listActive(tenantId: string, projectId: string, callerUserId: string) {
@@ -44,9 +45,10 @@ export class ProjectModulesService {
       assignedToUserId?: string;
     },
   ) {
-    const [tagId, statusId] = await Promise.all([
+    const [tagId, statusId, displayId] = await Promise.all([
       this.resolveEnum('module_type', input.tag),
       this.resolveEnum('project_status', input.status),
+      this.sequences.nextDisplayId(tenantId, 'module'),
     ]);
 
     const module = await this.repository.create({
@@ -57,6 +59,7 @@ export class ProjectModulesService {
       tagId,
       statusId,
       assignedToUserId: input.assignedToUserId,
+      displayId,
     });
 
     if (!module) {
