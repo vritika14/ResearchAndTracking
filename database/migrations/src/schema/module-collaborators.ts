@@ -13,7 +13,6 @@ export const moduleCollaborators = pgTable(
       .notNull()
       .references(() => tenants.id, { onDelete: 'cascade' }),
     projectId: uuid('project_id')
-      .notNull()
       .references(() => projects.id, { onDelete: 'cascade' }),
     moduleId: uuid('module_id')
       .notNull()

@@ -7,6 +7,7 @@ import {
   Param,
   Patch,
   Post,
+  Query,
   Req,
   UseGuards,
 } from '@nestjs/common';
@@ -30,23 +31,26 @@ interface AuthenticatedRequest extends Request {
 
 @ApiTags('modules')
 @ApiBearerAuth()
-@Controller('api/v1/tenant/:tenantId/projects/:projectId/modules')
+@Controller('api/v1/tenant/:tenantId/modules')
 export class ProjectModulesController {
   constructor(
     private readonly modulesService: ProjectModulesService,
     private readonly usersService: UsersService,
   ) {}
 
-  @ApiOperation({ summary: 'List active modules for a project' })
+  @ApiOperation({
+    summary:
+      'List active modules for a workspace, optionally filtered by project',
+  })
   @UseGuards(JwtAuthGuard)
   @Get()
   async list(
     @Param('tenantId') tenantId: string,
-    @Param('projectId') projectId: string,
     @Req() req: AuthenticatedRequest,
+    @Query('projectId') projectId?: string,
   ) {
     const user = await this.usersService.findByExternalAuthId(req.user.sub);
-    return this.modulesService.listActive(tenantId, projectId, user.id);
+    return this.modulesService.listActive(tenantId, user.id, projectId);
   }
 
   @ApiOperation({ summary: 'Get a single module' })
@@ -61,18 +65,19 @@ export class ProjectModulesController {
     return this.modulesService.findOne(tenantId, moduleId, user.id);
   }
 
-  @ApiOperation({ summary: 'Create a module' })
+  @ApiOperation({
+    summary: 'Create a module, optionally associated with a project',
+  })
   @ApiResponse({ status: 201 })
   @UseGuards(JwtAuthGuard)
   @Post()
   async create(
     @Param('tenantId') tenantId: string,
-    @Param('projectId') projectId: string,
     @Req() req: AuthenticatedRequest,
     @Body() dto: CreateModuleDto,
   ) {
     const user = await this.usersService.findByExternalAuthId(req.user.sub);
-    return this.modulesService.create(projectId, tenantId, user.id, dto);
+    return this.modulesService.create(tenantId, user.id, dto);
   }
 
   @ApiOperation({ summary: 'Update a module' })

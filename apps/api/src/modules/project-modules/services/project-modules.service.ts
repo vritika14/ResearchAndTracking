@@ -15,8 +15,8 @@ export class ProjectModulesService {
     private readonly sequences: TenantSequencesRepository,
   ) {}
 
-  async listActive(tenantId: string, projectId: string, callerUserId: string) {
-    const rows = await this.repository.findActiveByProject(tenantId, projectId);
+  async listActive(tenantId: string, callerUserId: string, projectId?: string) {
+    const rows = await this.repository.findActiveByTenant(tenantId, projectId);
     return this.withDisplayValues(tenantId, rows, callerUserId);
   }
 
@@ -34,10 +34,10 @@ export class ProjectModulesService {
   }
 
   async create(
-    projectId: string,
     tenantId: string,
     callerUserId: string,
     input: {
+      projectId?: string;
       title: string;
       description?: string;
       tag?: string;
@@ -52,7 +52,7 @@ export class ProjectModulesService {
     ]);
 
     const module = await this.repository.create({
-      projectId,
+      projectId: input.projectId,
       tenantId,
       title: input.title,
       description: input.description,
@@ -151,36 +151,16 @@ export class ProjectModulesService {
 
   private async withDisplayValues<
     T extends { id: string; tagId: string | null; statusId: string | null },
-  >(tenantId: string, rows: T[], callerUserId: string) {
+  >(tenantId: string, rows: T[], _callerUserId: string) {
     const enumIds = rows
       .flatMap((r) => [r.tagId, r.statusId])
       .filter((id): id is string => id !== null);
+    const valuesById = await this.enumRepository.findValuesByIds(enumIds);
 
-    const [valuesById, roleRows] = await Promise.all([
-      this.enumRepository.findValuesByIds(enumIds),
-      Promise.all(
-        rows.map((r) =>
-          this.collaboratorsRepository.findByModuleAndUser(
-            tenantId,
-            r.id,
-            callerUserId,
-          ),
-        ),
-      ),
-    ]);
-
-    const roleIds = roleRows
-      .map((r) => r?.roleId)
-      .filter((id): id is string => !!id);
-    const roleValuesById = await this.enumRepository.findValuesByIds(roleIds);
-
-    return rows.map(({ tagId, statusId, ...rest }, index) => ({
+    return rows.map(({ tagId, statusId, ...rest }) => ({
       ...rest,
       tag: tagId ? (valuesById.get(tagId) ?? null) : null,
       status: statusId ? (valuesById.get(statusId) ?? null) : null,
-      role: roleRows[index]?.roleId
-        ? (roleValuesById.get(roleRows[index].roleId) ?? null)
-        : null,
     }));
   }
 

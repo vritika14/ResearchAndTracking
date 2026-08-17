@@ -38,12 +38,12 @@ describe('ProjectModulesController', () => {
       const modules = [{ id: 'm1' }];
       modulesService.listActive.mockResolvedValue(modules);
 
-      const result = await controller.list('tenant-1', 'project-1', req);
+      const result = await controller.list('tenant-1', req, 'project-1');
 
       expect(modulesService.listActive).toHaveBeenCalledWith(
         'tenant-1',
-        'project-1',
         'user-1',
+        'project-1',
       );
       expect(result).toBe(modules);
     });
@@ -69,10 +69,9 @@ describe('ProjectModulesController', () => {
       modulesService.create.mockResolvedValue({ id: 'm1' });
       const dto = { title: 'New Module' };
 
-      const result = await controller.create('tenant-1', 'project-1', req, dto);
+      const result = await controller.create('tenant-1', req, dto);
 
       expect(modulesService.create).toHaveBeenCalledWith(
-        'project-1',
         'tenant-1',
         'user-1',
         dto,
