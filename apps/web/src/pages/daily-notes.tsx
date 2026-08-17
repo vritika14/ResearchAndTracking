@@ -16,9 +16,11 @@ import { dailyNotes, type DailyNote } from "@/data/daily-notes";
 import { cn } from "@/lib/utils";
 
 const ALL_PROJECTS = "All projects";
+const INDEPENDENT_NOTE = "Independent note";
 
 interface NoteDraft {
   title: string;
+  isIndependent: boolean;
   projectName: string;
   tags: string;
   content: string;
@@ -42,6 +44,7 @@ function formatTime(iso: string) {
 function draftFromNote(note: DailyNote): NoteDraft {
   return {
     title: note.title,
+    isIndependent: note.projectName === INDEPENDENT_NOTE,
     projectName: note.projectName,
     tags: note.tags.join(", "),
     content: note.content,
@@ -56,9 +59,12 @@ export default function DailyNotesPage() {
   const [editingId, setEditingId] = useState<string | "new" | null>(null);
   const [draft, setDraft] = useState<NoteDraft>(() => draftFromNote(dailyNotes[0]));
 
-  const projectOptions = useMemo(
-    () => Array.from(new Set(dailyNotes.map((note) => note.projectName))),
-    [],
+  const filterOptions = useMemo(
+    () => Array.from(new Set(notes.map((note) => note.projectName))),
+    [notes],
+  );
+  const projectOptions = filterOptions.filter(
+    (projectName) => projectName !== INDEPENDENT_NOTE,
   );
 
   const visibleNotes = useMemo(() => {
@@ -83,8 +89,11 @@ export default function DailyNotesPage() {
     setEditingId("new");
     setDraft({
       title: "",
+      isIndependent: projectFilter === INDEPENDENT_NOTE,
       projectName:
-        projectFilter === ALL_PROJECTS ? (projectOptions[0] ?? "") : projectFilter,
+        projectFilter === ALL_PROJECTS || projectFilter === INDEPENDENT_NOTE
+          ? (projectOptions[0] ?? "")
+          : projectFilter,
       tags: "",
       content: "",
     });
@@ -101,9 +110,12 @@ export default function DailyNotesPage() {
   }
 
   function saveNote() {
-    const projectName = draft.projectName || projectOptions[0] || "No project selected";
-    const projectId =
-      dailyNotes.find((note) => note.projectName === projectName)?.projectId ?? "PRJ-000";
+    const projectName = draft.isIndependent
+      ? INDEPENDENT_NOTE
+      : draft.projectName || projectOptions[0] || "No project selected";
+    const projectId = draft.isIndependent
+      ? ""
+      : notes.find((note) => note.projectName === projectName)?.projectId ?? "PRJ-000";
     const tags = draft.tags
       .split(",")
       .map((tag) => tag.trim().replace(/^#/, ""))
@@ -120,6 +132,7 @@ export default function DailyNotesPage() {
         content: draft.content.trim(),
       };
       setNotes((current) => [newNote, ...current]);
+      setProjectFilter(ALL_PROJECTS);
       setSelectedId(newNote.id);
     } else if (editingId) {
       setNotes((current) =>
@@ -170,7 +183,7 @@ export default function DailyNotesPage() {
             </SelectTrigger>
             <SelectContent>
               <SelectItem value={ALL_PROJECTS}>{ALL_PROJECTS}</SelectItem>
-              {projectOptions.map((name) => (
+              {filterOptions.map((name) => (
                 <SelectItem key={name} value={name}>
                   {name}
                 </SelectItem>
@@ -281,6 +294,32 @@ export default function DailyNotesPage() {
               </div>
 
               <div className="grid gap-4 sm:grid-cols-2">
+                <label className="flex items-start gap-3 rounded-md border border-border bg-muted/30 p-3 sm:col-span-2">
+                  <input
+                    type="checkbox"
+                    checked={draft.isIndependent}
+                    onChange={(event) =>
+                      setDraft((current) => ({
+                        ...current,
+                        isIndependent: event.target.checked,
+                        projectName: event.target.checked
+                          ? current.projectName
+                          : current.projectName === INDEPENDENT_NOTE
+                            ? projectOptions[0] || ""
+                            : current.projectName || projectOptions[0] || "",
+                      }))
+                    }
+                    className="mt-0.5 h-4 w-4 accent-primary"
+                  />
+                  <span>
+                    <span className="block text-sm font-medium">Independent note</span>
+                    <span className="block text-xs text-muted-foreground">
+                      Save this note without linking it to a project.
+                    </span>
+                  </span>
+                </label>
+
+                {!draft.isIndependent ? (
                 <div className="grid gap-2">
                   <label className="text-xs font-semibold text-muted-foreground">
                     Attached project
@@ -303,6 +342,7 @@ export default function DailyNotesPage() {
                     </SelectContent>
                   </Select>
                 </div>
+                ) : null}
 
                 <div className="grid gap-2">
                   <label htmlFor="note-tags" className="text-xs font-semibold text-muted-foreground">

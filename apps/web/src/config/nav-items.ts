@@ -3,6 +3,7 @@ import {
   Activity,
   Building2,
   BookOpen,
+  Boxes,
   Calendar,
   ClipboardCheck,
   ClipboardList,
@@ -47,6 +48,7 @@ export const navGroups: NavGroup[] = [
     items: [
       { label: "Dashboard", to: "/", icon: LayoutDashboard, end: true },
       { label: "Projects", to: "/projects", icon: FolderKanban },
+      { label: "Modules", to: "/modules", icon: Boxes },
       { label: "Tasks and to do", to: "/tasks", icon: ClipboardList },
       { label: "Notes", to: "/daily-notes", icon: NotebookPen },
       { label: "Pipeline", to: "/pipeline", icon: Workflow },

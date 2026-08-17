@@ -12,6 +12,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
 import {
   Select,
   SelectContent,
@@ -26,6 +27,8 @@ const TASK_PRIORITIES: TaskPriority[] = ["Low", "Medium", "High", "Critical"];
 
 export interface NewTaskInput {
   title: string;
+  description: string;
+  isIndependent: boolean;
   projectId: string;
   status: TaskStatus;
   priority: TaskPriority;
@@ -49,6 +52,8 @@ interface NewTaskDialogProps {
 
 const INITIAL_FORM: NewTaskInput = {
   title: "",
+  description: "",
+  isIndependent: false,
   projectId: "",
   status: "To do",
   priority: "Medium",
@@ -88,6 +93,7 @@ export function NewTaskDialog({ open, onOpenChange, projects, onCreate }: NewTas
     onCreate({
       ...form,
       title: form.title.trim(),
+      description: form.description.trim(),
       waitingOn: form.status === "Waiting" ? form.waitingOn?.trim() || undefined : undefined,
     });
     setForm(INITIAL_FORM);
@@ -100,7 +106,7 @@ export function NewTaskDialog({ open, onOpenChange, projects, onCreate }: NewTas
         <DialogHeader>
           <DialogTitle>Create a new task</DialogTitle>
           <DialogDescription>
-            Add a task to a project and set its current priority and due date.
+            Add an independent task or link it to a project, then set its priority and due date.
           </DialogDescription>
         </DialogHeader>
 
@@ -116,6 +122,40 @@ export function NewTaskDialog({ open, onOpenChange, projects, onCreate }: NewTas
             />
           </FormField>
 
+          <FormField label="Description" htmlFor="task-description">
+            <Textarea
+              id="task-description"
+              value={form.description}
+              onChange={(event) =>
+                setForm((prev) => ({ ...prev, description: event.target.value }))
+              }
+              placeholder="Add a short description of the work"
+              rows={3}
+            />
+          </FormField>
+
+          <label className="flex items-start gap-3 rounded-md border border-border bg-muted/30 p-3">
+            <input
+              type="checkbox"
+              checked={form.isIndependent}
+              onChange={(event) =>
+                setForm((prev) => ({
+                  ...prev,
+                  isIndependent: event.target.checked,
+                  projectId: event.target.checked ? "" : prev.projectId,
+                }))
+              }
+              className="mt-0.5 h-4 w-4 accent-primary"
+            />
+            <span>
+              <span className="block text-sm font-medium">Independent task</span>
+              <span className="block text-xs text-muted-foreground">
+                Create this task without linking it to a project.
+              </span>
+            </span>
+          </label>
+
+          {!form.isIndependent ? (
           <FormField label="Project" htmlFor="task-project" required>
             <Select
               value={form.projectId}
@@ -130,6 +170,7 @@ export function NewTaskDialog({ open, onOpenChange, projects, onCreate }: NewTas
               </SelectContent>
             </Select>
           </FormField>
+          ) : null}
 
           <div className="grid gap-4 sm:grid-cols-2">
             <FormField label="Status" htmlFor="task-status">

@@ -1,6 +1,6 @@
 import { fireEvent, render, screen } from "@testing-library/react";
 import { MemoryRouter } from "react-router-dom";
-import { describe, expect, it, vi } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import ProjectsPage from "@/pages/projects";
 
@@ -35,6 +35,10 @@ vi.mock("@/api/hooks", () => ({
 }));
 
 describe("ProjectsPage", () => {
+  beforeEach(() => {
+    window.localStorage.clear();
+  });
+
   it("provides a direct edit action for each project row", () => {
     render(
       <MemoryRouter>
@@ -57,7 +61,7 @@ describe("ProjectsPage", () => {
       </MemoryRouter>,
     );
 
-    expect(screen.getByText("Scheduled For")).toBeInTheDocument();
+    expect(screen.getAllByText("Scheduled For").length).toBeGreaterThan(0);
 
     fireEvent.click(screen.getByRole("button", { name: "New Project" }));
 
@@ -100,5 +104,45 @@ describe("ProjectsPage", () => {
     expect(screen.getByLabelText("Selected project members")).toHaveTextContent(
       "Jamie Collaborator",
     );
+  });
+
+  it("shows linked modules beneath an expanded project", () => {
+    render(
+      <MemoryRouter>
+        <ProjectsPage />
+      </MemoryRouter>,
+    );
+
+    const projectLink = screen.getByRole("link", {
+      name: "Enzyme Kinetics Inhibition Study Across Temperature Gradients",
+    });
+    const projectRow = projectLink.closest('[role="button"]');
+    expect(projectRow).not.toBeNull();
+    fireEvent.click(projectRow!);
+
+    expect(screen.getByText("Modules (1)")).toBeInTheDocument();
+    expect(screen.getByText("Temperature-response assay design")).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "Manage modules" })).toHaveAttribute(
+      "href",
+      "/modules",
+    );
+  });
+
+  it("shows a project stage changed from the pipeline", () => {
+    window.localStorage.setItem(
+      "research-in-motion.project-stages.v1",
+      JSON.stringify({ "PRJ-101": 4 }),
+    );
+    render(
+      <MemoryRouter>
+        <ProjectsPage />
+      </MemoryRouter>,
+    );
+
+    const projectLink = screen.getByRole("link", {
+      name: "Enzyme Kinetics Inhibition Study Across Temperature Gradients",
+    });
+    const projectRow = projectLink.closest('[role="button"]');
+    expect(projectRow).toHaveTextContent("Data Collection");
   });
 });

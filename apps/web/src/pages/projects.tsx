@@ -3,6 +3,11 @@ import { ChevronRight, Pencil } from "lucide-react";
 import { Link } from "react-router-dom";
 
 import { useCurrentWorkspace, useMe, useMembers } from "@/api/hooks";
+import { ColumnVisibilityMenu } from "@/components/dashboard/column-visibility-menu";
+import {
+  moduleImportanceBadgeClass,
+  moduleStatusBadgeClass,
+} from "@/components/modules/module-badge-styles";
 import { PageHeading } from "@/components/typography/heading";
 import {
   NewProjectDialog,
@@ -18,7 +23,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { PIPELINE_STAGES } from "@/data/pipeline-projects";
+import type { ResearchModule } from "@/data/modules";
 import {
   projects,
   type Project,
@@ -27,6 +32,10 @@ import {
   type ProjectStatus,
 } from "@/data/projects";
 import { cn } from "@/lib/utils";
+import { useColumnVisibility } from "@/hooks/use-column-visibility";
+import { useModules } from "@/hooks/use-modules";
+import { usePipelineStages } from "@/hooks/use-pipeline-stages";
+import { useProjectStageOverrides } from "@/hooks/use-project-stage-overrides";
 
 const STATUS_FILTERS = ["All", "Active", "Review", "Stalled", "Complete"] as const;
 const ROLE_FILTERS = ["All roles", "Owner", "Lead", "Collaborator", "Supervisor"] as const;
@@ -36,8 +45,17 @@ type StatusFilter = (typeof STATUS_FILTERS)[number];
 type RoleFilter = (typeof ROLE_FILTERS)[number];
 type SortOption = (typeof SORT_OPTIONS)[number];
 
-const GRID_TEMPLATE =
-  "minmax(280px,2.2fr) 110px 110px 110px 120px 130px 70px 110px 110px";
+const PROJECT_COLUMNS = [
+  { id: "project", label: "Project", width: "minmax(280px,2.2fr)" },
+  { id: "role", label: "My Role", width: "110px" },
+  { id: "importance", label: "Importance", width: "110px" },
+  { id: "status", label: "Status", width: "110px" },
+  { id: "stage", label: "Stage", width: "120px" },
+  { id: "progress", label: "Progress", width: "130px" },
+  { id: "notes", label: "Notes", width: "70px" },
+  { id: "scheduled", label: "Scheduled For", width: "110px" },
+  { id: "due", label: "Due Date", width: "110px" },
+] as const;
 
 function priorityPillClass(priority: ProjectPriority) {
   switch (priority) {
@@ -136,6 +154,60 @@ function ProjectOverviewDetails({ project }: { project: Project }) {
   );
 }
 
+function ProjectModulesDetails({
+  modules,
+  stageNames,
+}: {
+  modules: ResearchModule[];
+  stageNames: readonly string[];
+}) {
+  return (
+    <div className="flex flex-col gap-3 border-t border-border pt-4">
+      <div className="flex items-center justify-between gap-3">
+        <span className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+          Modules ({modules.length})
+        </span>
+        <Button asChild variant="ghost" size="sm">
+          <Link to="/modules">Manage modules</Link>
+        </Button>
+      </div>
+      {modules.length === 0 ? (
+        <p className="text-sm text-muted-foreground">No modules are linked to this project.</p>
+      ) : (
+        <div className="grid gap-2 lg:grid-cols-2">
+          {modules.map((module) => (
+            <div key={module.id} className="rounded-md border border-border bg-card p-3">
+              <div className="flex flex-wrap items-start justify-between gap-2">
+                <div className="min-w-0">
+                  <span className="block font-mono text-[10px] text-muted-foreground">
+                    {module.id}
+                  </span>
+                  <span className="block text-sm font-semibold">{module.title}</span>
+                </div>
+                <div className="flex flex-wrap gap-1">
+                  <Badge variant="outline" className={moduleStatusBadgeClass(module.status)}>
+                    {module.status}
+                  </Badge>
+                  <Badge
+                    variant="outline"
+                    className={moduleImportanceBadgeClass(module.importance)}
+                  >
+                    {module.importance}
+                  </Badge>
+                </div>
+              </div>
+              <div className="mt-2 flex flex-wrap gap-x-4 gap-y-1 text-xs text-muted-foreground">
+                <span>{stageNames[module.stageIndex] ?? "Unknown stage"}</span>
+                <span>Due {formatDate(module.dueDate)}</span>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
 function sortProjects(rows: Project[], sortBy: SortOption) {
   const sorted = [...rows];
   switch (sortBy) {
@@ -156,12 +228,32 @@ function sortProjects(rows: Project[], sortBy: SortOption) {
 
 export default function ProjectsPage() {
   const [projectRows, setProjectRows] = useState<Project[]>(projects);
+  const { moduleRows } = useModules();
+  const { pipelineStages } = usePipelineStages();
+  const stageNames = pipelineStages.map((stage) => stage.name);
+  const { stageOverrides } = useProjectStageOverrides();
+  const stagedProjectRows = useMemo(
+    () =>
+      projectRows.map((project) => ({
+        ...project,
+        stageIndex: stageOverrides[project.id] ?? project.stageIndex,
+      })),
+    [projectRows, stageOverrides],
+  );
   const [isNewProjectOpen, setIsNewProjectOpen] = useState(false);
   const [search, setSearch] = useState("");
   const [status, setStatus] = useState<StatusFilter>("All");
   const [role, setRole] = useState<RoleFilter>("All roles");
   const [sortBy, setSortBy] = useState<SortOption>("Due date");
   const [expandedId, setExpandedId] = useState<string | null>(null);
+  const columns = useColumnVisibility(
+    PROJECT_COLUMNS.map((column) => column.id),
+  );
+  const gridTemplate = PROJECT_COLUMNS.filter((column) =>
+    columns.visibleColumns.has(column.id),
+  )
+    .map((column) => column.width)
+    .join(" ");
   const me = useMe();
   const workspace = useCurrentWorkspace();
   const workspaceMembers = useMembers(
@@ -175,7 +267,7 @@ export default function ProjectsPage() {
 
   const visibleProjects = useMemo(() => {
     const query = search.trim().toLowerCase();
-    const filtered = projectRows.filter((project) => {
+    const filtered = stagedProjectRows.filter((project) => {
       if (status !== "All" && project.status !== status) return false;
       if (role !== "All roles" && project.myRole !== role) return false;
       if (
@@ -190,7 +282,7 @@ export default function ProjectsPage() {
       return true;
     });
     return sortProjects(filtered, sortBy);
-  }, [projectRows, search, status, role, sortBy]);
+  }, [stagedProjectRows, search, status, role, sortBy]);
 
   const hasActiveFilters = search !== "" || status !== "All" || role !== "All roles";
 
@@ -273,6 +365,11 @@ export default function ProjectsPage() {
               ))}
             </SelectContent>
           </Select>
+          <ColumnVisibilityMenu
+            columns={PROJECT_COLUMNS}
+            visibleColumns={columns.visibleColumns}
+            onToggle={columns.toggleColumn}
+          />
           {hasActiveFilters ? (
             <button
               type="button"
@@ -304,20 +401,16 @@ export default function ProjectsPage() {
       </div>
 
       <div className="overflow-x-auto">
-        <div className="min-w-[1100px]">
+        <div className="min-w-[720px]">
           <div
-            className="grid gap-4 px-4 pb-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground"
-            style={{ gridTemplateColumns: GRID_TEMPLATE }}
+            className="grid gap-4 px-4 pb-2 text-xs font-semibold uppercase tracking-wide text-primary"
+            style={{ gridTemplateColumns: gridTemplate }}
           >
-            <span>Project</span>
-            <span>My Role</span>
-            <span>Importance</span>
-            <span>Status</span>
-            <span>Stage</span>
-            <span>Progress</span>
-            <span>Notes</span>
-            <span>Scheduled For</span>
-            <span>Due Date</span>
+            {PROJECT_COLUMNS.filter((column) =>
+              columns.visibleColumns.has(column.id),
+            ).map((column) => (
+              <span key={column.id}>{column.label}</span>
+            ))}
           </div>
 
           <div className="flex flex-col gap-3">
@@ -346,8 +439,9 @@ export default function ProjectsPage() {
                         "grid cursor-pointer items-center gap-4 border border-border bg-card px-4 py-4 shadow-sm transition-colors hover:bg-accent/40",
                         isExpanded ? "rounded-t-lg border-b-0" : "rounded-lg",
                       )}
-                      style={{ gridTemplateColumns: GRID_TEMPLATE }}
+                      style={{ gridTemplateColumns: gridTemplate }}
                     >
+                      {columns.isColumnVisible("project") ? (
                       <div className="flex items-start gap-2">
                         <ChevronRight
                           className={cn(
@@ -382,34 +476,50 @@ export default function ProjectsPage() {
                           </span>
                         </div>
                       </div>
+                      ) : null}
 
+                      {columns.isColumnVisible("role") ? (
                       <Badge variant="outline" className={rolePillClass(project.myRole)}>
                         {project.myRole}
                       </Badge>
+                      ) : null}
 
+                      {columns.isColumnVisible("importance") ? (
                       <Badge variant="outline" className={priorityPillClass(project.priority)}>
                         {project.priority}
                       </Badge>
+                      ) : null}
 
+                      {columns.isColumnVisible("status") ? (
                       <Badge variant="outline" className={statusPillClass(project.status)}>
                         {project.status}
                       </Badge>
+                      ) : null}
 
+                      {columns.isColumnVisible("stage") ? (
                       <span className="text-sm text-muted-foreground">
-                        {PIPELINE_STAGES[project.stageIndex]}
+                        {stageNames[project.stageIndex] ?? "Unknown stage"}
                       </span>
+                      ) : null}
 
+                      {columns.isColumnVisible("progress") ? (
                       <ProgressCell
                         completed={project.tasksCompleted}
                         total={project.tasksTotal}
                       />
+                      ) : null}
 
+                      {columns.isColumnVisible("notes") ? (
                       <span className="text-sm text-muted-foreground">{project.notes}</span>
+                      ) : null}
 
+                      {columns.isColumnVisible("scheduled") ? (
                       <span className="text-sm tabular-nums text-muted-foreground">
                         {formatDate(project.scheduledFor)}
                       </span>
+                      ) : null}
 
+                      {columns.isColumnVisible("due") ? (
                       <span
                         className={cn(
                           "text-sm",
@@ -420,11 +530,16 @@ export default function ProjectsPage() {
                       >
                         {formatDate(project.dueDate)}
                       </span>
+                      ) : null}
                     </div>
 
                     {isExpanded ? (
-                      <div className="rounded-b-lg border border-t-0 border-border bg-muted/30 px-4 py-5">
+                      <div className="flex flex-col gap-5 rounded-b-lg border border-t-0 border-border bg-muted/30 px-4 py-5">
                         <ProjectOverviewDetails project={project} />
+                        <ProjectModulesDetails
+                          modules={moduleRows.filter((module) => module.projectId === project.id)}
+                          stageNames={stageNames}
+                        />
                       </div>
                     ) : null}
                   </div>

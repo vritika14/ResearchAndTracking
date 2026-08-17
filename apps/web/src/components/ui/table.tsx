@@ -4,7 +4,7 @@ import { cn } from "@/lib/utils";
 
 const Table = React.forwardRef<HTMLTableElement, React.HTMLAttributes<HTMLTableElement>>(
   ({ className, ...props }, ref) => (
-    <div className="relative w-full overflow-auto rounded-md border border-slate-200/80 bg-white/80">
+    <div className="relative w-full overflow-auto rounded-md border border-border bg-card/80">
       <table ref={ref} className={cn("w-full caption-bottom text-sm", className)} {...props} />
     </div>
   ),
@@ -17,7 +17,7 @@ const TableHeader = React.forwardRef<
 >(({ className, ...props }, ref) => (
   <thead
     ref={ref}
-    className={cn("bg-blue-50/80 [&_tr]:border-b [&_tr]:border-blue-100", className)}
+    className={cn("bg-accent/80 [&_tr]:border-b [&_tr]:border-primary/10", className)}
     {...props}
   />
 ));
@@ -36,7 +36,7 @@ const TableRow = React.forwardRef<HTMLTableRowElement, React.HTMLAttributes<HTML
     <tr
       ref={ref}
       className={cn(
-        "border-b border-slate-100 transition-colors hover:bg-blue-50/55 data-[state=selected]:bg-blue-100/70",
+        "border-b border-border transition-colors hover:bg-accent/55 data-[state=selected]:bg-accent",
         className,
       )}
       {...props}
@@ -52,7 +52,7 @@ const TableHead = React.forwardRef<
   <th
     ref={ref}
     className={cn(
-      "h-10 px-3 text-left align-middle text-xs font-semibold uppercase tracking-wide text-blue-900/70 [&:has([role=checkbox])]:pr-0",
+      "h-10 px-3 text-left align-middle text-xs font-semibold uppercase tracking-wide text-primary [&:has([role=checkbox])]:pr-0",
       className,
     )}
     {...props}

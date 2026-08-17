@@ -6,6 +6,7 @@ import { RequireWorkspace } from "@/auth/require-workspace";
 import { AppLayout } from "@/components/layout/app-layout";
 import DashboardPage from "@/pages/dashboard";
 import ProjectsPage from "@/pages/projects";
+import ModulesPage from "@/pages/modules";
 import ProjectDetailPage from "@/pages/project-detail";
 import TasksPage from "@/pages/tasks";
 import DailyNotesPage from "@/pages/daily-notes";
@@ -45,6 +46,7 @@ export default function App() {
             <Route element={<AppLayout />}>
               <Route index element={<DashboardPage />} />
               <Route path="projects" element={<ProjectsPage />} />
+              <Route path="modules" element={<ModulesPage />} />
               <Route
                 path="projects/:projectId"
                 element={<ProjectDetailPage />}

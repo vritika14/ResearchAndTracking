@@ -16,7 +16,6 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { PIPELINE_STAGES } from "@/data/pipeline-projects";
 import {
   projects,
   type Project,
@@ -24,6 +23,8 @@ import {
   type ProjectRole,
   type ProjectStatus,
 } from "@/data/projects";
+import { useProjectStageOverrides } from "@/hooks/use-project-stage-overrides";
+import { usePipelineStages } from "@/hooks/use-pipeline-stages";
 
 const PROJECT_ROLES: ProjectRole[] = ["Owner", "Lead", "Collaborator", "Supervisor"];
 const PROJECT_PRIORITIES: ProjectPriority[] = ["Low", "Medium", "High", "Critical"];
@@ -87,7 +88,12 @@ export default function ProjectDetailPage() {
   const { projectId } = useParams();
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
-  const initialProject = projects.find((item) => item.id === projectId);
+  const { pipelineStages } = usePipelineStages();
+  const { stageOverrides, updateProjectStage } = useProjectStageOverrides();
+  const sourceProject = projects.find((item) => item.id === projectId);
+  const initialProject = sourceProject
+    ? { ...sourceProject, stageIndex: stageOverrides[sourceProject.id] ?? sourceProject.stageIndex }
+    : undefined;
   const [project, setProject] = useState<Project | undefined>(() =>
     initialProject ? { ...initialProject } : undefined,
   );
@@ -126,10 +132,11 @@ export default function ProjectDetailPage() {
 
   function saveProject(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    if (!form) return;
+    if (!form || !project) return;
 
     const dueDate = form.dueDate;
     const today = new Date().toISOString().slice(0, 10);
+    updateProjectStage(project.id, form.stageIndex);
     setProject((current) =>
       current
         ? {
@@ -267,8 +274,8 @@ export default function ProjectDetailPage() {
                   >
                     <SelectTrigger id="edit-project-stage"><SelectValue /></SelectTrigger>
                     <SelectContent>
-                      {PIPELINE_STAGES.map((stage, index) => (
-                        <SelectItem key={stage} value={String(index)}>{stage}</SelectItem>
+                      {pipelineStages.map((stage, index) => (
+                        <SelectItem key={stage.name} value={String(index)}>{stage.name}</SelectItem>
                       ))}
                     </SelectContent>
                   </Select>
@@ -385,7 +392,9 @@ export default function ProjectDetailPage() {
               <DetailItem label="Funder">{project.funder}</DetailItem>
               <DetailItem label="My role">{project.myRole}</DetailItem>
               <DetailItem label="Importance">{project.priority}</DetailItem>
-              <DetailItem label="Pipeline stage">{PIPELINE_STAGES[project.stageIndex]}</DetailItem>
+              <DetailItem label="Pipeline stage">
+                {pipelineStages[project.stageIndex]?.name ?? "Unknown stage"}
+              </DetailItem>
               <DetailItem label="Scheduled for">{formatDate(project.scheduledFor)}</DetailItem>
               <DetailItem label="Due date">{formatDate(project.dueDate)}</DetailItem>
               <DetailItem label="Target journal or output" className="sm:col-span-2">

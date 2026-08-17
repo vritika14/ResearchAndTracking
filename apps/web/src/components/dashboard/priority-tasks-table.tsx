@@ -1,9 +1,9 @@
 import { useMemo, useState } from "react";
 
+import { ColumnVisibilityMenu } from "@/components/dashboard/column-visibility-menu";
+import { priorityBadgeClass } from "@/components/dashboard/priority-badge-styles";
 import {
   priorityTasks,
-  type TaskPriority,
-  type TaskStatus,
 } from "@/data/priority-tasks";
 import { Badge } from "@/components/ui/badge";
 import {
@@ -30,48 +30,27 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { cn } from "@/lib/utils";
+import { useColumnVisibility } from "@/hooks/use-column-visibility";
 
 const PRIORITY_FILTERS = ["All", "Critical", "High", "Medium", "Low"] as const;
-const STATUS_FILTERS = [
-  "All",
-  "Open",
-  "In Progress",
-  "Blocked",
-  "Done",
+const TASK_COLUMNS = [
+  { id: "project", label: "Project" },
+  { id: "task", label: "Task" },
+  { id: "due", label: "Due" },
+  { id: "priority", label: "Priority" },
 ] as const;
 
 type PriorityFilter = (typeof PRIORITY_FILTERS)[number];
-type StatusFilter = (typeof STATUS_FILTERS)[number];
-
-function priorityBadgeClass(priority: TaskPriority) {
-  return priority === "Critical"
-    ? "border-transparent bg-destructive text-destructive-foreground"
-    : "border-transparent bg-amber-100 text-amber-900 dark:bg-amber-500/15 dark:text-amber-400";
-}
-
-function statusBadgeClass(status: TaskStatus) {
-  switch (status) {
-    case "Open":
-      return "border-transparent bg-secondary text-secondary-foreground";
-    case "In Progress":
-      return "border-transparent bg-primary text-primary-foreground";
-    case "Blocked":
-      return "border-transparent bg-destructive text-destructive-foreground";
-    case "Done":
-      return "border-transparent bg-emerald-100 text-emerald-900 dark:bg-emerald-500/15 dark:text-emerald-400";
-  }
-}
 
 export function PriorityTasksTable() {
   const [search, setSearch] = useState("");
   const [priority, setPriority] = useState<PriorityFilter>("All");
-  const [status, setStatus] = useState<StatusFilter>("All");
+  const columns = useColumnVisibility(TASK_COLUMNS.map((column) => column.id));
 
   const filtered = useMemo(() => {
     const query = search.trim().toLowerCase();
     return priorityTasks.filter((row) => {
       if (priority !== "All" && row.priority !== priority) return false;
-      if (status !== "All" && row.status !== status) return false;
       if (
         query &&
         !row.project.toLowerCase().includes(query) &&
@@ -81,15 +60,13 @@ export function PriorityTasksTable() {
       }
       return true;
     });
-  }, [search, priority, status]);
+  }, [search, priority]);
 
-  const hasActiveFilters =
-    search !== "" || priority !== "All" || status !== "All";
+  const hasActiveFilters = search !== "" || priority !== "All";
 
   function clearFilters() {
     setSearch("");
     setPriority("All");
-    setStatus("All");
   }
 
   return (
@@ -123,21 +100,11 @@ export function PriorityTasksTable() {
               ))}
             </SelectContent>
           </Select>
-          <Select
-            value={status}
-            onValueChange={(value) => setStatus(value as StatusFilter)}
-          >
-            <SelectTrigger className="sm:w-40">
-              <SelectValue placeholder="Status" />
-            </SelectTrigger>
-            <SelectContent>
-              {STATUS_FILTERS.map((option) => (
-                <SelectItem key={option} value={option}>
-                  {option === "All" ? "All statuses" : option}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+          <ColumnVisibilityMenu
+            columns={TASK_COLUMNS}
+            visibleColumns={columns.visibleColumns}
+            onToggle={columns.toggleColumn}
+          />
           {hasActiveFilters ? (
             <button
               type="button"
@@ -153,18 +120,17 @@ export function PriorityTasksTable() {
         <Table>
           <TableHeader>
             <TableRow>
-              <TableHead>Project</TableHead>
-              <TableHead>Task</TableHead>
-              <TableHead>Due</TableHead>
-              <TableHead>Priority</TableHead>
-              <TableHead>Status</TableHead>
+              {columns.isColumnVisible("project") ? <TableHead>Project</TableHead> : null}
+              {columns.isColumnVisible("task") ? <TableHead>Task</TableHead> : null}
+              {columns.isColumnVisible("due") ? <TableHead>Due</TableHead> : null}
+              {columns.isColumnVisible("priority") ? <TableHead>Priority</TableHead> : null}
             </TableRow>
           </TableHeader>
           <TableBody>
             {filtered.length === 0 ? (
               <TableRow>
                 <TableCell
-                  colSpan={5}
+                  colSpan={columns.visibleColumns.size}
                   className="h-24 text-center text-muted-foreground"
                 >
                   No tasks match the current filters.
@@ -173,33 +139,29 @@ export function PriorityTasksTable() {
             ) : (
               filtered.map((row) => (
                 <TableRow key={row.id}>
-                  <TableCell className="font-medium">{row.project}</TableCell>
-                  <TableCell className="text-muted-foreground">
-                    {row.task}
-                  </TableCell>
-                  <TableCell
-                    className={cn(
-                      row.overdue && "font-medium text-destructive",
-                    )}
-                  >
-                    {row.due}
-                  </TableCell>
-                  <TableCell>
-                    <Badge
-                      variant="outline"
-                      className={priorityBadgeClass(row.priority)}
+                  {columns.isColumnVisible("project") ? (
+                    <TableCell className="font-medium">{row.project}</TableCell>
+                  ) : null}
+                  {columns.isColumnVisible("task") ? (
+                    <TableCell className="text-muted-foreground">{row.task}</TableCell>
+                  ) : null}
+                  {columns.isColumnVisible("due") ? (
+                    <TableCell
+                      className={cn(row.overdue && "font-medium text-destructive")}
                     >
-                      {row.priority}
-                    </Badge>
-                  </TableCell>
-                  <TableCell>
-                    <Badge
-                      variant="outline"
-                      className={statusBadgeClass(row.status)}
-                    >
-                      {row.status}
-                    </Badge>
-                  </TableCell>
+                      {row.due}
+                    </TableCell>
+                  ) : null}
+                  {columns.isColumnVisible("priority") ? (
+                    <TableCell>
+                      <Badge
+                        variant="outline"
+                        className={priorityBadgeClass(row.priority)}
+                      >
+                        {row.priority}
+                      </Badge>
+                    </TableCell>
+                  ) : null}
                 </TableRow>
               ))
             )}

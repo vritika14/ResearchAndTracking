@@ -4,6 +4,7 @@ export type TaskPriority = "Low" | "Medium" | "High" | "Critical";
 export interface TaskItem {
   code: string;
   title: string;
+  description: string;
   /** Dependency shown as a secondary line under the title, e.g. "Waiting: Dr Thornton". */
   waitingOn?: string;
   projectName: string;
@@ -21,6 +22,7 @@ export const tasks: TaskItem[] = [
   {
     code: "TSK-0441",
     title: "Submit interim safety report to IRB",
+    description: "Compile interim safety findings and submit the approved report package.",
     projectName: "Clinical Trial Phase II — Cardiac Biomarker Response",
     status: "To do",
     priority: "Critical",
@@ -31,6 +33,7 @@ export const tasks: TaskItem[] = [
   {
     code: "TSK-0442",
     title: "Resolve calibration drift on HPLC unit 3",
+    description: "Investigate the retention-time drift and document the recalibration results.",
     projectName: "Biosafety Level 2 Lab Compliance Audit",
     status: "Underway",
     priority: "High",
@@ -41,6 +44,7 @@ export const tasks: TaskItem[] = [
   {
     code: "TSK-0443",
     title: "Review adverse event log for Cohort B",
+    description: "Validate reported events and flag entries requiring clinical follow-up.",
     waitingOn: "Dr Thornton",
     projectName: "Cohort B Longitudinal Recruitment Program",
     status: "Waiting",
@@ -52,6 +56,7 @@ export const tasks: TaskItem[] = [
   {
     code: "TSK-0444",
     title: "Finalize budget justification narrative",
+    description: "Complete the cost rationale and align figures with the renewal budget.",
     projectName: "NSF Grant Renewal — Structural Biology Core",
     status: "To do",
     priority: "Medium",
@@ -62,6 +67,7 @@ export const tasks: TaskItem[] = [
   {
     code: "TSK-0445",
     title: "Fix sample tracking barcode mismatch",
+    description: "Reconcile mismatched identifiers between legacy records and the new LIMS.",
     projectName: "Legacy Sample Data Migration to New LIMS",
     status: "Underway",
     priority: "High",
@@ -72,6 +78,7 @@ export const tasks: TaskItem[] = [
   {
     code: "TSK-0446",
     title: "Re-consent participants under amendment v3",
+    description: "Coordinate updated consent documentation for affected trial participants.",
     waitingOn: "Ethics office",
     projectName: "Clinical Trial Phase II — Cardiac Biomarker Response",
     status: "Waiting",
@@ -83,6 +90,7 @@ export const tasks: TaskItem[] = [
   {
     code: "TSK-0447",
     title: "Prepare quarterly compliance summary draft",
+    description: "Summarize compliance activity, exceptions, and corrective actions for review.",
     projectName: "Quarterly Regulatory Compliance Summary",
     status: "Complete",
     priority: "Medium",
@@ -93,6 +101,7 @@ export const tasks: TaskItem[] = [
   {
     code: "TSK-0448",
     title: "Close out corrective action from last inspection",
+    description: "Record evidence of remediation and complete the inspection close-out entry.",
     projectName: "Biosafety Level 2 Lab Compliance Audit",
     status: "Complete",
     priority: "High",
@@ -103,6 +112,7 @@ export const tasks: TaskItem[] = [
   {
     code: "TSK-0449",
     title: "Order sequencing reagents",
+    description: "Confirm stock requirements and place the reagent order for the next run.",
     projectName: "Enzyme Kinetics Inhibition Study Across Temperature Gradients",
     status: "To do",
     priority: "Low",
@@ -113,6 +123,7 @@ export const tasks: TaskItem[] = [
   {
     code: "TSK-0450",
     title: "Draft cryo-EM service contract quote request",
+    description: "Prepare scope, sample volumes, and turnaround requirements for suppliers.",
     projectName: "NSF Grant Renewal — Structural Biology Core",
     status: "Underway",
     priority: "Medium",
@@ -123,6 +134,7 @@ export const tasks: TaskItem[] = [
   {
     code: "TSK-0451",
     title: "Validate RNA extraction protocol",
+    description: "Run validation controls and record yield and quality acceptance results.",
     projectName: "Genome Sequencing Pipeline v3",
     status: "To do",
     priority: "Critical",
@@ -133,6 +145,7 @@ export const tasks: TaskItem[] = [
   {
     code: "TSK-0452",
     title: "Archive validation records for mass spec calibration",
+    description: "Organize signed calibration records and move them into the governed archive.",
     projectName: "Mass Spectrometry Calibration Standardization",
     status: "Complete",
     priority: "Low",

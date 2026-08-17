@@ -75,7 +75,7 @@ export default function InvitationAcceptancePage() {
         <Badge variant="outline" className="border-primary/30 bg-primary/5 text-primary">Workspace invitation</Badge>
         <Heading level="h2" className="mt-4">You have been invited</Heading>
         <p className="mx-auto mt-2 max-w-md text-sm leading-6 text-muted-foreground">
-          Join this Research &amp; Tracking workspace using the account that received the invitation.
+          Join this Research in Motion workspace using the account that received the invitation.
         </p>
       </div>
 

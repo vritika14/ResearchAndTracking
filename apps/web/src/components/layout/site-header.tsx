@@ -28,7 +28,7 @@ export function SiteHeader() {
         </SheetTrigger>
         <SheetContent side="left" className="flex w-3/4 flex-col overflow-y-auto sm:max-w-xs">
           <SheetHeader>
-            <SheetTitle>Research &amp; Tracking</SheetTitle>
+            <SheetTitle>Research in Motion</SheetTitle>
           </SheetHeader>
           <div className="mt-6 flex flex-col gap-6">
             <NavTree onNavigate={() => setOpen(false)} />

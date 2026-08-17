@@ -22,7 +22,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { PIPELINE_STAGES } from "@/data/pipeline-projects";
+import { usePipelineStages } from "@/hooks/use-pipeline-stages";
 import type { ProjectPriority, ProjectRole, ProjectStatus } from "@/data/projects";
 
 const PROJECT_PRIORITIES: ProjectPriority[] = ["Low", "Medium", "High", "Critical"];
@@ -94,6 +94,7 @@ export function NewProjectDialog({
   members,
   membersLoading,
 }: NewProjectDialogProps) {
+  const { pipelineStages } = usePipelineStages();
   const [form, setForm] = useState<NewProjectInput>(INITIAL_FORM);
   const [memberSearch, setMemberSearch] = useState("");
   const [memberPickerOpen, setMemberPickerOpen] = useState(false);
@@ -346,8 +347,8 @@ export function NewProjectDialog({
               >
                 <SelectTrigger id="project-stage"><SelectValue /></SelectTrigger>
                 <SelectContent>
-                  {PIPELINE_STAGES.map((stage, index) => (
-                    <SelectItem key={stage} value={String(index)}>{stage}</SelectItem>
+                  {pipelineStages.map((stage, index) => (
+                    <SelectItem key={stage.name} value={String(index)}>{stage.name}</SelectItem>
                   ))}
                 </SelectContent>
               </Select>

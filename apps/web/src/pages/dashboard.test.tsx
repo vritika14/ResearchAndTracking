@@ -1,6 +1,6 @@
-import { render, screen } from "@testing-library/react";
+import { fireEvent, render, screen } from "@testing-library/react";
 import { MemoryRouter } from "react-router-dom";
-import { describe, expect, it, vi } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import DashboardPage from "@/pages/dashboard";
 
@@ -15,16 +15,22 @@ vi.mock("@/api/hooks", () => ({
 }));
 
 vi.mock("@/components/dashboard/priority-tasks-table", () => ({
-  PriorityTasksTable: () => null,
+  PriorityTasksTable: () => <div data-testid="dashboard-table-tasks">Tasks table</div>,
 }));
 vi.mock("@/components/dashboard/pipeline-overview-table", () => ({
-  PipelineOverviewTable: () => null,
+  PipelineOverviewTable: () => <div data-testid="dashboard-table-pipeline">Pipeline table</div>,
 }));
 vi.mock("@/components/dashboard/conference-submissions-table", () => ({
-  ConferenceSubmissionsTable: () => null,
+  ConferenceSubmissionsTable: () => (
+    <div data-testid="dashboard-table-conferences">Conferences table</div>
+  ),
 }));
 
 describe("DashboardPage", () => {
+  beforeEach(() => {
+    window.localStorage.clear();
+  });
+
   it("identifies the workspace whose data is displayed", () => {
     render(
       <MemoryRouter>
@@ -38,5 +44,39 @@ describe("DashboardPage", () => {
     expect(
       screen.getByRole("link", { name: "Switch workspace" }),
     ).toHaveAttribute("href", "/workspaces");
+  });
+
+  it("hides and reorders dashboard tables and preserves the layout", () => {
+    const view = render(
+      <MemoryRouter>
+        <DashboardPage />
+      </MemoryRouter>,
+    );
+
+    fireEvent.click(screen.getByRole("button", { name: "Customize dashboard" }));
+    fireEvent.click(screen.getByRole("checkbox", { name: /Tasks to be done/ }));
+    fireEvent.click(
+      screen.getByRole("button", { name: "Move Pipeline project overview up" }),
+    );
+    fireEvent.click(screen.getByRole("button", { name: "Done" }));
+
+    expect(screen.queryByTestId("dashboard-table-tasks")).not.toBeInTheDocument();
+    expect(screen.getAllByTestId(/dashboard-table-/).map((table) => table.textContent)).toEqual([
+      "Pipeline table",
+      "Conferences table",
+    ]);
+
+    view.unmount();
+    render(
+      <MemoryRouter>
+        <DashboardPage />
+      </MemoryRouter>,
+    );
+
+    expect(screen.queryByTestId("dashboard-table-tasks")).not.toBeInTheDocument();
+    expect(screen.getAllByTestId(/dashboard-table-/).map((table) => table.textContent)).toEqual([
+      "Pipeline table",
+      "Conferences table",
+    ]);
   });
 });
