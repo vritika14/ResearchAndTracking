@@ -16,6 +16,8 @@ import { ProjectsModule } from './modules/projects/project.module';
 import { ProjectModulesModule } from './modules/project-modules/project-modules.module';
 import { NotesModule } from './modules/notes/notes.module';
 import { TasksModule } from './modules/tasks/tasks.module';
+import { ProjectCollaboratorsModule } from './modules/project-collaborators/project-collaborators.module';
+import { ModuleCollaboratorsModule } from './modules/module-collaborators/module-collaborators.module';
 
 const invitationTokenPath = /\/api\/v1\/invitations\/[^/]+/g;
 
@@ -68,6 +70,8 @@ const invitationTokenPath = /\/api\/v1\/invitations\/[^/]+/g;
     ProjectModulesModule,
     NotesModule,
     TasksModule,
+    ProjectCollaboratorsModule,
+    ModuleCollaboratorsModule,
   ],
   controllers: [AppController],
   providers: [AppService],

@@ -13,7 +13,7 @@ describe('TasksService', () => {
     update: jest.Mock;
     delete: jest.Mock;
   };
-  let enumRepository: { findByCategoryAndValue: jest.Mock };
+  let enumRepository: { findByCategoryAndValue: jest.Mock; findValuesByIds: jest.Mock };
 
   beforeEach(() => {
     repository = {
@@ -23,7 +23,10 @@ describe('TasksService', () => {
       update: jest.fn(),
       delete: jest.fn(),
     };
-    enumRepository = { findByCategoryAndValue: jest.fn() };
+    enumRepository = {
+      findByCategoryAndValue: jest.fn(),
+      findValuesByIds: jest.fn().mockResolvedValue(new Map()),
+    };
 
     service = new TasksService(
       repository as unknown as TasksRepository,

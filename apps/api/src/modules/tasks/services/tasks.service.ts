@@ -1,3 +1,4 @@
+// apps/api/src/modules/tasks/services/tasks.service.ts
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { EnumRepository } from '../../enum/repositories/enum.repository';
 import { TasksRepository } from '../repositories/tasks.repository';
@@ -10,7 +11,8 @@ export class TasksService {
   ) {}
 
   async listByProject(tenantId: string, projectId: string) {
-    return this.repository.findByProject(tenantId, projectId);
+    const rows = await this.repository.findByProject(tenantId, projectId);
+    return this.withDisplayValues(rows);
   }
 
   async findOne(tenantId: string, taskId: string) {
@@ -18,7 +20,8 @@ export class TasksService {
     if (!task) {
       throw new NotFoundException('Task not found');
     }
-    return task;
+    const [shaped] = await this.withDisplayValues([task]);
+    return shaped;
   }
 
   async create(
@@ -41,7 +44,7 @@ export class TasksService {
       this.resolveEnum('importance', input.priority),
     ]);
 
-    return this.repository.create({
+    const task = await this.repository.create({
       projectId,
       tenantId,
       moduleId: input.moduleId,
@@ -54,6 +57,13 @@ export class TasksService {
       estimatedHours: input.estimatedHours,
       dueDate: input.dueDate,
     });
+
+    if (!task) {
+      throw new NotFoundException('Failed to create task');
+    }
+
+    const [shaped] = await this.withDisplayValues([task]);
+    return shaped;
   }
 
   async update(
@@ -73,9 +83,7 @@ export class TasksService {
 
     const [statusId, priorityId] = await Promise.all([
       input.status ? this.resolveEnum('task_status', input.status) : undefined,
-      input.priority
-        ? this.resolveEnum('importance', input.priority)
-        : undefined,
+      input.priority ? this.resolveEnum('importance', input.priority) : undefined,
     ]);
 
     const task = await this.repository.update(tenantId, taskId, {
@@ -91,7 +99,9 @@ export class TasksService {
     if (!task) {
       throw new NotFoundException('Task not found');
     }
-    return task;
+
+    const [shaped] = await this.withDisplayValues([task]);
+    return shaped;
   }
 
   async delete(tenantId: string, taskId: string) {
@@ -102,15 +112,25 @@ export class TasksService {
     return task;
   }
 
-  private async resolveEnum(
-    category: string,
-    value?: string,
-  ): Promise<string | undefined> {
+  private async withDisplayValues<
+    T extends { statusId: string | null; priorityId: string | null },
+  >(rows: T[]) {
+    const ids = rows
+      .flatMap((r) => [r.statusId, r.priorityId])
+      .filter((id): id is string => id !== null);
+
+    const valuesById = await this.enumRepository.findValuesByIds(ids);
+
+    return rows.map(({ statusId, priorityId, ...rest }) => ({
+      ...rest,
+      status: statusId ? (valuesById.get(statusId) ?? null) : null,
+      priority: priorityId ? (valuesById.get(priorityId) ?? null) : null,
+    }));
+  }
+
+  private async resolveEnum(category: string, value?: string): Promise<string | undefined> {
     if (!value) return undefined;
-    const match = await this.enumRepository.findByCategoryAndValue(
-      category,
-      value,
-    );
+    const match = await this.enumRepository.findByCategoryAndValue(category, value);
     if (!match) {
       throw new NotFoundException(`Unknown ${category} value: "${value}"`);
     }
