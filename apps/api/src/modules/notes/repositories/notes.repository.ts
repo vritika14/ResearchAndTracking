@@ -15,20 +15,25 @@ export class NotesRepository {
     return note;
   }
 
-  async findByProject(tenantId: string, projectId: string) {
+  async findByTenant(tenantId: string, projectId?: string) {
+    const conditions = [eq(notes.tenantId, tenantId)];
+    if (projectId) {
+      conditions.push(eq(notes.projectId, projectId));
+    }
     return this.drizzle.db
       .select()
       .from(notes)
-      .where(and(eq(notes.tenantId, tenantId), eq(notes.projectId, projectId)));
+      .where(and(...conditions));
   }
 
   async create(values: {
-    projectId: string;
+    projectId?: string;
     tenantId: string;
     moduleId?: string;
     createdBy: string;
     title: string;
     content?: string;
+    displayId?: string;
   }) {
     const [note] = await this.drizzle.db
       .insert(notes)

@@ -1,5 +1,7 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { EnumRepository } from '../../enum/repositories/enum.repository';
+import { ProjectCollaboratorsRepository } from '../../project-collaborators/repositories/project-collaborators.repository';
+import { TenantSequencesRepository } from '../../tenant-sequences/repositories/tenant-sequences.repository';
 import { ProjectsRepository } from '../repositories/projects.repository';
 
 const ARCHIVE_RETENTION_DAYS = 14;
@@ -9,18 +11,26 @@ export class ProjectsService {
   constructor(
     private readonly repository: ProjectsRepository,
     private readonly enumRepository: EnumRepository,
+    private readonly collaboratorsRepository: ProjectCollaboratorsRepository,
+    private readonly sequences: TenantSequencesRepository,
   ) {}
 
-  async listActive(tenantId: string) {
-    return this.repository.findActiveByTenant(tenantId);
+  async listActive(tenantId: string, callerUserId: string) {
+    const rows = await this.repository.findActiveByTenant(tenantId);
+    return this.withDisplayValues(tenantId, rows, callerUserId);
   }
 
-  async findOne(tenantId: string, projectId: string) {
+  async findOne(tenantId: string, projectId: string, callerUserId: string) {
     const project = await this.repository.findById(tenantId, projectId);
     if (!project) {
       throw new NotFoundException('Project not found');
     }
-    return project;
+    const [shaped] = await this.withDisplayValues(
+      tenantId,
+      [project],
+      callerUserId,
+    );
+    return shaped;
   }
 
   async create(
@@ -39,31 +49,52 @@ export class ProjectsService {
       targetJournals?: string;
     },
   ) {
-    const [statusId, pipelineStageId, importanceId] = await Promise.all([
-      this.resolveEnum('project_status', input.status),
-      this.resolveEnum('pipeline_stage', input.pipelineStage),
-      this.resolveEnum('importance', input.importance),
-    ]);
+    const [statusId, pipelineStageId, importanceId, ownerRoleId, displayId] =
+      await Promise.all([
+        this.resolveEnum('project_status', input.status),
+        this.resolveEnum('pipeline_stage', input.pipelineStage),
+        this.resolveEnum('importance', input.importance),
+        this.resolveEnum('project_role', 'Owner'),
+        this.sequences.nextDisplayId(tenantId, 'project'),
+      ]);
 
-    return this.repository.create({
-      userId,
-      tenantId,
-      title: input.title,
-      description: input.description,
-      researchArea: input.researchArea,
-      statusId,
-      pipelineStageId,
-      importanceId,
-      scheduledFor: input.scheduledFor,
-      dueDate: input.dueDate,
-      totalBudget: input.totalBudget,
-      targetJournals: input.targetJournals,
-    });
+    if (!ownerRoleId) {
+      throw new NotFoundException(
+        'Owner role is not configured in the enum table',
+      );
+    }
+
+    const project = await this.repository.create(
+      {
+        userId,
+        tenantId,
+        title: input.title,
+        description: input.description,
+        researchArea: input.researchArea,
+        statusId,
+        pipelineStageId,
+        importanceId,
+        scheduledFor: input.scheduledFor,
+        dueDate: input.dueDate,
+        totalBudget: input.totalBudget,
+        targetJournals: input.targetJournals,
+        displayId,
+      },
+      ownerRoleId,
+    );
+
+    if (!project) {
+      throw new NotFoundException('Failed to create project');
+    }
+
+    const [shaped] = await this.withDisplayValues(tenantId, [project], userId);
+    return shaped;
   }
 
   async update(
     tenantId: string,
     projectId: string,
+    callerUserId: string,
     input: Partial<{
       title: string;
       description: string;
@@ -77,7 +108,7 @@ export class ProjectsService {
       targetJournals: string;
     }>,
   ) {
-    await this.findOne(tenantId, projectId);
+    await this.findOne(tenantId, projectId, callerUserId);
 
     const [statusId, pipelineStageId, importanceId] = await Promise.all([
       input.status
@@ -107,11 +138,17 @@ export class ProjectsService {
     if (!project) {
       throw new NotFoundException('Project not found');
     }
-    return project;
+
+    const [shaped] = await this.withDisplayValues(
+      tenantId,
+      [project],
+      callerUserId,
+    );
+    return shaped;
   }
 
-  async archive(tenantId: string, projectId: string) {
-    await this.findOne(tenantId, projectId);
+  async archive(tenantId: string, projectId: string, callerUserId: string) {
+    await this.findOne(tenantId, projectId, callerUserId);
 
     const archivedStatusId = await this.resolveEnum(
       'project_status',
@@ -132,10 +169,63 @@ export class ProjectsService {
       throw new NotFoundException('Project not found');
     }
 
+    const [shaped] = await this.withDisplayValues(
+      tenantId,
+      [project],
+      callerUserId,
+    );
+
     return {
-      project,
+      project: shaped,
       warning: `This project has been archived and will be permanently deleted in ${ARCHIVE_RETENTION_DAYS} days.`,
     };
+  }
+
+  private async withDisplayValues<
+    T extends {
+      id: string;
+      statusId: string | null;
+      pipelineStageId: string | null;
+      importanceId: string | null;
+    },
+  >(tenantId: string, rows: T[], callerUserId: string) {
+    const enumIds = rows
+      .flatMap((r) => [r.statusId, r.pipelineStageId, r.importanceId])
+      .filter((id): id is string => id !== null);
+
+    const [valuesById, roleRows] = await Promise.all([
+      this.enumRepository.findValuesByIds(enumIds),
+      Promise.all(
+        rows.map((r) =>
+          this.collaboratorsRepository.findByProjectAndUser(
+            tenantId,
+            r.id,
+            callerUserId,
+          ),
+        ),
+      ),
+    ]);
+
+    const roleIds = roleRows
+      .map((r) => r?.roleId)
+      .filter((id): id is string => !!id);
+    const roleValuesById = await this.enumRepository.findValuesByIds(roleIds);
+
+    return rows.map(
+      ({ statusId, pipelineStageId, importanceId, ...rest }, index) => ({
+        ...rest,
+        status: statusId ? (valuesById.get(statusId) ?? null) : null,
+        pipelineStage: pipelineStageId
+          ? (valuesById.get(pipelineStageId) ?? null)
+          : null,
+        importance: importanceId
+          ? (valuesById.get(importanceId) ?? null)
+          : null,
+        role: roleRows[index]?.roleId
+          ? (roleValuesById.get(roleRows[index].roleId) ?? null)
+          : null,
+      }),
+    );
   }
 
   private async resolveEnum(

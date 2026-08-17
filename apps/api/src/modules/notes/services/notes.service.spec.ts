@@ -2,6 +2,7 @@
 import { NotFoundException } from '@nestjs/common';
 import { NotesService } from './notes.service';
 import { NotesRepository } from '../repositories/notes.repository';
+import { TenantSequencesRepository } from '../../tenant-sequences/repositories/tenant-sequences.repository';
 
 describe('NotesService', () => {
   let service: NotesService;
@@ -12,6 +13,7 @@ describe('NotesService', () => {
     update: jest.Mock;
     delete: jest.Mock;
   };
+  let sequences: { nextDisplayId: jest.Mock };
 
   beforeEach(() => {
     repository = {
@@ -21,25 +23,32 @@ describe('NotesService', () => {
       update: jest.fn(),
       delete: jest.fn(),
     };
-    service = new NotesService(repository as unknown as NotesRepository);
+    sequences = {
+      nextDisplayId: jest.fn().mockResolvedValue('NTE-0001'),
+    };
+    service = new NotesService(
+      repository as unknown as NotesRepository,
+      sequences as unknown as TenantSequencesRepository,
+    );
   });
 
   describe('create', () => {
     it('delegates directly to the repository, no enum resolution', async () => {
       repository.create.mockResolvedValue({ id: 'note-1' });
 
-      const result = await service.create('project-1', 'tenant-1', 'user-1', {
+      const result = await service.create('tenant-1', 'user-1', {
         title: 'Meeting Notes',
         content: 'Discussed timeline',
       });
 
       expect(repository.create).toHaveBeenCalledWith({
-        projectId: 'project-1',
+        projectId: undefined,
         tenantId: 'tenant-1',
         createdBy: 'user-1',
         title: 'Meeting Notes',
         content: 'Discussed timeline',
         moduleId: undefined,
+        displayId: 'NTE-0001',
       });
       expect(result).toEqual({ id: 'note-1' });
     });

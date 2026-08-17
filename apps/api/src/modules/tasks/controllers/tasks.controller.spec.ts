@@ -6,7 +6,7 @@ import { UsersService } from '../../users/users.service';
 describe('TasksController', () => {
   let controller: TasksController;
   let tasksService: {
-    listByProject: jest.Mock;
+    list: jest.Mock;
     findOne: jest.Mock;
     create: jest.Mock;
     update: jest.Mock;
@@ -16,7 +16,7 @@ describe('TasksController', () => {
 
   beforeEach(() => {
     tasksService = {
-      listByProject: jest.fn(),
+      list: jest.fn(),
       findOne: jest.fn(),
       create: jest.fn(),
       update: jest.fn(),
@@ -33,14 +33,11 @@ describe('TasksController', () => {
   describe('list', () => {
     it('delegates to the service with tenantId and projectId', async () => {
       const tasks = [{ id: 't1' }];
-      tasksService.listByProject.mockResolvedValue(tasks);
+      tasksService.list.mockResolvedValue(tasks);
 
       const result = await controller.list('tenant-1', 'project-1');
 
-      expect(tasksService.listByProject).toHaveBeenCalledWith(
-        'tenant-1',
-        'project-1',
-      );
+      expect(tasksService.list).toHaveBeenCalledWith('tenant-1', 'project-1');
       expect(result).toBe(tasks);
     });
   });
@@ -66,13 +63,12 @@ describe('TasksController', () => {
       } as any;
       const dto = { title: 'New Task' };
 
-      const result = await controller.create('tenant-1', 'project-1', req, dto);
+      const result = await controller.create('tenant-1', req, dto);
 
       expect(usersService.findByExternalAuthId).toHaveBeenCalledWith(
         'cognito-sub-1',
       );
       expect(tasksService.create).toHaveBeenCalledWith(
-        'project-1',
         'tenant-1',
         'user-1',
         dto,

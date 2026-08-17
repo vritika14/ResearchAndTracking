@@ -1,12 +1,20 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import {
+  BadRequestException,
+  Injectable,
+  NotFoundException,
+} from '@nestjs/common';
+import { TenantSequencesRepository } from '../../tenant-sequences/repositories/tenant-sequences.repository';
 import { NotesRepository } from '../repositories/notes.repository';
 
 @Injectable()
 export class NotesService {
-  constructor(private readonly repository: NotesRepository) {}
+  constructor(
+    private readonly repository: NotesRepository,
+    private readonly sequences: TenantSequencesRepository,
+  ) {}
 
-  async listByProject(tenantId: string, projectId: string) {
-    return this.repository.findByProject(tenantId, projectId);
+  async list(tenantId: string, projectId?: string) {
+    return this.repository.findByTenant(tenantId, projectId);
   }
 
   async findOne(tenantId: string, noteId: string) {
@@ -18,18 +26,31 @@ export class NotesService {
   }
 
   async create(
-    projectId: string,
     tenantId: string,
     createdBy: string,
-    input: { title: string; content?: string; moduleId?: string },
+    input: {
+      title: string;
+      content?: string;
+      projectId?: string;
+      moduleId?: string;
+    },
   ) {
+    if (input.moduleId && !input.projectId) {
+      throw new BadRequestException(
+        'moduleId requires projectId to also be provided',
+      );
+    }
+
+    const displayId = await this.sequences.nextDisplayId(tenantId, 'note');
+
     return this.repository.create({
-      projectId,
       tenantId,
+      projectId: input.projectId,
+      moduleId: input.moduleId,
       createdBy,
       title: input.title,
       content: input.content,
-      moduleId: input.moduleId,
+      displayId,
     });
   }
 

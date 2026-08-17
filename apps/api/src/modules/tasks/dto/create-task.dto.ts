@@ -1,3 +1,4 @@
+// apps/api/src/modules/tasks/dto/create-task.dto.ts
 import { ApiProperty } from '@nestjs/swagger';
 import {
   IsString,
@@ -18,6 +19,11 @@ export class CreateTaskDto {
   @IsOptional()
   @IsString()
   description?: string;
+
+  @ApiProperty({ required: false })
+  @IsOptional()
+  @IsUUID()
+  projectId?: string;
 
   @ApiProperty({ required: false })
   @IsOptional()

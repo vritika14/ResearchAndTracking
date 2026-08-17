@@ -41,8 +41,12 @@ export class ProjectsController {
   })
   @UseGuards(JwtAuthGuard)
   @Get()
-  async list(@Param('tenantId') tenantId: string) {
-    return this.projectsService.listActive(tenantId);
+  async list(
+    @Param('tenantId') tenantId: string,
+    @Req() req: AuthenticatedRequest,
+  ) {
+    const user = await this.usersService.findByExternalAuthId(req.user.sub);
+    return this.projectsService.listActive(tenantId, user.id);
   }
 
   @ApiOperation({ summary: 'Get a single project' })
@@ -51,8 +55,10 @@ export class ProjectsController {
   async findOne(
     @Param('tenantId') tenantId: string,
     @Param('projectId') projectId: string,
+    @Req() req: AuthenticatedRequest,
   ) {
-    return this.projectsService.findOne(tenantId, projectId);
+    const user = await this.usersService.findByExternalAuthId(req.user.sub);
+    return this.projectsService.findOne(tenantId, projectId, user.id);
   }
 
   @ApiOperation({ summary: 'Create a project' })
@@ -74,9 +80,11 @@ export class ProjectsController {
   async update(
     @Param('tenantId') tenantId: string,
     @Param('projectId') projectId: string,
+    @Req() req: AuthenticatedRequest,
     @Body() dto: UpdateProjectDto,
   ) {
-    return this.projectsService.update(tenantId, projectId, dto);
+    const user = await this.usersService.findByExternalAuthId(req.user.sub);
+    return this.projectsService.update(tenantId, projectId, user.id, dto);
   }
 
   @ApiOperation({ summary: 'Archive a project (auto-deleted after 14 days)' })
@@ -85,7 +93,9 @@ export class ProjectsController {
   async archive(
     @Param('tenantId') tenantId: string,
     @Param('projectId') projectId: string,
+    @Req() req: AuthenticatedRequest,
   ) {
-    return this.projectsService.archive(tenantId, projectId);
+    const user = await this.usersService.findByExternalAuthId(req.user.sub);
+    return this.projectsService.archive(tenantId, projectId, user.id);
   }
 }

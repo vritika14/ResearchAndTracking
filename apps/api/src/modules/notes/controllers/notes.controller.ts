@@ -1,3 +1,4 @@
+// apps/api/src/modules/notes/controllers/notes.controller.ts
 import {
   Body,
   Controller,
@@ -6,6 +7,7 @@ import {
   Param,
   Patch,
   Post,
+  Query,
   Req,
   UseGuards,
 } from '@nestjs/common';
@@ -29,21 +31,23 @@ interface AuthenticatedRequest extends Request {
 
 @ApiTags('notes')
 @ApiBearerAuth()
-@Controller('api/v1/tenant/:tenantId/projects/:projectId/notes')
+@Controller('api/v1/tenant/:tenantId/notes')
 export class NotesController {
   constructor(
     private readonly notesService: NotesService,
     private readonly usersService: UsersService,
   ) {}
 
-  @ApiOperation({ summary: 'List notes for a project' })
+  @ApiOperation({
+    summary: 'List notes for a workspace, optionally filtered by project',
+  })
   @UseGuards(JwtAuthGuard)
   @Get()
   async list(
     @Param('tenantId') tenantId: string,
-    @Param('projectId') projectId: string,
+    @Query('projectId') projectId?: string,
   ) {
-    return this.notesService.listByProject(tenantId, projectId);
+    return this.notesService.list(tenantId, projectId);
   }
 
   @ApiOperation({ summary: 'Get a single note' })
@@ -56,18 +60,19 @@ export class NotesController {
     return this.notesService.findOne(tenantId, noteId);
   }
 
-  @ApiOperation({ summary: 'Create a note' })
+  @ApiOperation({
+    summary: 'Create a note, optionally associated with a project and module',
+  })
   @ApiResponse({ status: 201 })
   @UseGuards(JwtAuthGuard)
   @Post()
   async create(
     @Param('tenantId') tenantId: string,
-    @Param('projectId') projectId: string,
     @Req() req: AuthenticatedRequest,
     @Body() dto: CreateNoteDto,
   ) {
     const user = await this.usersService.findByExternalAuthId(req.user.sub);
-    return this.notesService.create(projectId, tenantId, user.id, dto);
+    return this.notesService.create(tenantId, user.id, dto);
   }
 
   @ApiOperation({ summary: 'Update a note' })

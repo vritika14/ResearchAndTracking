@@ -6,11 +6,11 @@ import { users } from './users';
 
 export const notes = pgTable('notes', {
   id: uuid('id').defaultRandom().primaryKey(),
+  displayId: text('display_id').unique(),
   tenantId: uuid('tenant_id')
     .notNull()
     .references(() => tenants.id, { onDelete: 'cascade' }),
   projectId: uuid('project_id')
-    .notNull()
     .references(() => projects.id, { onDelete: 'cascade' }),
   moduleId: uuid('module_id').references(() => modules.id, { onDelete: 'cascade' }),
   createdBy: uuid('created_by')

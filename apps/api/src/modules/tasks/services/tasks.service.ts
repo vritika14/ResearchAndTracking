@@ -1,5 +1,10 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import {
+  BadRequestException,
+  Injectable,
+  NotFoundException,
+} from '@nestjs/common';
 import { EnumRepository } from '../../enum/repositories/enum.repository';
+import { TenantSequencesRepository } from '../../tenant-sequences/repositories/tenant-sequences.repository';
 import { TasksRepository } from '../repositories/tasks.repository';
 
 @Injectable()
@@ -7,10 +12,12 @@ export class TasksService {
   constructor(
     private readonly repository: TasksRepository,
     private readonly enumRepository: EnumRepository,
+    private readonly sequences: TenantSequencesRepository,
   ) {}
 
-  async listByProject(tenantId: string, projectId: string) {
-    return this.repository.findByProject(tenantId, projectId);
+  async list(tenantId: string, projectId?: string) {
+    const rows = await this.repository.findByTenant(tenantId, projectId);
+    return this.withDisplayValues(rows);
   }
 
   async findOne(tenantId: string, taskId: string) {
@@ -18,14 +25,15 @@ export class TasksService {
     if (!task) {
       throw new NotFoundException('Task not found');
     }
-    return task;
+    const [shaped] = await this.withDisplayValues([task]);
+    return shaped;
   }
 
   async create(
-    projectId: string,
     tenantId: string,
     createdBy: string,
     input: {
+      projectId?: string;
       moduleId?: string;
       title: string;
       description?: string;
@@ -36,14 +44,21 @@ export class TasksService {
       dueDate?: string;
     },
   ) {
-    const [statusId, priorityId] = await Promise.all([
+    if (input.moduleId && !input.projectId) {
+      throw new BadRequestException(
+        'moduleId requires projectId to also be provided',
+      );
+    }
+
+    const [statusId, priorityId, displayId] = await Promise.all([
       this.resolveEnum('task_status', input.status),
       this.resolveEnum('importance', input.priority),
+      this.sequences.nextDisplayId(tenantId, 'task'),
     ]);
 
-    return this.repository.create({
-      projectId,
+    const task = await this.repository.create({
       tenantId,
+      projectId: input.projectId,
       moduleId: input.moduleId,
       createdBy,
       title: input.title,
@@ -53,7 +68,15 @@ export class TasksService {
       workingWith: input.workingWith,
       estimatedHours: input.estimatedHours,
       dueDate: input.dueDate,
+      displayId,
     });
+
+    if (!task) {
+      throw new NotFoundException('Failed to create task');
+    }
+
+    const [shaped] = await this.withDisplayValues([task]);
+    return shaped;
   }
 
   async update(
@@ -91,7 +114,9 @@ export class TasksService {
     if (!task) {
       throw new NotFoundException('Task not found');
     }
-    return task;
+
+    const [shaped] = await this.withDisplayValues([task]);
+    return shaped;
   }
 
   async delete(tenantId: string, taskId: string) {
@@ -100,6 +125,22 @@ export class TasksService {
       throw new NotFoundException('Task not found');
     }
     return task;
+  }
+
+  private async withDisplayValues<
+    T extends { statusId: string | null; priorityId: string | null },
+  >(rows: T[]) {
+    const ids = rows
+      .flatMap((r) => [r.statusId, r.priorityId])
+      .filter((id): id is string => id !== null);
+
+    const valuesById = await this.enumRepository.findValuesByIds(ids);
+
+    return rows.map(({ statusId, priorityId, ...rest }) => ({
+      ...rest,
+      status: statusId ? (valuesById.get(statusId) ?? null) : null,
+      priority: priorityId ? (valuesById.get(priorityId) ?? null) : null,
+    }));
   }
 
   private async resolveEnum(

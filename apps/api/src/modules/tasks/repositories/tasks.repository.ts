@@ -15,15 +15,19 @@ export class TasksRepository {
     return task;
   }
 
-  async findByProject(tenantId: string, projectId: string) {
+  async findByTenant(tenantId: string, projectId?: string) {
+    const conditions = [eq(tasks.tenantId, tenantId)];
+    if (projectId) {
+      conditions.push(eq(tasks.projectId, projectId));
+    }
     return this.drizzle.db
       .select()
       .from(tasks)
-      .where(and(eq(tasks.tenantId, tenantId), eq(tasks.projectId, projectId)));
+      .where(and(...conditions));
   }
 
   async create(values: {
-    projectId: string;
+    projectId?: string;
     tenantId: string;
     moduleId?: string;
     createdBy: string;
@@ -34,6 +38,7 @@ export class TasksRepository {
     workingWith?: string;
     estimatedHours?: string;
     dueDate?: string;
+    displayId?: string;
   }) {
     const [task] = await this.drizzle.db
       .insert(tasks)

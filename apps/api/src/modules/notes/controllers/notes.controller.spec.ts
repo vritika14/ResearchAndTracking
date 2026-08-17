@@ -6,7 +6,7 @@ import { UsersService } from '../../users/users.service';
 describe('NotesController', () => {
   let controller: NotesController;
   let notesService: {
-    listByProject: jest.Mock;
+    list: jest.Mock;
     findOne: jest.Mock;
     create: jest.Mock;
     update: jest.Mock;
@@ -16,7 +16,7 @@ describe('NotesController', () => {
 
   beforeEach(() => {
     notesService = {
-      listByProject: jest.fn(),
+      list: jest.fn(),
       findOne: jest.fn(),
       create: jest.fn(),
       update: jest.fn(),
@@ -31,16 +31,13 @@ describe('NotesController', () => {
   });
 
   describe('list', () => {
-    it('delegates to the service with tenantId and projectId', async () => {
+    it('delegates to the service with tenantId', async () => {
       const notes = [{ id: 'n1' }];
-      notesService.listByProject.mockResolvedValue(notes);
+      notesService.list.mockResolvedValue(notes);
 
       const result = await controller.list('tenant-1', 'project-1');
 
-      expect(notesService.listByProject).toHaveBeenCalledWith(
-        'tenant-1',
-        'project-1',
-      );
+      expect(notesService.list).toHaveBeenCalledWith('tenant-1', 'project-1');
       expect(result).toBe(notes);
     });
   });
@@ -66,13 +63,12 @@ describe('NotesController', () => {
       } as any;
       const dto = { title: 'New Note' };
 
-      const result = await controller.create('tenant-1', 'project-1', req, dto);
+      const result = await controller.create('tenant-1', req, dto);
 
       expect(usersService.findByExternalAuthId).toHaveBeenCalledWith(
         'cognito-sub-1',
       );
       expect(notesService.create).toHaveBeenCalledWith(
-        'project-1',
         'tenant-1',
         'user-1',
         dto,

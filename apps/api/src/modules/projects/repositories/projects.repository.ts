@@ -1,5 +1,5 @@
 import { Injectable } from '@nestjs/common';
-import { projects } from '@research-tracker/migrations';
+import { projectCollaborators, projects } from '@research-tracker/migrations';
 import { and, eq, isNull } from 'drizzle-orm';
 import { DrizzleService } from '../../../db/drizzle.service';
 
@@ -22,25 +22,39 @@ export class ProjectsRepository {
       .where(and(eq(projects.tenantId, tenantId), isNull(projects.archivedAt)));
   }
 
-  async create(values: {
-    userId: string;
-    tenantId: string;
-    title: string;
-    description?: string;
-    researchArea?: string;
-    statusId?: string;
-    pipelineStageId?: string;
-    importanceId?: string;
-    scheduledFor?: string;
-    dueDate?: string;
-    totalBudget?: string;
-    targetJournals?: string;
-  }) {
-    const [project] = await this.drizzle.db
-      .insert(projects)
-      .values(values)
-      .returning();
-    return project;
+  async create(
+    values: {
+      userId: string;
+      tenantId: string;
+      title: string;
+      description?: string;
+      researchArea?: string;
+      statusId?: string;
+      pipelineStageId?: string;
+      importanceId?: string;
+      scheduledFor?: string;
+      dueDate?: string;
+      totalBudget?: string;
+      targetJournals?: string;
+      displayId?: string;
+    },
+    ownerRoleId: string,
+  ) {
+    return this.drizzle.db.transaction(async (tx) => {
+      const [project] = await tx.insert(projects).values(values).returning();
+
+      if (!project) {
+        return undefined;
+      }
+
+      await tx.insert(projectCollaborators).values({
+        tenantId: values.tenantId,
+        projectId: project.id,
+        userId: values.userId,
+        roleId: ownerRoleId,
+      });
+      return project;
+    });
   }
 
   async update(
