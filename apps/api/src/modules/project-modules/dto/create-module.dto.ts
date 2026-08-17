@@ -1,3 +1,4 @@
+// apps/api/src/modules/project-modules/dto/create-module.dto.ts
 import { ApiProperty } from '@nestjs/swagger';
 import { IsString, IsOptional, IsUUID, Length } from 'class-validator';
 
@@ -11,6 +12,11 @@ export class CreateModuleDto {
   @IsOptional()
   @IsString()
   description?: string;
+
+  @ApiProperty({ required: false })
+  @IsOptional()
+  @IsUUID()
+  projectId?: string;
 
   @ApiProperty({ required: false, example: 'Research Paper' })
   @IsOptional()

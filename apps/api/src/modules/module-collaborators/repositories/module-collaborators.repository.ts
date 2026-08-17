@@ -40,7 +40,7 @@ export class ModuleCollaboratorsRepository {
 
   async create(values: {
     tenantId: string;
-    projectId: string;
+    projectId?: string;
     moduleId: string;
     userId: string;
     roleId: string;

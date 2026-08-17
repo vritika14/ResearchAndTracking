@@ -15,21 +15,22 @@ export class ProjectModulesRepository {
     return module;
   }
 
-  async findActiveByProject(tenantId: string, projectId: string) {
+  async findActiveByTenant(tenantId: string, projectId?: string) {
+    const conditions = [
+      eq(modules.tenantId, tenantId),
+      isNull(modules.archivedAt),
+    ];
+    if (projectId) {
+      conditions.push(eq(modules.projectId, projectId));
+    }
     return this.drizzle.db
       .select()
       .from(modules)
-      .where(
-        and(
-          eq(modules.tenantId, tenantId),
-          eq(modules.projectId, projectId),
-          isNull(modules.archivedAt),
-        ),
-      );
+      .where(and(...conditions));
   }
 
   async create(values: {
-    projectId: string;
+    projectId?: string;
     tenantId: string;
     title: string;
     description?: string;

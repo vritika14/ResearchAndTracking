@@ -8,7 +8,6 @@ export const modules = pgTable('modules', {
   id: uuid('id').defaultRandom().primaryKey(),
   displayId: text('display_id').unique(),
   projectId: uuid('project_id')
-    .notNull()
     .references(() => projects.id, { onDelete: 'cascade' }),
   tenantId: uuid('tenant_id')
     .notNull()

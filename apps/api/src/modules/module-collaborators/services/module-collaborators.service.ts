@@ -41,7 +41,7 @@ export class ModuleCollaboratorsService {
 
     return this.repository.create({
       tenantId,
-      projectId: module.projectId,
+      projectId: module.projectId ?? undefined,
       moduleId,
       userId,
       roleId,

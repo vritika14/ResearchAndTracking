@@ -69,7 +69,7 @@ describe('ProjectModulesService', () => {
         statusId: 'project_status-Active-id',
       });
 
-      await service.create('project-1', 'tenant-1', 'user-1', {
+      await service.create('tenant-1', 'user-1', {
         title: 'New Module',
         tag: 'Research Paper',
         status: 'Active',
@@ -86,7 +86,7 @@ describe('ProjectModulesService', () => {
     it('throws NotFoundException for an unknown tag value', async () => {
       enumRepository.findByCategoryAndValue.mockResolvedValue(undefined);
       await expect(
-        service.create('project-1', 'tenant-1', 'user-1', {
+        service.create('tenant-1', 'user-1', {
           title: 'New Module',
           tag: 'NotReal',
         }),

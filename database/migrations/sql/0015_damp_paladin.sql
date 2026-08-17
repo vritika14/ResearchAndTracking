@@ -1,0 +1,1 @@
+ALTER TABLE "module_collaborators" ALTER COLUMN "project_id" DROP NOT NULL;
