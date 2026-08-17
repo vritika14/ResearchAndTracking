@@ -21,6 +21,7 @@ export const tasks = pgTable('tasks', {
   description: text('description'),
   statusId: uuid('status_id').references(() => enumTable.id),
   priorityId: uuid('priority_id').references(() => enumTable.id),
+  visibilityId: uuid('visibility_id').references(() => enumTable.id),
   workingWith: uuid('working_with').references(() => users.id),
   estimatedHours: numeric('estimated_hours', { precision: 6, scale: 2 }),
   dueDate: date('due_date'),
