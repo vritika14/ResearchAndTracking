@@ -1,4 +1,4 @@
-import { Building2, Mail, ShieldCheck, UserRound } from "lucide-react";
+import { Building2, Mail, Palette, ShieldCheck, UserRound } from "lucide-react";
 
 import { useCurrentWorkspace, useMe } from "@/api/hooks";
 import { WorkspaceMembers } from "@/components/settings/workspace-members";
@@ -14,10 +14,23 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import {
+  COLOR_THEMES,
+  type ColorTheme,
+  useColorTheme,
+} from "@/theme/color-theme";
 
 export default function SettingsPage() {
   const me = useMe();
   const workspace = useCurrentWorkspace();
+  const colorTheme = useColorTheme();
 
   if (me.isPending || workspace.isPending) {
     return (
@@ -102,6 +115,43 @@ export default function SettingsPage() {
               </Badge>
               <p className="mt-3 break-all font-mono text-xs text-muted-foreground">
                 User ID: {me.data.id}
+              </p>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Palette className="h-5 w-5 text-primary" />
+                Color theme
+              </CardTitle>
+              <CardDescription>
+                Choose the accent color used throughout your workspace.
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="grid gap-3">
+              <label htmlFor="color-theme" className="text-sm font-medium">
+                Theme
+              </label>
+              <Select
+                value={colorTheme.theme}
+                onValueChange={(value) =>
+                  colorTheme.setTheme(value as ColorTheme)
+                }
+              >
+                <SelectTrigger id="color-theme">
+                  <SelectValue placeholder="Select a color theme" />
+                </SelectTrigger>
+                <SelectContent>
+                  {COLOR_THEMES.map((theme) => (
+                    <SelectItem key={theme.value} value={theme.value}>
+                      {theme.label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <p className="text-xs leading-5 text-muted-foreground">
+                This preference is saved in this browser and applied immediately.
               </p>
             </CardContent>
           </Card>

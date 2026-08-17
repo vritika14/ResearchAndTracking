@@ -36,7 +36,7 @@ export default function FutureFeaturePage({ feature: featureOverride }: FutureFe
           {featureName}
         </Heading>
         <p className="mx-auto mt-3 max-w-md text-sm leading-6 text-muted-foreground">
-          This feature will be available in a future version of Research &amp; Tracking.
+          This feature will be available in a future version of Research in Motion.
         </p>
       </section>
     </div>

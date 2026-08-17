@@ -33,7 +33,85 @@
     --input: 214 32% 88%;
     --ring: 221.2 83.2% 53.3%;
 
+    --theme-glow-one: 199 89% 92%;
+    --theme-glow-two: 221 83% 95%;
+    --pipeline-start: 213 94% 80%;
+    --pipeline-middle: 217 91% 60%;
+    --pipeline-end: 224 64% 33%;
+
     --radius: 0.625rem;
+  }
+
+  :root[data-color-theme="violet"] {
+    --background: 270 40% 97%;
+    --card: 270 30% 99%;
+    --card-foreground: 263 70% 15%;
+    --popover: 270 30% 99%;
+    --popover-foreground: 263 70% 15%;
+    --primary: 262 83% 58%;
+    --primary-foreground: 210 40% 98%;
+    --secondary: 265 35% 95%;
+    --secondary-foreground: 263 55% 22%;
+    --muted: 266 28% 93%;
+    --muted-foreground: 260 15% 44%;
+    --accent: 262 80% 95%;
+    --accent-foreground: 263 70% 25%;
+    --border: 265 28% 87%;
+    --input: 265 28% 87%;
+    --ring: 262 83% 58%;
+    --theme-glow-one: 270 95% 94%;
+    --theme-glow-two: 250 90% 96%;
+    --pipeline-start: 270 95% 82%;
+    --pipeline-middle: 262 83% 58%;
+    --pipeline-end: 263 70% 30%;
+  }
+
+  :root[data-color-theme="emerald"] {
+    --background: 150 35% 97%;
+    --card: 150 25% 99%;
+    --card-foreground: 164 86% 12%;
+    --popover: 150 25% 99%;
+    --popover-foreground: 164 86% 12%;
+    --primary: 160 84% 39%;
+    --primary-foreground: 0 0% 100%;
+    --secondary: 152 35% 94%;
+    --secondary-foreground: 164 65% 18%;
+    --muted: 150 25% 93%;
+    --muted-foreground: 158 15% 40%;
+    --accent: 152 76% 94%;
+    --accent-foreground: 164 86% 16%;
+    --border: 153 25% 85%;
+    --input: 153 25% 85%;
+    --ring: 160 84% 39%;
+    --theme-glow-one: 152 81% 92%;
+    --theme-glow-two: 166 76% 95%;
+    --pipeline-start: 152 81% 78%;
+    --pipeline-middle: 160 84% 39%;
+    --pipeline-end: 164 86% 20%;
+  }
+
+  :root[data-color-theme="rose"] {
+    --background: 350 40% 97%;
+    --card: 350 30% 99%;
+    --card-foreground: 343 79% 14%;
+    --popover: 350 30% 99%;
+    --popover-foreground: 343 79% 14%;
+    --primary: 347 77% 50%;
+    --primary-foreground: 0 0% 100%;
+    --secondary: 350 40% 95%;
+    --secondary-foreground: 343 60% 22%;
+    --muted: 350 28% 93%;
+    --muted-foreground: 345 15% 43%;
+    --accent: 350 100% 95%;
+    --accent-foreground: 343 79% 25%;
+    --border: 350 28% 86%;
+    --input: 350 28% 86%;
+    --ring: 347 77% 50%;
+    --theme-glow-one: 350 100% 93%;
+    --theme-glow-two: 330 90% 96%;
+    --pipeline-start: 351 95% 80%;
+    --pipeline-middle: 347 77% 50%;
+    --pipeline-end: 343 79% 30%;
   }
 
   .dark {
@@ -75,8 +153,9 @@
   body {
     @apply bg-background text-foreground antialiased;
     background-image:
-      radial-gradient(circle at 85% 0%, hsl(199 89% 92% / 0.55), transparent 28rem),
-      radial-gradient(circle at 15% 35%, hsl(221 83% 95% / 0.65), transparent 34rem);
+      radial-gradient(circle at 85% 0%, hsl(var(--theme-glow-one) / 0.55), transparent 28rem),
+      radial-gradient(circle at 15% 35%, hsl(var(--theme-glow-two) / 0.65), transparent 34rem);
     background-attachment: fixed;
+    transition: background-color 180ms ease, color 180ms ease;
   }
 }

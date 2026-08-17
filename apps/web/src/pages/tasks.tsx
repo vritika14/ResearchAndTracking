@@ -1,6 +1,7 @@
 import { useMemo, useState } from "react";
-import { ChevronDown, Pencil } from "lucide-react";
+import { ChevronDown, Pencil, Trash2 } from "lucide-react";
 
+import { ColumnVisibilityMenu } from "@/components/dashboard/column-visibility-menu";
 import { PageHeading } from "@/components/typography/heading";
 import { EditTaskDialog, type EditTaskInput } from "@/components/tasks/edit-task-dialog";
 import { NewTaskDialog, type NewTaskInput } from "@/components/tasks/new-task-dialog";
@@ -17,6 +18,7 @@ import {
 import { tasks, type TaskItem, type TaskPriority, type TaskStatus } from "@/data/tasks";
 import { projects } from "@/data/projects";
 import { cn } from "@/lib/utils";
+import { useColumnVisibility } from "@/hooks/use-column-visibility";
 
 const STATUS_FILTERS = ["All", "To do", "Underway", "Waiting", "Complete"] as const;
 const PRIORITY_FILTERS = ["All", "Low", "Medium", "High", "Critical"] as const;
@@ -27,6 +29,7 @@ type PriorityFilter = (typeof PRIORITY_FILTERS)[number];
 type SortColumn =
   | "code"
   | "task"
+  | "description"
   | "project"
   | "status"
   | "priority"
@@ -35,7 +38,17 @@ type SortColumn =
   | "est";
 type SortDirection = "asc" | "desc";
 
-const GRID_TEMPLATE = "100px minmax(240px,2fr) 170px 110px 110px 120px 110px 80px";
+const TASK_COLUMNS = [
+  { id: "code", label: "Code", width: "100px" },
+  { id: "task", label: "Task", width: "minmax(220px,1.5fr)" },
+  { id: "description", label: "Description", width: "minmax(260px,2fr)" },
+  { id: "project", label: "Project", width: "170px" },
+  { id: "status", label: "Status", width: "110px" },
+  { id: "priority", label: "Priority", width: "110px" },
+  { id: "scheduled", label: "Scheduled For", width: "120px" },
+  { id: "due", label: "Due", width: "110px" },
+  { id: "est", label: "Est.", width: "80px" },
+] as const;
 
 const STATUS_ORDER: Record<TaskStatus, number> = {
   "To do": 0,
@@ -89,6 +102,8 @@ function compareTasks(a: TaskItem, b: TaskItem, column: SortColumn) {
       return a.code.localeCompare(b.code);
     case "task":
       return a.title.localeCompare(b.title);
+    case "description":
+      return a.description.localeCompare(b.description);
     case "project":
       return a.projectName.localeCompare(b.projectName);
     case "status":
@@ -145,6 +160,12 @@ export default function TasksPage() {
   const [priority, setPriority] = useState<PriorityFilter>("All");
   const [sortColumn, setSortColumn] = useState<SortColumn>("due");
   const [sortDirection, setSortDirection] = useState<SortDirection>("asc");
+  const columns = useColumnVisibility(TASK_COLUMNS.map((column) => column.id));
+  const gridTemplate = TASK_COLUMNS.filter((column) =>
+    columns.visibleColumns.has(column.id),
+  )
+    .map((column) => column.width)
+    .join(" ");
 
   function handleSort(column: SortColumn) {
     if (column === sortColumn) {
@@ -164,6 +185,7 @@ export default function TasksPage() {
         query &&
         !task.code.toLowerCase().includes(query) &&
         !task.title.toLowerCase().includes(query) &&
+        !task.description.toLowerCase().includes(query) &&
         !task.projectName.toLowerCase().includes(query) &&
         !(task.waitingOn?.toLowerCase().includes(query) ?? false)
       ) {
@@ -190,13 +212,16 @@ export default function TasksPage() {
       const numericCode = Number(task.code.replace(/\D/g, ""));
       return Number.isNaN(numericCode) ? highest : Math.max(highest, numericCode);
     }, 440);
-    const projectName = projects.find((project) => project.id === input.projectId)?.title;
+    const projectName = input.isIndependent
+      ? "Independent task"
+      : projects.find((project) => project.id === input.projectId)?.title;
     if (!projectName) return;
 
     setTaskRows((current) => [
       {
         code: `TSK-${String(highestCode + 1).padStart(4, "0")}`,
         title: input.title,
+        description: input.description,
         projectName,
         status: input.status,
         priority: input.priority,
@@ -210,10 +235,17 @@ export default function TasksPage() {
   }
 
   function updateTask(code: string, input: EditTaskInput) {
-    const projectName = projects.find((project) => project.id === input.projectId)?.title;
+    const projectName = input.isIndependent
+      ? "Independent task"
+      : projects.find((project) => project.id === input.projectId)?.title;
     if (!projectName) return;
-    const { projectId: _projectId, ...values } = input;
+    const {
+      projectId: _projectId,
+      isIndependent: _isIndependent,
+      ...values
+    } = input;
     void _projectId;
+    void _isIndependent;
 
     setTaskRows((current) =>
       current.map((task) =>
@@ -226,6 +258,14 @@ export default function TasksPage() {
           : task,
       ),
     );
+  }
+
+  function deleteTask(task: TaskItem) {
+    if (!window.confirm(`Delete "${task.title}"? This action cannot be undone.`)) {
+      return;
+    }
+    setTaskRows((current) => current.filter((row) => row.code !== task.code));
+    setEditingTask((current) => (current?.code === task.code ? null : current));
   }
 
   return (
@@ -288,6 +328,11 @@ export default function TasksPage() {
             ))}
           </SelectContent>
         </Select>
+        <ColumnVisibilityMenu
+          columns={TASK_COLUMNS}
+          visibleColumns={columns.visibleColumns}
+          onToggle={columns.toggleColumn}
+        />
         {hasActiveFilters ? (
           <button
             type="button"
@@ -300,67 +345,23 @@ export default function TasksPage() {
       </div>
 
       <div className="overflow-x-auto">
-        <div className="min-w-[1040px]">
+        <div className="min-w-[720px]">
           <div
-            className="grid gap-4 px-4 pb-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground"
-            style={{ gridTemplateColumns: GRID_TEMPLATE }}
+            className="grid gap-4 px-4 pb-2 text-xs font-semibold uppercase tracking-wide text-primary"
+            style={{ gridTemplateColumns: gridTemplate }}
           >
-            <SortableHeader
-              label="Code"
-              column="code"
-              sortColumn={sortColumn}
-              sortDirection={sortDirection}
-              onSort={handleSort}
-            />
-            <SortableHeader
-              label="Task"
-              column="task"
-              sortColumn={sortColumn}
-              sortDirection={sortDirection}
-              onSort={handleSort}
-            />
-            <SortableHeader
-              label="Project"
-              column="project"
-              sortColumn={sortColumn}
-              sortDirection={sortDirection}
-              onSort={handleSort}
-            />
-            <SortableHeader
-              label="Status"
-              column="status"
-              sortColumn={sortColumn}
-              sortDirection={sortDirection}
-              onSort={handleSort}
-            />
-            <SortableHeader
-              label="Priority"
-              column="priority"
-              sortColumn={sortColumn}
-              sortDirection={sortDirection}
-              onSort={handleSort}
-            />
-            <SortableHeader
-              label="Scheduled For"
-              column="scheduled"
-              sortColumn={sortColumn}
-              sortDirection={sortDirection}
-              onSort={handleSort}
-            />
-            <SortableHeader
-              label="Due"
-              column="due"
-              sortColumn={sortColumn}
-              sortDirection={sortDirection}
-              onSort={handleSort}
-            />
-            <SortableHeader
-              label="Est."
-              column="est"
-              sortColumn={sortColumn}
-              sortDirection={sortDirection}
-              onSort={handleSort}
-            />
+            {TASK_COLUMNS.filter((column) =>
+              columns.visibleColumns.has(column.id),
+            ).map((column) => (
+              <SortableHeader
+                key={column.id}
+                label={column.label}
+                column={column.id}
+                sortColumn={sortColumn}
+                sortDirection={sortDirection}
+                onSort={handleSort}
+              />
+            ))}
           </div>
 
           <div className="flex flex-col gap-3">
@@ -373,10 +374,13 @@ export default function TasksPage() {
                 <div
                   key={task.code}
                   className="grid items-center gap-4 rounded-lg border border-border bg-card px-4 py-4 shadow-sm"
-                  style={{ gridTemplateColumns: GRID_TEMPLATE }}
+                  style={{ gridTemplateColumns: gridTemplate }}
                 >
+                  {columns.isColumnVisible("code") ? (
                   <span className="font-mono text-[11px] text-muted-foreground">{task.code}</span>
+                  ) : null}
 
+                  {columns.isColumnVisible("task") ? (
                   <div className="flex flex-col gap-0.5">
                     <div className="flex items-start gap-2">
                       <span className="font-semibold leading-tight">{task.title}</span>
@@ -389,6 +393,15 @@ export default function TasksPage() {
                       >
                         <Pencil className="h-3.5 w-3.5" />
                       </button>
+                      <button
+                        type="button"
+                        onClick={() => deleteTask(task)}
+                        aria-label={`Delete ${task.title}`}
+                        title="Delete task"
+                        className="inline-flex h-6 w-6 shrink-0 items-center justify-center rounded-md text-destructive transition-colors hover:bg-destructive/10 hover:text-destructive focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                      >
+                        <Trash2 className="h-3.5 w-3.5" />
+                      </button>
                     </div>
                     {task.waitingOn ? (
                       <span className="text-xs text-muted-foreground">
@@ -396,26 +409,45 @@ export default function TasksPage() {
                       </span>
                     ) : null}
                   </div>
+                  ) : null}
 
+                  {columns.isColumnVisible("description") ? (
+                  <span className="text-sm leading-5 text-muted-foreground">
+                    {task.description || "—"}
+                  </span>
+                  ) : null}
+
+                  {columns.isColumnVisible("project") ? (
                   <span className="text-sm text-muted-foreground">{task.projectName}</span>
+                  ) : null}
 
+                  {columns.isColumnVisible("status") ? (
                   <Badge variant="outline" className={statusPillClass(task.status)}>
                     {task.status}
                   </Badge>
+                  ) : null}
 
+                  {columns.isColumnVisible("priority") ? (
                   <Badge variant="outline" className={priorityPillClass(task.priority)}>
                     {task.priority}
                   </Badge>
+                  ) : null}
 
+                  {columns.isColumnVisible("scheduled") ? (
                   <span className="text-sm tabular-nums text-muted-foreground">
                     {formatDueDate(task.scheduledFor)}
                   </span>
+                  ) : null}
 
+                  {columns.isColumnVisible("due") ? (
                   <span className="text-sm tabular-nums">{formatDueDate(task.dueDate)}</span>
+                  ) : null}
 
+                  {columns.isColumnVisible("est") ? (
                   <span className="text-sm tabular-nums text-muted-foreground">
                     {task.estimatedHours}h
                   </span>
+                  ) : null}
                 </div>
               ))
             )}

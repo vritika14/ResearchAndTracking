@@ -1,4 +1,4 @@
-export type TaskPriority = "Critical" | "High";
+export type TaskPriority = "Low" | "Medium" | "High" | "Critical";
 export type TaskStatus = "Open" | "In Progress" | "Blocked" | "Done";
 
 export interface PriorityTask {

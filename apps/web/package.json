@@ -1,6 +1,6 @@
 {
   "name": "@research-tracker/web",
-  "description": "Research Pipeline & Tracking web application shell",
+  "description": "Research in Motion web application",
   "private": true,
   "version": "0.0.0",
   "type": "module",

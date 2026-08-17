@@ -14,7 +14,7 @@ export function AppLayout() {
         </main>
         <footer className="border-t py-6">
           <div className="container text-sm text-muted-foreground">
-            Research &amp; Tracking
+            Research in Motion
           </div>
         </footer>
       </div>

@@ -12,6 +12,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
 import {
   Select,
   SelectContent,
@@ -31,6 +32,8 @@ interface ProjectOption {
 
 export interface EditTaskInput {
   title: string;
+  description: string;
+  isIndependent: boolean;
   projectId: string;
   status: TaskStatus;
   priority: TaskPriority;
@@ -74,6 +77,8 @@ export function EditTaskDialog({
 }: EditTaskDialogProps) {
   const [form, setForm] = useState<EditTaskInput>(() => ({
     title: task.title,
+    description: task.description,
+    isIndependent: task.projectName === "Independent task",
     projectId: projects.find((project) => project.title === task.projectName)?.id ?? "",
     status: task.status,
     priority: task.priority,
@@ -88,6 +93,7 @@ export function EditTaskDialog({
     onSave({
       ...form,
       title: form.title.trim(),
+      description: form.description.trim(),
       waitingOn: form.status === "Waiting" ? form.waitingOn?.trim() || undefined : undefined,
     });
     onOpenChange(false);
@@ -114,6 +120,39 @@ export function EditTaskDialog({
             />
           </FormField>
 
+          <FormField label="Description" htmlFor="edit-task-description">
+            <Textarea
+              id="edit-task-description"
+              value={form.description}
+              onChange={(event) =>
+                setForm((current) => ({ ...current, description: event.target.value }))
+              }
+              rows={3}
+            />
+          </FormField>
+
+          <label className="flex items-start gap-3 rounded-md border border-border bg-muted/30 p-3">
+            <input
+              type="checkbox"
+              checked={form.isIndependent}
+              onChange={(event) =>
+                setForm((current) => ({
+                  ...current,
+                  isIndependent: event.target.checked,
+                  projectId: event.target.checked ? "" : current.projectId,
+                }))
+              }
+              className="mt-0.5 h-4 w-4 accent-primary"
+            />
+            <span>
+              <span className="block text-sm font-medium">Independent task</span>
+              <span className="block text-xs text-muted-foreground">
+                Keep this task separate from all projects.
+              </span>
+            </span>
+          </label>
+
+          {!form.isIndependent ? (
           <FormField label="Project" htmlFor="edit-task-project" required>
             <Select
               value={form.projectId}
@@ -130,6 +169,7 @@ export function EditTaskDialog({
               </SelectContent>
             </Select>
           </FormField>
+          ) : null}
 
           <div className="grid gap-4 sm:grid-cols-2">
             <FormField label="Status" htmlFor="edit-task-status">

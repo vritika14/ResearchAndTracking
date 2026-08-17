@@ -14,10 +14,10 @@ export default function SignInPage() {
     <AuthScreenBackground className="flex items-center justify-center px-4 py-8">
       <div className="flex w-full max-w-sm flex-col items-center gap-6 rounded-lg border bg-card/95 p-8 text-center shadow-lg backdrop-blur-sm">
         <span className="flex h-10 w-10 items-center justify-center rounded-md bg-primary text-sm font-bold text-primary-foreground">
-          R&amp;T
+          R
         </span>
         <div className="flex flex-col gap-1.5">
-          <Heading level="h2">Research &amp; Tracking</Heading>
+          <Heading level="h2">Research in Motion</Heading>
           <p className="text-sm text-muted-foreground">Sign in with your account to continue.</p>
         </div>
         <Button

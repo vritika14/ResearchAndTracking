@@ -127,7 +127,7 @@ export default function AccountAuditPage() {
         description="Security and access activity recorded for this account."
       >
         <Table className="min-w-[900px]">
-          <TableHeader className="bg-slate-50/80 dark:bg-slate-900/50">
+          <TableHeader>
             <TableRow className="hover:bg-transparent">
               <TableHead className="h-12 w-[18%] px-4 text-[11px] font-bold uppercase tracking-wider">
                 Date &amp; time

@@ -1,9 +1,11 @@
-import { useMemo, useState } from "react";
-import { Pencil } from "lucide-react";
+import { useMemo, useState, type DragEvent } from "react";
+import { GripVertical, Pencil, Settings2 } from "lucide-react";
 import { Link } from "react-router-dom";
 
+import { ManageStagesDialog } from "@/components/pipeline/manage-stages-dialog";
 import { PageHeading } from "@/components/typography/heading";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import {
   Select,
   SelectContent,
@@ -12,13 +14,16 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import {
-  RESEARCH_PIPELINE_STAGES,
   pipelineRows,
+  type PipelineStageInfo,
   type PipelineRow,
 } from "@/data/pipeline-rows";
 import type { ProjectPriority } from "@/data/pipeline-projects";
 import type { ProjectStatus } from "@/data/projects";
 import { cn } from "@/lib/utils";
+import { reindexModulesAfterStageDeletion } from "@/hooks/use-modules";
+import { usePipelineStages } from "@/hooks/use-pipeline-stages";
+import { useProjectStageOverrides } from "@/hooks/use-project-stage-overrides";
 
 const VIEW_OPTIONS = ["Flow", "Columns"] as const;
 type ViewOption = (typeof VIEW_OPTIONS)[number];
@@ -31,7 +36,6 @@ type StatusFilter = (typeof STATUS_FILTERS)[number];
 
 const ROLE_FILTERS = ["All", "Owner", "Lead", "Collaborator", "Supervisor"] as const;
 type RoleFilter = (typeof ROLE_FILTERS)[number];
-
 const STAGE_TITLE_CLASS = "text-sm font-bold text-foreground";
 const PROJECT_ID_CLASS = "font-mono text-[11px] text-muted-foreground";
 const PROJECT_TITLE_CLASS = "text-sm font-medium text-foreground";
@@ -73,8 +77,8 @@ function controlPillClass(selected: boolean) {
   );
 }
 
-function groupByStage(rows: PipelineRow[]) {
-  const groups: PipelineRow[][] = RESEARCH_PIPELINE_STAGES.map(() => []);
+function groupByStage(rows: PipelineRow[], stageCount: number) {
+  const groups: PipelineRow[][] = Array.from({ length: stageCount }, () => []);
   for (const row of rows) {
     groups[row.stageIndex]?.push(row);
   }
@@ -84,6 +88,11 @@ function groupByStage(rows: PipelineRow[]) {
 interface PipelineProjectRowProps {
   row: PipelineRow;
   compact?: boolean;
+  isDragging: boolean;
+  onDragStart: (event: DragEvent<HTMLDivElement>, row: PipelineRow) => void;
+  onDragEnd: () => void;
+  onStageChange: (projectId: string, stageIndex: number) => void;
+  stages: readonly PipelineStageInfo[];
 }
 
 function ProjectEditLink({ row }: { row: PipelineRow }) {
@@ -99,7 +108,36 @@ function ProjectEditLink({ row }: { row: PipelineRow }) {
   );
 }
 
-function PipelineProjectRow({ row, compact }: PipelineProjectRowProps) {
+function StageSelect({ row, stages, onStageChange }: {
+  row: PipelineRow;
+  stages: readonly PipelineStageInfo[];
+  onStageChange: (projectId: string, stageIndex: number) => void;
+}) {
+  return (
+    <select
+      value={row.stageIndex}
+      onChange={(event) => onStageChange(row.id, Number(event.target.value))}
+      onMouseDown={(event) => event.stopPropagation()}
+      aria-label={`Move ${row.title} to stage`}
+      title="Change pipeline stage"
+      className="h-7 max-w-44 rounded-md border border-input bg-background px-2 text-xs text-muted-foreground focus:outline-none focus:ring-1 focus:ring-ring"
+    >
+      {stages.map((stage, index) => (
+        <option key={stage.name} value={index}>{stage.name}</option>
+      ))}
+    </select>
+  );
+}
+
+function PipelineProjectRow({
+  row,
+  compact,
+  isDragging,
+  onDragStart,
+  onDragEnd,
+  onStageChange,
+  stages,
+}: PipelineProjectRowProps) {
   const outstandingClass =
     row.outstanding === 0
       ? "text-muted-foreground"
@@ -107,10 +145,23 @@ function PipelineProjectRow({ row, compact }: PipelineProjectRowProps) {
 
   if (compact) {
     return (
-      <div className="flex flex-col gap-1.5 rounded-lg border border-border bg-card px-3 py-2.5 shadow-sm">
+      <div
+        draggable
+        onDragStart={(event) => onDragStart(event, row)}
+        onDragEnd={onDragEnd}
+        className={cn(
+          "flex cursor-grab flex-col gap-1.5 rounded-lg border border-border bg-card px-3 py-2.5 shadow-sm active:cursor-grabbing",
+          isDragging && "opacity-45",
+        )}
+      >
         <div className="flex items-start justify-between gap-2">
-          <span className={PROJECT_ID_CLASS}>{row.id}</span>
-          <ProjectEditLink row={row} />
+          <span className="flex items-center gap-1">
+            <GripVertical className="h-3.5 w-3.5 text-muted-foreground" aria-hidden="true" />
+            <span className={PROJECT_ID_CLASS}>{row.id}</span>
+          </span>
+          <div className="flex items-center gap-1">
+            <ProjectEditLink row={row} />
+          </div>
         </div>
         <span className={cn(PROJECT_TITLE_CLASS, "leading-snug")}>{row.title}</span>
         <div className="flex flex-wrap items-center gap-1.5">
@@ -127,13 +178,25 @@ function PipelineProjectRow({ row, compact }: PipelineProjectRowProps) {
             {row.outstanding} outstanding
           </span>
         </div>
+        <StageSelect row={row} stages={stages} onStageChange={onStageChange} />
       </div>
     );
   }
 
   return (
-    <div className="flex flex-wrap items-center gap-3 rounded-lg border border-border bg-card px-4 py-2.5 shadow-sm">
-      <span className={PROJECT_ID_CLASS}>{row.id}</span>
+    <div
+      draggable
+      onDragStart={(event) => onDragStart(event, row)}
+      onDragEnd={onDragEnd}
+      className={cn(
+        "flex cursor-grab flex-wrap items-center gap-3 rounded-lg border border-border bg-card px-4 py-2.5 shadow-sm active:cursor-grabbing",
+        isDragging && "opacity-45",
+      )}
+    >
+      <span className="flex items-center gap-1">
+        <GripVertical className="h-4 w-4 text-muted-foreground" aria-hidden="true" />
+        <span className={PROJECT_ID_CLASS}>{row.id}</span>
+      </span>
       <span className={PROJECT_TITLE_CLASS}>{row.title}</span>
       <ProjectEditLink row={row} />
       <div className="ml-auto flex flex-wrap items-center gap-3">
@@ -147,27 +210,124 @@ function PipelineProjectRow({ row, compact }: PipelineProjectRowProps) {
         <span className={cn(OUTSTANDING_CLASS, outstandingClass)}>
           {row.outstanding} outstanding
         </span>
+        <StageSelect row={row} stages={stages} onStageChange={onStageChange} />
       </div>
     </div>
   );
 }
 
 export default function PipelinePage() {
+  const { pipelineStages, setPipelineStages } = usePipelineStages();
+  const [visibleStageNames, setVisibleStageNames] = useState<Set<string>>(
+    () => new Set(pipelineStages.map((stage) => stage.name)),
+  );
+  const [isManageStagesOpen, setIsManageStagesOpen] = useState(false);
   const [view, setView] = useState<ViewOption>("Flow");
   const [priority, setPriority] = useState<PriorityFilter>("All");
   const [status, setStatus] = useState<StatusFilter>("All");
   const [role, setRole] = useState<RoleFilter>("All");
-
+  const [draggedProjectId, setDraggedProjectId] = useState<string | null>(null);
+  const [dragOverStageIndex, setDragOverStageIndex] = useState<number | null>(null);
+  const { stageOverrides, updateProjectStage, updateProjectStages } = useProjectStageOverrides();
+  const projectRows = useMemo(
+    () =>
+      pipelineRows.map((row) => ({
+        ...row,
+        stageIndex: stageOverrides[row.id] ?? row.stageIndex,
+      })),
+    [stageOverrides],
+  );
   const filteredRows = useMemo(() => {
-    return pipelineRows.filter((row) => {
+    return projectRows.filter((row) => {
       if (priority !== "All" && row.priority !== priority) return false;
       if (status !== "All" && row.status !== status) return false;
       if (role !== "All" && row.myRole !== role) return false;
       return true;
     });
-  }, [priority, status, role]);
+  }, [projectRows, priority, status, role]);
 
-  const grouped = useMemo(() => groupByStage(filteredRows), [filteredRows]);
+  const grouped = useMemo(
+    () => groupByStage(filteredRows, pipelineStages.length),
+    [filteredRows, pipelineStages.length],
+  );
+  const visibleStages = pipelineStages.map((stage, index) => ({
+    stage,
+    index,
+  })).filter(({ stage }) => visibleStageNames.has(stage.name));
+
+  function toggleStageVisibility(stageName: string) {
+    setVisibleStageNames((current) => {
+      const next = new Set(current);
+      if (next.has(stageName)) {
+        if (next.size === 1) return current;
+        next.delete(stageName);
+      } else {
+        next.add(stageName);
+      }
+      return next;
+    });
+  }
+
+  function addStage(name: string, description: string) {
+    setPipelineStages([...pipelineStages, { name, description }]);
+    setVisibleStageNames((current) => new Set(current).add(name));
+  }
+
+  function deleteStage(index: number) {
+    const stage = pipelineStages[index];
+    if (!stage || pipelineStages.length === 1) return;
+    if (!window.confirm(`Delete "${stage.name}"? Projects in this stage will move to the previous stage.`)) {
+      return;
+    }
+
+    const stageUpdates = Object.fromEntries(
+      projectRows.map((project) => [
+        project.id,
+        project.stageIndex === index
+          ? Math.max(0, index - 1)
+          : project.stageIndex > index
+            ? project.stageIndex - 1
+            : project.stageIndex,
+      ]),
+    );
+    updateProjectStages(stageUpdates);
+    reindexModulesAfterStageDeletion(index);
+    setPipelineStages(pipelineStages.filter((_, stageIndex) => stageIndex !== index));
+    setVisibleStageNames((current) => {
+      const next = new Set(current);
+      next.delete(stage.name);
+      return next.size > 0 ? next : new Set([pipelineStages[index === 0 ? 1 : index - 1].name]);
+    });
+  }
+
+  function moveProject(projectId: string, stageIndex: number) {
+    updateProjectStage(projectId, stageIndex);
+  }
+
+  function handleDragStart(event: DragEvent<HTMLDivElement>, row: PipelineRow) {
+    event.dataTransfer.effectAllowed = "move";
+    event.dataTransfer.setData("text/plain", row.id);
+    setDraggedProjectId(row.id);
+  }
+
+  function handleDragOver(event: DragEvent<HTMLDivElement>, stageIndex: number) {
+    event.preventDefault();
+    event.dataTransfer.dropEffect = "move";
+    setDragOverStageIndex(stageIndex);
+  }
+
+  function handleDrop(event: DragEvent<HTMLDivElement>, stageIndex: number) {
+    event.preventDefault();
+    const projectId = draggedProjectId ?? event.dataTransfer.getData("text/plain");
+    if (projectId) moveProject(projectId, stageIndex);
+    setDraggedProjectId(null);
+    setDragOverStageIndex(null);
+  }
+
+  function handleDragEnd() {
+    setDraggedProjectId(null);
+    setDragOverStageIndex(null);
+  }
 
   return (
     <div className="flex flex-col gap-6">
@@ -232,15 +392,19 @@ export default function PipelinePage() {
               ))}
             </SelectContent>
           </Select>
+          <Button variant="outline" onClick={() => setIsManageStagesOpen(true)}>
+            <Settings2 />
+            Manage stages
+          </Button>
         </div>
       </div>
 
       {view === "Flow" ? (
         <div className="flex flex-col">
-          {RESEARCH_PIPELINE_STAGES.map((stage, index) => {
+          {visibleStages.map(({ stage, index }, visibleIndex) => {
             const rows = grouped[index] ?? [];
             const hasProjects = rows.length > 0;
-            const isLast = index === RESEARCH_PIPELINE_STAGES.length - 1;
+            const isLast = visibleIndex === visibleStages.length - 1;
 
             return (
               <div key={stage.name} className="flex gap-4">
@@ -254,7 +418,18 @@ export default function PipelinePage() {
                   {!isLast ? <span className="w-px flex-1 bg-border" /> : null}
                 </div>
 
-                <div className={cn("flex-1 min-w-0", !isLast && "pb-8")}>
+                <div
+                  role="group"
+                  aria-label={`${stage.name} stage drop zone`}
+                  onDragOver={(event) => handleDragOver(event, index)}
+                  onDrop={(event) => handleDrop(event, index)}
+                  className={cn(
+                    "min-h-24 flex-1 rounded-lg p-2 transition-colors",
+                    !isLast && "mb-6",
+                    draggedProjectId && "border border-dashed border-primary/30",
+                    dragOverStageIndex === index && "border-primary bg-primary/5 ring-2 ring-primary/30",
+                  )}
+                >
                   <div className="flex flex-wrap items-center gap-2">
                     <h3
                       className={cn(STAGE_TITLE_CLASS, !hasProjects && "text-muted-foreground")}
@@ -274,7 +449,15 @@ export default function PipelinePage() {
                   {hasProjects ? (
                     <div className="mt-3 flex flex-col gap-2">
                       {rows.map((row) => (
-                        <PipelineProjectRow key={row.id} row={row} />
+                        <PipelineProjectRow
+                          key={row.id}
+                          row={row}
+                          isDragging={draggedProjectId === row.id}
+                          onDragStart={handleDragStart}
+                          onDragEnd={handleDragEnd}
+                          onStageChange={moveProject}
+                          stages={pipelineStages}
+                        />
                       ))}
                     </div>
                   ) : null}
@@ -287,16 +470,24 @@ export default function PipelinePage() {
         <div className="overflow-x-auto">
           <div
             className="flex gap-4"
-            style={{ minWidth: `${RESEARCH_PIPELINE_STAGES.length * 260}px` }}
+            style={{ minWidth: `${visibleStages.length * 260}px` }}
           >
-            {RESEARCH_PIPELINE_STAGES.map((stage, index) => {
+            {visibleStages.map(({ stage, index }) => {
               const rows = grouped[index] ?? [];
               const hasProjects = rows.length > 0;
 
               return (
                 <div
                   key={stage.name}
-                  className="flex w-64 shrink-0 flex-col gap-3 rounded-lg border border-border bg-card p-3"
+                  role="group"
+                  aria-label={`${stage.name} stage drop zone`}
+                  onDragOver={(event) => handleDragOver(event, index)}
+                  onDrop={(event) => handleDrop(event, index)}
+                  className={cn(
+                    "flex min-h-48 w-64 shrink-0 flex-col gap-3 rounded-lg border border-border bg-card p-3 transition-colors",
+                    draggedProjectId && "border-dashed border-primary/30",
+                    dragOverStageIndex === index && "border-primary bg-primary/5 ring-2 ring-primary/30",
+                  )}
                 >
                   <div className="flex items-center gap-2">
                     <h3
@@ -315,7 +506,18 @@ export default function PipelinePage() {
                   </div>
                   <div className="flex flex-col gap-2">
                     {hasProjects ? (
-                      rows.map((row) => <PipelineProjectRow key={row.id} row={row} compact />)
+                      rows.map((row) => (
+                        <PipelineProjectRow
+                          key={row.id}
+                          row={row}
+                          compact
+                          isDragging={draggedProjectId === row.id}
+                          onDragStart={handleDragStart}
+                          onDragEnd={handleDragEnd}
+                          onStageChange={moveProject}
+                          stages={pipelineStages}
+                        />
+                      ))
                     ) : (
                       <p className="text-sm text-muted-foreground">No projects</p>
                     )}
@@ -326,6 +528,15 @@ export default function PipelinePage() {
           </div>
         </div>
       )}
+      <ManageStagesDialog
+        open={isManageStagesOpen}
+        onOpenChange={setIsManageStagesOpen}
+        stages={pipelineStages}
+        visibleStages={visibleStageNames}
+        onToggleVisibility={toggleStageVisibility}
+        onAdd={addStage}
+        onDelete={deleteStage}
+      />
     </div>
   );
 }
