@@ -40,6 +40,11 @@ export class CreateTaskDto {
   @IsString()
   priority?: string;
 
+  @ApiProperty({ required: false, example: 'Private' })
+  @IsOptional()
+  @IsString()
+  visibility?: string;
+
   @ApiProperty({ required: false })
   @IsOptional()
   @IsUUID()

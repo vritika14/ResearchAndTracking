@@ -1,3 +1,4 @@
+// apps/api/src/modules/notes/dto/create-note.dto.ts
 import { ApiProperty } from '@nestjs/swagger';
 import { IsString, IsOptional, IsUUID, Length } from 'class-validator';
 
@@ -15,5 +16,15 @@ export class CreateNoteDto {
   @ApiProperty({ required: false })
   @IsOptional()
   @IsUUID()
+  projectId?: string;
+
+  @ApiProperty({ required: false })
+  @IsOptional()
+  @IsUUID()
   moduleId?: string;
+
+  @ApiProperty({ required: false, example: 'Private' })
+  @IsOptional()
+  @IsString()
+  visibility?: string;
 }

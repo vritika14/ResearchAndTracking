@@ -4,6 +4,7 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import { EnumRepository } from '../../enum/repositories/enum.repository';
+import { TaskMembersRepository } from '../../task-members/repositories/task-members.repository';
 import { TenantSequencesRepository } from '../../tenant-sequences/repositories/tenant-sequences.repository';
 import { TasksRepository } from '../repositories/tasks.repository';
 
@@ -13,6 +14,7 @@ export class TasksService {
     private readonly repository: TasksRepository,
     private readonly enumRepository: EnumRepository,
     private readonly sequences: TenantSequencesRepository,
+    private readonly taskMembers: TaskMembersRepository,
   ) {}
 
   async list(tenantId: string, projectId?: string) {
@@ -39,6 +41,7 @@ export class TasksService {
       description?: string;
       status?: string;
       priority?: string;
+      visibility?: string;
       workingWith?: string;
       estimatedHours?: string;
       dueDate?: string;
@@ -49,10 +52,17 @@ export class TasksService {
         'moduleId requires projectId to also be provided',
       );
     }
+    const visibilityValue = input.visibility ?? 'Private';
+    if (visibilityValue === 'Private' && input.workingWith) {
+      throw new BadRequestException(
+        'A private task cannot have workingWith set',
+      );
+    }
 
-    const [statusId, priorityId, displayId] = await Promise.all([
+    const [statusId, priorityId, visibilityId, displayId] = await Promise.all([
       this.resolveEnum('task_status', input.status),
       this.resolveEnum('importance', input.priority),
+      this.resolveEnum('visibility', visibilityValue),
       this.sequences.nextDisplayId(tenantId, 'task'),
     ]);
 
@@ -65,6 +75,7 @@ export class TasksService {
       description: input.description,
       statusId,
       priorityId,
+      visibilityId,
       workingWith: input.workingWith,
       estimatedHours: input.estimatedHours,
       dueDate: input.dueDate,
@@ -73,6 +84,13 @@ export class TasksService {
 
     if (!task) {
       throw new NotFoundException('Failed to create task');
+    }
+    if (visibilityValue === 'Shared') {
+      await this.taskMembers.create({
+        tenantId,
+        taskId: task.id,
+        userId: createdBy,
+      });
     }
 
     const [shaped] = await this.withDisplayValues([task]);
@@ -87,17 +105,30 @@ export class TasksService {
       description: string;
       status: string;
       priority: string;
+      visibility: string;
       workingWith: string;
       estimatedHours: string;
       dueDate: string;
     }>,
   ) {
-    await this.findOne(tenantId, taskId);
+    const existing = await this.findOne(tenantId, taskId);
+    if (!existing) {
+      throw new NotFoundException('Task not found');
+    }
 
-    const [statusId, priorityId] = await Promise.all([
+    if (input.visibility === 'Private' && input.workingWith) {
+      throw new BadRequestException(
+        'A private task cannot have workingWith set',
+      );
+    }
+
+    const [statusId, priorityId, visibilityId] = await Promise.all([
       input.status ? this.resolveEnum('task_status', input.status) : undefined,
       input.priority
         ? this.resolveEnum('importance', input.priority)
+        : undefined,
+      input.visibility
+        ? this.resolveEnum('visibility', input.visibility)
         : undefined,
     ]);
 
@@ -106,13 +137,17 @@ export class TasksService {
       description: input.description,
       statusId,
       priorityId,
-      workingWith: input.workingWith,
+      visibilityId,
+      workingWith: input.visibility === 'Private' ? null : input.workingWith,
       estimatedHours: input.estimatedHours,
       dueDate: input.dueDate,
     });
 
     if (!task) {
       throw new NotFoundException('Task not found');
+    }
+    if (input.visibility === 'Private') {
+      await this.taskMembers.deleteAllForTask(tenantId, taskId);
     }
 
     const [shaped] = await this.withDisplayValues([task]);
@@ -128,18 +163,23 @@ export class TasksService {
   }
 
   private async withDisplayValues<
-    T extends { statusId: string | null; priorityId: string | null },
+    T extends {
+      statusId: string | null;
+      priorityId: string | null;
+      visibilityId: string | null;
+    },
   >(rows: T[]) {
     const ids = rows
-      .flatMap((r) => [r.statusId, r.priorityId])
+      .flatMap((r) => [r.statusId, r.priorityId, r.visibilityId])
       .filter((id): id is string => id !== null);
 
     const valuesById = await this.enumRepository.findValuesByIds(ids);
 
-    return rows.map(({ statusId, priorityId, ...rest }) => ({
+    return rows.map(({ statusId, priorityId, visibilityId, ...rest }) => ({
       ...rest,
       status: statusId ? (valuesById.get(statusId) ?? null) : null,
       priority: priorityId ? (valuesById.get(priorityId) ?? null) : null,
+      visibility: visibilityId ? (valuesById.get(visibilityId) ?? null) : null,
     }));
   }
 

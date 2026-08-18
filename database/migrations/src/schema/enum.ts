@@ -1,9 +1,11 @@
 import { pgTable, uuid, text, integer, timestamp, uniqueIndex } from 'drizzle-orm/pg-core';
+import { tenants } from './tenants';
 
 export const enumTable = pgTable(
   'enum',
   {
     id: uuid('id').defaultRandom().primaryKey(),
+    tenantId: uuid('tenant_id').references(() => tenants.id, { onDelete: 'cascade' }),
     category: text('category').notNull(),
     value: text('value').notNull(),
     sortOrder: integer('sort_order').default(0).notNull(),
@@ -14,6 +16,7 @@ export const enumTable = pgTable(
     uniqueCategoryValue: uniqueIndex('enum_category_value_key').on(
       table.category,
       table.value,
+      table.tenantId,
     ),
   }),
 );

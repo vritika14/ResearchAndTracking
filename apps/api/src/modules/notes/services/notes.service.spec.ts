@@ -3,6 +3,8 @@ import { NotFoundException } from '@nestjs/common';
 import { NotesService } from './notes.service';
 import { NotesRepository } from '../repositories/notes.repository';
 import { TenantSequencesRepository } from '../../tenant-sequences/repositories/tenant-sequences.repository';
+import { EnumRepository } from '../../enum/repositories/enum.repository';
+import { NoteMembersRepository } from '../../note-members/repositories/note-members.repository';
 
 describe('NotesService', () => {
   let service: NotesService;
@@ -14,6 +16,8 @@ describe('NotesService', () => {
     delete: jest.Mock;
   };
   let sequences: { nextDisplayId: jest.Mock };
+  let enumRepository: { findByCategoryAndValue: jest.Mock };
+  let noteMembers: { create: jest.Mock; deleteAllForNote: jest.Mock };
 
   beforeEach(() => {
     repository = {
@@ -26,9 +30,21 @@ describe('NotesService', () => {
     sequences = {
       nextDisplayId: jest.fn().mockResolvedValue('NTE-0001'),
     };
+    enumRepository = {
+      findByCategoryAndValue: jest
+        .fn()
+        .mockResolvedValue({ id: 'visibility-private-id' }),
+    };
+    noteMembers = {
+      create: jest.fn(),
+      deleteAllForNote: jest.fn(),
+    };
+
     service = new NotesService(
       repository as unknown as NotesRepository,
+      enumRepository as unknown as EnumRepository,
       sequences as unknown as TenantSequencesRepository,
+      noteMembers as unknown as NoteMembersRepository,
     );
   });
 
@@ -49,6 +65,7 @@ describe('NotesService', () => {
         content: 'Discussed timeline',
         moduleId: undefined,
         displayId: 'NTE-0001',
+        visibilityId: 'visibility-private-id',
       });
       expect(result).toEqual({ id: 'note-1' });
     });

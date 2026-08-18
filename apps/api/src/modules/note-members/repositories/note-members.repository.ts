@@ -1,0 +1,63 @@
+// apps/api/src/modules/note-members/repositories/note-members.repository.ts
+import { Injectable } from '@nestjs/common';
+import { noteMembers } from '@research-tracker/migrations';
+import { and, eq } from 'drizzle-orm';
+import { DrizzleService } from '../../../db/drizzle.service';
+
+@Injectable()
+export class NoteMembersRepository {
+  constructor(private readonly drizzle: DrizzleService) {}
+
+  async findByNote(tenantId: string, noteId: string) {
+    return this.drizzle.db
+      .select()
+      .from(noteMembers)
+      .where(
+        and(eq(noteMembers.tenantId, tenantId), eq(noteMembers.noteId, noteId)),
+      );
+  }
+
+  async findByNoteAndUser(tenantId: string, noteId: string, userId: string) {
+    const [row] = await this.drizzle.db
+      .select()
+      .from(noteMembers)
+      .where(
+        and(
+          eq(noteMembers.tenantId, tenantId),
+          eq(noteMembers.noteId, noteId),
+          eq(noteMembers.userId, userId),
+        ),
+      );
+    return row;
+  }
+
+  async create(values: { tenantId: string; noteId: string; userId: string }) {
+    const [row] = await this.drizzle.db
+      .insert(noteMembers)
+      .values(values)
+      .returning();
+    return row;
+  }
+
+  async deleteAllForNote(tenantId: string, noteId: string) {
+    await this.drizzle.db
+      .delete(noteMembers)
+      .where(
+        and(eq(noteMembers.tenantId, tenantId), eq(noteMembers.noteId, noteId)),
+      );
+  }
+
+  async delete(tenantId: string, noteId: string, userId: string) {
+    const [row] = await this.drizzle.db
+      .delete(noteMembers)
+      .where(
+        and(
+          eq(noteMembers.tenantId, tenantId),
+          eq(noteMembers.noteId, noteId),
+          eq(noteMembers.userId, userId),
+        ),
+      )
+      .returning();
+    return row;
+  }
+}

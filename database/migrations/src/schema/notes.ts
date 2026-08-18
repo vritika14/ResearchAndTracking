@@ -3,6 +3,7 @@ import { projects } from './projects';
 import { modules } from './modules';
 import { tenants } from './tenants';
 import { users } from './users';
+import { enumTable } from './enum';
 
 export const notes = pgTable('notes', {
   id: uuid('id').defaultRandom().primaryKey(),
@@ -18,6 +19,7 @@ export const notes = pgTable('notes', {
     .references(() => users.id, { onDelete: 'cascade' }),
   title: text('title').notNull(),
   content: text('content'),
+  visibilityId: uuid('visibility_id').references(() => enumTable.id),
   noteDate: timestamp('note_date', { withTimezone: true }).defaultNow().notNull(),
   updatedAt: timestamp('updated_at', { withTimezone: true }).defaultNow().notNull(),
 });
