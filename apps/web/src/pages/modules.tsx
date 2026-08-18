@@ -1,5 +1,6 @@
 import { useMemo, useState } from "react";
 import { Pencil, Trash2 } from "lucide-react";
+import { Link } from "react-router-dom";
 
 import { ColumnVisibilityMenu } from "@/components/dashboard/column-visibility-menu";
 import {
@@ -208,7 +209,12 @@ export default function ModulesPage() {
                     <TableCell>
                       <div className="flex flex-col gap-0.5">
                         <span className="font-mono text-[11px] text-muted-foreground">{module.id}</span>
-                        <span className="font-semibold">{module.title}</span>
+                        <Link
+                          to={`/modules/${module.id}`}
+                          className="font-semibold leading-tight text-foreground transition-colors hover:text-primary hover:underline"
+                        >
+                          {module.title}
+                        </Link>
                         <span className="max-w-md text-xs text-muted-foreground">
                           {module.description || "No description"}
                         </span>
