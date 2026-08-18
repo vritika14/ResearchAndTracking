@@ -31,7 +31,9 @@ describe('NotesService', () => {
       nextDisplayId: jest.fn().mockResolvedValue('NTE-0001'),
     };
     enumRepository = {
-      findByCategoryAndValue: jest.fn().mockResolvedValue({ id: 'visibility-private-id' }),
+      findByCategoryAndValue: jest
+        .fn()
+        .mockResolvedValue({ id: 'visibility-private-id' }),
     };
     noteMembers = {
       create: jest.fn(),

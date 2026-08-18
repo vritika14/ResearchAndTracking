@@ -1,4 +1,8 @@
-import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
+import {
+  BadRequestException,
+  Injectable,
+  NotFoundException,
+} from '@nestjs/common';
 import { EnumRepository } from '../../enum/repositories/enum.repository';
 import { NoteMembersRepository } from '../../note-members/repositories/note-members.repository';
 import { TenantSequencesRepository } from '../../tenant-sequences/repositories/tenant-sequences.repository';
@@ -37,7 +41,9 @@ export class NotesService {
     },
   ) {
     if (input.moduleId && !input.projectId) {
-      throw new BadRequestException('moduleId requires projectId to also be provided');
+      throw new BadRequestException(
+        'moduleId requires projectId to also be provided',
+      );
     }
 
     const visibilityValue = input.visibility ?? 'Private';
@@ -63,7 +69,11 @@ export class NotesService {
     }
 
     if (visibilityValue === 'Shared') {
-      await this.noteMembers.create({ tenantId, noteId: note.id, userId: createdBy });
+      await this.noteMembers.create({
+        tenantId,
+        noteId: note.id,
+        userId: createdBy,
+      });
     }
 
     return note;
@@ -108,9 +118,15 @@ export class NotesService {
     return note;
   }
 
-  private async resolveEnum(category: string, value?: string): Promise<string | undefined> {
+  private async resolveEnum(
+    category: string,
+    value?: string,
+  ): Promise<string | undefined> {
     if (!value) return undefined;
-    const match = await this.enumRepository.findByCategoryAndValue(category, value);
+    const match = await this.enumRepository.findByCategoryAndValue(
+      category,
+      value,
+    );
     if (!match) {
       throw new NotFoundException(`Unknown ${category} value: "${value}"`);
     }

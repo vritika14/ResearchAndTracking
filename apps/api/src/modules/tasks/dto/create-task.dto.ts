@@ -1,6 +1,13 @@
 // apps/api/src/modules/tasks/dto/create-task.dto.ts
 import { ApiProperty } from '@nestjs/swagger';
-import { IsString, IsOptional, IsUUID, IsDateString, IsNumberString, Length } from 'class-validator';
+import {
+  IsString,
+  IsOptional,
+  IsUUID,
+  IsDateString,
+  IsNumberString,
+  Length,
+} from 'class-validator';
 
 export class CreateTaskDto {
   @ApiProperty({ example: 'Draft introduction section' })

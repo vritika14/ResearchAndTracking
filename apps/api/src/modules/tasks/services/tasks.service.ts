@@ -163,15 +163,19 @@ export class TasksService {
   }
 
   private async withDisplayValues<
-    T extends { statusId: string | null; priorityId: string | null; visibilityId: string | null },
+    T extends {
+      statusId: string | null;
+      priorityId: string | null;
+      visibilityId: string | null;
+    },
   >(rows: T[]) {
     const ids = rows
-      .flatMap((r) => [r.statusId, r.priorityId,r.visibilityId])
+      .flatMap((r) => [r.statusId, r.priorityId, r.visibilityId])
       .filter((id): id is string => id !== null);
 
     const valuesById = await this.enumRepository.findValuesByIds(ids);
 
-    return rows.map(({ statusId, priorityId,visibilityId, ...rest }) => ({
+    return rows.map(({ statusId, priorityId, visibilityId, ...rest }) => ({
       ...rest,
       status: statusId ? (valuesById.get(statusId) ?? null) : null,
       priority: priorityId ? (valuesById.get(priorityId) ?? null) : null,
