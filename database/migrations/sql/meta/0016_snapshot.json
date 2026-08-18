@@ -1,5 +1,5 @@
 {
-  "id": "0f135e59-2e61-4333-aa5b-be8dd45b0887",
+  "id": "6e267052-76da-45fa-8c5e-c318936286e9",
   "prevId": "001e550a-2473-4078-8aae-926a159f7d04",
   "version": "7",
   "dialect": "postgresql",
@@ -1259,12 +1259,6 @@
           "primaryKey": false,
           "notNull": false
         },
-        "visibility_id": {
-          "name": "visibility_id",
-          "type": "uuid",
-          "primaryKey": false,
-          "notNull": false
-        },
         "note_date": {
           "name": "note_date",
           "type": "timestamp with time zone",
@@ -1332,19 +1326,6 @@
             "id"
           ],
           "onDelete": "cascade",
-          "onUpdate": "no action"
-        },
-        "notes_visibility_id_enum_id_fk": {
-          "name": "notes_visibility_id_enum_id_fk",
-          "tableFrom": "notes",
-          "tableTo": "enum",
-          "columnsFrom": [
-            "visibility_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
-          "onDelete": "no action",
           "onUpdate": "no action"
         }
       },
@@ -1423,12 +1404,6 @@
         },
         "priority_id": {
           "name": "priority_id",
-          "type": "uuid",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "visibility_id": {
-          "name": "visibility_id",
           "type": "uuid",
           "primaryKey": false,
           "notNull": false
@@ -1546,19 +1521,6 @@
           "onDelete": "no action",
           "onUpdate": "no action"
         },
-        "tasks_visibility_id_enum_id_fk": {
-          "name": "tasks_visibility_id_enum_id_fk",
-          "tableFrom": "tasks",
-          "tableTo": "enum",
-          "columnsFrom": [
-            "visibility_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
-          "onDelete": "no action",
-          "onUpdate": "no action"
-        },
         "tasks_working_with_users_id_fk": {
           "name": "tasks_working_with_users_id_fk",
           "tableFrom": "tasks",
@@ -1655,220 +1617,6 @@
           "tableTo": "tenants",
           "columnsFrom": [
             "tenant_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
-          "onDelete": "cascade",
-          "onUpdate": "no action"
-        }
-      },
-      "compositePrimaryKeys": {},
-      "uniqueConstraints": {},
-      "policies": {},
-      "checkConstraints": {},
-      "isRLSEnabled": false
-    },
-    "public.task_members": {
-      "name": "task_members",
-      "schema": "",
-      "columns": {
-        "id": {
-          "name": "id",
-          "type": "uuid",
-          "primaryKey": true,
-          "notNull": true,
-          "default": "gen_random_uuid()"
-        },
-        "tenant_id": {
-          "name": "tenant_id",
-          "type": "uuid",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "task_id": {
-          "name": "task_id",
-          "type": "uuid",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "user_id": {
-          "name": "user_id",
-          "type": "uuid",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "created_at": {
-          "name": "created_at",
-          "type": "timestamp with time zone",
-          "primaryKey": false,
-          "notNull": true,
-          "default": "now()"
-        }
-      },
-      "indexes": {
-        "task_members_task_id_user_id_key": {
-          "name": "task_members_task_id_user_id_key",
-          "columns": [
-            {
-              "expression": "task_id",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            },
-            {
-              "expression": "user_id",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            }
-          ],
-          "isUnique": true,
-          "concurrently": false,
-          "method": "btree",
-          "with": {}
-        }
-      },
-      "foreignKeys": {
-        "task_members_tenant_id_tenants_id_fk": {
-          "name": "task_members_tenant_id_tenants_id_fk",
-          "tableFrom": "task_members",
-          "tableTo": "tenants",
-          "columnsFrom": [
-            "tenant_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
-          "onDelete": "cascade",
-          "onUpdate": "no action"
-        },
-        "task_members_task_id_tasks_id_fk": {
-          "name": "task_members_task_id_tasks_id_fk",
-          "tableFrom": "task_members",
-          "tableTo": "tasks",
-          "columnsFrom": [
-            "task_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
-          "onDelete": "cascade",
-          "onUpdate": "no action"
-        },
-        "task_members_user_id_users_id_fk": {
-          "name": "task_members_user_id_users_id_fk",
-          "tableFrom": "task_members",
-          "tableTo": "users",
-          "columnsFrom": [
-            "user_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
-          "onDelete": "cascade",
-          "onUpdate": "no action"
-        }
-      },
-      "compositePrimaryKeys": {},
-      "uniqueConstraints": {},
-      "policies": {},
-      "checkConstraints": {},
-      "isRLSEnabled": false
-    },
-    "public.note_members": {
-      "name": "note_members",
-      "schema": "",
-      "columns": {
-        "id": {
-          "name": "id",
-          "type": "uuid",
-          "primaryKey": true,
-          "notNull": true,
-          "default": "gen_random_uuid()"
-        },
-        "tenant_id": {
-          "name": "tenant_id",
-          "type": "uuid",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "note_id": {
-          "name": "note_id",
-          "type": "uuid",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "user_id": {
-          "name": "user_id",
-          "type": "uuid",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "created_at": {
-          "name": "created_at",
-          "type": "timestamp with time zone",
-          "primaryKey": false,
-          "notNull": true,
-          "default": "now()"
-        }
-      },
-      "indexes": {
-        "note_members_note_id_user_id_key": {
-          "name": "note_members_note_id_user_id_key",
-          "columns": [
-            {
-              "expression": "note_id",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            },
-            {
-              "expression": "user_id",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            }
-          ],
-          "isUnique": true,
-          "concurrently": false,
-          "method": "btree",
-          "with": {}
-        }
-      },
-      "foreignKeys": {
-        "note_members_tenant_id_tenants_id_fk": {
-          "name": "note_members_tenant_id_tenants_id_fk",
-          "tableFrom": "note_members",
-          "tableTo": "tenants",
-          "columnsFrom": [
-            "tenant_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
-          "onDelete": "cascade",
-          "onUpdate": "no action"
-        },
-        "note_members_note_id_notes_id_fk": {
-          "name": "note_members_note_id_notes_id_fk",
-          "tableFrom": "note_members",
-          "tableTo": "notes",
-          "columnsFrom": [
-            "note_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
-          "onDelete": "cascade",
-          "onUpdate": "no action"
-        },
-        "note_members_user_id_users_id_fk": {
-          "name": "note_members_user_id_users_id_fk",
-          "tableFrom": "note_members",
-          "tableTo": "users",
-          "columnsFrom": [
-            "user_id"
           ],
           "columnsTo": [
             "id"
