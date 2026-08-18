@@ -19,6 +19,7 @@ import { JwtAuthGuard } from '../../auth/jwt-auth.guard';
 import { AddCollaboratorDto } from '../dto/add-collaborator.dto';
 import { UpdateRoleDto } from '../dto/update-role.dto';
 import { ModuleCollaboratorsService } from '../services/module-collaborators.service';
+import { TenantMemberGuard } from '../../memberships/policies/tenant-member.guard';
 
 @ApiTags('module-collaborators')
 @ApiBearerAuth()
@@ -27,7 +28,7 @@ export class ModuleCollaboratorsController {
   constructor(private readonly service: ModuleCollaboratorsService) {}
 
   @ApiOperation({ summary: 'List collaborators on a module' })
-  @UseGuards(JwtAuthGuard)
+  @UseGuards(JwtAuthGuard,TenantMemberGuard)
   @Get()
   async list(
     @Param('tenantId') tenantId: string,
@@ -38,7 +39,7 @@ export class ModuleCollaboratorsController {
 
   @ApiOperation({ summary: 'Add a collaborator to a module' })
   @ApiResponse({ status: 201 })
-  @UseGuards(JwtAuthGuard)
+  @UseGuards(JwtAuthGuard,TenantMemberGuard)
   @Post()
   async add(
     @Param('tenantId') tenantId: string,
@@ -49,7 +50,7 @@ export class ModuleCollaboratorsController {
   }
 
   @ApiOperation({ summary: "Update a collaborator's role" })
-  @UseGuards(JwtAuthGuard)
+  @UseGuards(JwtAuthGuard,TenantMemberGuard)
   @Patch(':userId')
   async updateRole(
     @Param('tenantId') tenantId: string,
@@ -61,7 +62,7 @@ export class ModuleCollaboratorsController {
   }
 
   @ApiOperation({ summary: 'Remove a collaborator from a module' })
-  @UseGuards(JwtAuthGuard)
+  @UseGuards(JwtAuthGuard,TenantMemberGuard)
   @Delete(':userId')
   async remove(
     @Param('tenantId') tenantId: string,

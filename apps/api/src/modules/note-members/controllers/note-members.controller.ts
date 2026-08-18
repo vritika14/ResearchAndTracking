@@ -17,6 +17,7 @@ import {
 import { JwtAuthGuard } from '../../auth/jwt-auth.guard';
 import { AddMemberDto } from '../dto/add-member.dto';
 import { NoteMembersService } from '../services/note-members.service';
+import { TenantMemberGuard } from '../../memberships/policies/tenant-member.guard';
 
 @ApiTags('note-members')
 @ApiBearerAuth()
@@ -25,7 +26,7 @@ export class NoteMembersController {
   constructor(private readonly service: NoteMembersService) {}
 
   @ApiOperation({ summary: 'List members who can see this shared note' })
-  @UseGuards(JwtAuthGuard)
+  @UseGuards(JwtAuthGuard,TenantMemberGuard)
   @Get()
   async list(
     @Param('tenantId') tenantId: string,
@@ -36,7 +37,7 @@ export class NoteMembersController {
 
   @ApiOperation({ summary: 'Grant a user access to this shared note' })
   @ApiResponse({ status: 201 })
-  @UseGuards(JwtAuthGuard)
+  @UseGuards(JwtAuthGuard,TenantMemberGuard)
   @Post()
   async add(
     @Param('tenantId') tenantId: string,
@@ -47,7 +48,7 @@ export class NoteMembersController {
   }
 
   @ApiOperation({ summary: "Remove a user's access to this shared note" })
-  @UseGuards(JwtAuthGuard)
+  @UseGuards(JwtAuthGuard,TenantMemberGuard)
   @Delete(':userId')
   async remove(
     @Param('tenantId') tenantId: string,

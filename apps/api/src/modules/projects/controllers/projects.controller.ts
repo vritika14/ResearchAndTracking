@@ -22,6 +22,7 @@ import { UsersService } from '../../users/users.service';
 import { CreateProjectDto } from '../dto/create-project.dto';
 import { UpdateProjectDto } from '../dto/update-project.dto';
 import { ProjectsService } from '../services/projects.service';
+import { TenantMemberGuard } from '../../memberships/policies/tenant-member.guard';
 
 interface AuthenticatedRequest extends Request {
   user: AuthenticatedPrincipal;
@@ -39,7 +40,7 @@ export class ProjectsController {
   @ApiOperation({
     summary: 'List active (non-archived) projects for a workspace',
   })
-  @UseGuards(JwtAuthGuard)
+  @UseGuards(JwtAuthGuard,TenantMemberGuard)
   @Get()
   async list(
     @Param('tenantId') tenantId: string,
@@ -50,7 +51,7 @@ export class ProjectsController {
   }
 
   @ApiOperation({ summary: 'Get a single project' })
-  @UseGuards(JwtAuthGuard)
+  @UseGuards(JwtAuthGuard,TenantMemberGuard)
   @Get(':projectId')
   async findOne(
     @Param('tenantId') tenantId: string,
@@ -63,7 +64,7 @@ export class ProjectsController {
 
   @ApiOperation({ summary: 'Create a project' })
   @ApiResponse({ status: 201 })
-  @UseGuards(JwtAuthGuard)
+  @UseGuards(JwtAuthGuard,TenantMemberGuard)
   @Post()
   async create(
     @Param('tenantId') tenantId: string,
@@ -75,7 +76,7 @@ export class ProjectsController {
   }
 
   @ApiOperation({ summary: 'Update a project' })
-  @UseGuards(JwtAuthGuard)
+  @UseGuards(JwtAuthGuard,TenantMemberGuard)
   @Patch(':projectId')
   async update(
     @Param('tenantId') tenantId: string,
@@ -88,7 +89,7 @@ export class ProjectsController {
   }
 
   @ApiOperation({ summary: 'Archive a project (auto-deleted after 14 days)' })
-  @UseGuards(JwtAuthGuard)
+  @UseGuards(JwtAuthGuard,TenantMemberGuard)
   @Delete(':projectId')
   async archive(
     @Param('tenantId') tenantId: string,

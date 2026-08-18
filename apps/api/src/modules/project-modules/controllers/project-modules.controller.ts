@@ -24,6 +24,7 @@ import { UsersService } from '../../users/users.service';
 import { CreateModuleDto } from '../dto/create-module.dto';
 import { UpdateModuleDto } from '../dto/update-module.dto';
 import { ProjectModulesService } from '../services/project-modules.service';
+import { TenantMemberGuard } from '../../memberships/policies/tenant-member.guard';
 
 interface AuthenticatedRequest extends Request {
   user: AuthenticatedPrincipal;
@@ -42,7 +43,7 @@ export class ProjectModulesController {
     summary:
       'List active modules for a workspace, optionally filtered by project',
   })
-  @UseGuards(JwtAuthGuard)
+  @UseGuards(JwtAuthGuard,TenantMemberGuard)
   @Get()
   async list(
     @Param('tenantId') tenantId: string,
@@ -54,7 +55,7 @@ export class ProjectModulesController {
   }
 
   @ApiOperation({ summary: 'Get a single module' })
-  @UseGuards(JwtAuthGuard)
+  @UseGuards(JwtAuthGuard,TenantMemberGuard)
   @Get(':moduleId')
   async findOne(
     @Param('tenantId') tenantId: string,
@@ -69,7 +70,7 @@ export class ProjectModulesController {
     summary: 'Create a module, optionally associated with a project',
   })
   @ApiResponse({ status: 201 })
-  @UseGuards(JwtAuthGuard)
+  @UseGuards(JwtAuthGuard,TenantMemberGuard)
   @Post()
   async create(
     @Param('tenantId') tenantId: string,
@@ -81,7 +82,7 @@ export class ProjectModulesController {
   }
 
   @ApiOperation({ summary: 'Update a module' })
-  @UseGuards(JwtAuthGuard)
+  @UseGuards(JwtAuthGuard,TenantMemberGuard)
   @Patch(':moduleId')
   async update(
     @Param('tenantId') tenantId: string,
@@ -94,7 +95,7 @@ export class ProjectModulesController {
   }
 
   @ApiOperation({ summary: 'Archive a module (auto-deleted after 14 days)' })
-  @UseGuards(JwtAuthGuard)
+  @UseGuards(JwtAuthGuard,TenantMemberGuard)
   @Delete(':moduleId')
   async archive(
     @Param('tenantId') tenantId: string,

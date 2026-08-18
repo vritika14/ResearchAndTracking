@@ -7,6 +7,7 @@ import { TenantSequencesModule } from '../tenant-sequences/tenant-sequences.modu
 import { ProjectsController } from './controllers/projects.controller';
 import { ProjectsRepository } from './repositories/projects.repository';
 import { ProjectsService } from './services/projects.service';
+import { MembershipsModule } from '../memberships/memberships.module';
 
 @Module({
   imports: [
@@ -14,6 +15,7 @@ import { ProjectsService } from './services/projects.service';
     EnumModule,
     ProjectCollaboratorsModule,
     TenantSequencesModule,
+    MembershipsModule,
   ],
   controllers: [ProjectsController],
   providers: [ProjectsService, ProjectsRepository],
