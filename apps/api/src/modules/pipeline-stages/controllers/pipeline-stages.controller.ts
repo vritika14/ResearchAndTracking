@@ -20,6 +20,7 @@ import { TenantOwnerGuard } from '../../memberships/policies/tenant-owner.guard'
 import { CreatePipelineStageDto } from '../dto/create-pipeline-stage.dto';
 import { UpdatePipelineStageDto } from '../dto/update-pipeline-stage.dto';
 import { PipelineStagesService } from '../services/pipeline-stages.service';
+import { TenantMemberGuard } from '../../memberships/policies/tenant-member.guard';
 
 @ApiTags('pipeline-stages')
 @ApiBearerAuth()
@@ -30,7 +31,7 @@ export class PipelineStagesController {
   @ApiOperation({
     summary: 'List pipeline stages available to this workspace (base + custom)',
   })
-  @UseGuards(JwtAuthGuard)
+  @UseGuards(JwtAuthGuard, TenantMemberGuard)
   @Get()
   async list(@Param('tenantId') tenantId: string) {
     return this.service.list(tenantId);

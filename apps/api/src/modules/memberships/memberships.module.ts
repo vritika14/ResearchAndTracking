@@ -33,6 +33,6 @@ import { MembershipsService } from './services/memberships.service';
     TenantOwnerGuard,
     TenantMemberGuard,
   ],
-  exports: [MembershipsService, MembershipsRepository, TenantOwnerGuard],
+  exports: [UsersModule,MembershipsService, MembershipsRepository, TenantOwnerGuard, TenantMemberGuard],
 })
 export class MembershipsModule {}

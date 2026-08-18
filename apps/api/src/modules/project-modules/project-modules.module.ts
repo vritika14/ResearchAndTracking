@@ -7,6 +7,7 @@ import { UsersModule } from '../users/users.module';
 import { ProjectModulesController } from './controllers/project-modules.controller';
 import { ProjectModulesRepository } from './repositories/project-modules.repository';
 import { ProjectModulesService } from './services/project-modules.service';
+import { MembershipsModule } from '../memberships/memberships.module';
 
 @Module({
   imports: [
@@ -14,6 +15,7 @@ import { ProjectModulesService } from './services/project-modules.service';
     EnumModule,
     forwardRef(() => ModuleCollaboratorsModule),
     TenantSequencesModule,
+    MembershipsModule,
   ],
   controllers: [ProjectModulesController],
   providers: [ProjectModulesService, ProjectModulesRepository],

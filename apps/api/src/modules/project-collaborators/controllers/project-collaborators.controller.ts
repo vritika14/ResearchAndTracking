@@ -19,6 +19,7 @@ import { JwtAuthGuard } from '../../auth/jwt-auth.guard';
 import { AddCollaboratorDto } from '../dto/add-collaborator.dto';
 import { UpdateRoleDto } from '../dto/update-role.dto';
 import { ProjectCollaboratorsService } from '../services/project-collaborators.service';
+import { TenantMemberGuard } from '../../memberships/policies/tenant-member.guard';
 
 @ApiTags('project-collaborators')
 @ApiBearerAuth()
@@ -27,7 +28,7 @@ export class ProjectCollaboratorsController {
   constructor(private readonly service: ProjectCollaboratorsService) {}
 
   @ApiOperation({ summary: 'List collaborators on a project' })
-  @UseGuards(JwtAuthGuard)
+  @UseGuards(JwtAuthGuard,TenantMemberGuard)
   @Get()
   async list(
     @Param('tenantId') tenantId: string,
@@ -38,7 +39,7 @@ export class ProjectCollaboratorsController {
 
   @ApiOperation({ summary: 'Add a collaborator to a project' })
   @ApiResponse({ status: 201 })
-  @UseGuards(JwtAuthGuard)
+  @UseGuards(JwtAuthGuard,TenantMemberGuard)
   @Post()
   async add(
     @Param('tenantId') tenantId: string,
@@ -49,7 +50,7 @@ export class ProjectCollaboratorsController {
   }
 
   @ApiOperation({ summary: "Update a collaborator's role" })
-  @UseGuards(JwtAuthGuard)
+  @UseGuards(JwtAuthGuard,TenantMemberGuard)
   @Patch(':userId')
   async updateRole(
     @Param('tenantId') tenantId: string,
@@ -61,7 +62,7 @@ export class ProjectCollaboratorsController {
   }
 
   @ApiOperation({ summary: 'Remove a collaborator from a project' })
-  @UseGuards(JwtAuthGuard)
+  @UseGuards(JwtAuthGuard,TenantMemberGuard)
   @Delete(':userId')
   async remove(
     @Param('tenantId') tenantId: string,

@@ -6,8 +6,9 @@ import { NotesService } from './services/notes.service';
 import { TenantSequencesModule } from '../tenant-sequences/tenant-sequences.module';
 import { NoteMembersModule } from '../note-members/note-members.module';
 import { EnumModule } from '../enum/enum.module';
+import { MembershipsModule } from '../memberships/memberships.module';
 @Module({
-  imports: [UsersModule, TenantSequencesModule, NoteMembersModule, EnumModule],
+  imports: [UsersModule, TenantSequencesModule, NoteMembersModule, EnumModule, MembershipsModule],
   controllers: [NotesController],
   providers: [NotesService, NotesRepository],
 })
