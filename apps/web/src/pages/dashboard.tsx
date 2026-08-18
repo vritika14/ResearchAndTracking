@@ -173,6 +173,18 @@ export default function DashboardPage() {
     });
   }
 
+  function reorderTables(draggedId: DashboardTableId, targetId: DashboardTableId) {
+    setLayout((current) => {
+      const fromIndex = current.order.indexOf(draggedId);
+      const toIndex = current.order.indexOf(targetId);
+      if (fromIndex < 0 || toIndex < 0 || fromIndex === toIndex) return current;
+      const order = [...current.order];
+      order.splice(fromIndex, 1);
+      order.splice(toIndex, 0, draggedId);
+      return { ...current, order };
+    });
+  }
+
   function resetLayout() {
     setLayout({ order: [...DEFAULT_TABLE_ORDER], hidden: [] });
   }
@@ -275,6 +287,7 @@ export default function DashboardPage() {
         visibleTables={visibleTables}
         onToggle={toggleTable}
         onMove={moveTable}
+        onReorder={reorderTables}
         onReset={resetLayout}
       />
     </div>

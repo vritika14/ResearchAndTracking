@@ -7,8 +7,10 @@ import { AppLayout } from "@/components/layout/app-layout";
 import DashboardPage from "@/pages/dashboard";
 import ProjectsPage from "@/pages/projects";
 import ModulesPage from "@/pages/modules";
+import ModuleDetailPage from "@/pages/module-detail";
 import ProjectDetailPage from "@/pages/project-detail";
 import TasksPage from "@/pages/tasks";
+import TaskDetailPage from "@/pages/task-detail";
 import DailyNotesPage from "@/pages/daily-notes";
 import PipelinePage from "@/pages/pipeline";
 import AccountAuditPage from "@/pages/account-audit";
@@ -47,11 +49,13 @@ export default function App() {
               <Route index element={<DashboardPage />} />
               <Route path="projects" element={<ProjectsPage />} />
               <Route path="modules" element={<ModulesPage />} />
+              <Route path="modules/:moduleId" element={<ModuleDetailPage />} />
               <Route
                 path="projects/:projectId"
                 element={<ProjectDetailPage />}
               />
               <Route path="tasks" element={<TasksPage />} />
+              <Route path="tasks/:taskCode" element={<TaskDetailPage />} />
               <Route path="daily-notes" element={<DailyNotesPage />} />
               <Route path="pipeline" element={<PipelinePage />} />
               <Route path="settings" element={<SettingsPage />} />
