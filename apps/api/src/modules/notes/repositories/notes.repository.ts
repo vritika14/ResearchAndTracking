@@ -34,6 +34,7 @@ export class NotesRepository {
     title: string;
     content?: string;
     displayId?: string;
+    visibilityId?: string;
   }) {
     const [note] = await this.drizzle.db
       .insert(notes)
@@ -45,7 +46,7 @@ export class NotesRepository {
   async update(
     tenantId: string,
     noteId: string,
-    values: Partial<{ title: string; content: string }>,
+    values: Partial<{ title: string; content: string; visibilityId: string }>,
   ) {
     const [note] = await this.drizzle.db
       .update(notes)

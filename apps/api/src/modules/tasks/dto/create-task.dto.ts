@@ -1,13 +1,6 @@
 // apps/api/src/modules/tasks/dto/create-task.dto.ts
 import { ApiProperty } from '@nestjs/swagger';
-import {
-  IsString,
-  IsOptional,
-  IsUUID,
-  IsDateString,
-  IsNumberString,
-  Length,
-} from 'class-validator';
+import { IsString, IsOptional, IsUUID, IsDateString, IsNumberString, Length } from 'class-validator';
 
 export class CreateTaskDto {
   @ApiProperty({ example: 'Draft introduction section' })
@@ -39,6 +32,11 @@ export class CreateTaskDto {
   @IsOptional()
   @IsString()
   priority?: string;
+
+  @ApiProperty({ required: false, example: 'Private' })
+  @IsOptional()
+  @IsString()
+  visibility?: string;
 
   @ApiProperty({ required: false })
   @IsOptional()

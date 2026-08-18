@@ -16,6 +16,7 @@ import {
   ApiOperation,
   ApiResponse,
   ApiTags,
+  ApiQuery,
 } from '@nestjs/swagger';
 import { Request } from 'express';
 import type { AuthenticatedPrincipal } from '../../auth/jwt.strategy';
@@ -41,6 +42,7 @@ export class TasksController {
   @ApiOperation({
     summary: 'List tasks for a workspace, optionally filtered by project',
   })
+  @ApiQuery({ name: 'projectId', required: false, type: String })
   @UseGuards(JwtAuthGuard)
   @Get()
   async list(

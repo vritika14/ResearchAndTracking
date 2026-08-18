@@ -4,6 +4,7 @@ import { TasksService } from './tasks.service';
 import { TasksRepository } from '../repositories/tasks.repository';
 import { EnumRepository } from '../../enum/repositories/enum.repository';
 import { TenantSequencesRepository } from '../../tenant-sequences/repositories/tenant-sequences.repository';
+import { TaskMembersRepository } from '../../task-members/repositories/task-members.repository';
 
 describe('TasksService', () => {
   let service: TasksService;
@@ -19,6 +20,7 @@ describe('TasksService', () => {
     findValuesByIds: jest.Mock;
   };
   let sequences: { nextDisplayId: jest.Mock };
+  let taskMembers: { create: jest.Mock; deleteAllForTask: jest.Mock };
 
   beforeEach(() => {
     repository = {
@@ -35,11 +37,16 @@ describe('TasksService', () => {
     sequences = {
       nextDisplayId: jest.fn().mockResolvedValue('TSK-0001'),
     };
+    taskMembers = {
+      create: jest.fn(),
+      deleteAllForTask: jest.fn(),
+    };
 
     service = new TasksService(
       repository as unknown as TasksRepository,
       enumRepository as unknown as EnumRepository,
       sequences as unknown as TenantSequencesRepository,
+      taskMembers as unknown as TaskMembersRepository,
     );
   });
 

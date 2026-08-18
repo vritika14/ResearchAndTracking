@@ -27,14 +27,15 @@ export class TasksRepository {
   }
 
   async create(values: {
-    projectId?: string;
     tenantId: string;
+    projectId?: string;
     moduleId?: string;
     createdBy: string;
     title: string;
     description?: string;
     statusId?: string;
     priorityId?: string;
+    visibilityId?: string;
     workingWith?: string;
     estimatedHours?: string;
     dueDate?: string;
@@ -55,7 +56,8 @@ export class TasksRepository {
       description: string;
       statusId: string;
       priorityId: string;
-      workingWith: string;
+      visibilityId: string;
+      workingWith: string | null;
       estimatedHours: string;
       dueDate: string;
     }>,
