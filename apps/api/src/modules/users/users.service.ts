@@ -10,6 +10,7 @@ import { users } from '@research-tracker/migrations';
 import { eq } from 'drizzle-orm';
 import { firstValueFrom } from 'rxjs';
 import { DrizzleService } from '../../db/drizzle.service';
+import type { UpdateProfileDto } from './dto/update-profile.dto';
 
 interface CognitoUserInfo {
   sub: string;
@@ -124,6 +125,33 @@ export class UsersService {
       .returning();
 
     return created;
+  }
+
+  async updateProfile(userId: string, input: UpdateProfileDto) {
+    const optionalText = (value: string | undefined) => {
+      if (value === undefined) return undefined;
+      return value.trim() || null;
+    };
+
+    const [updated] = await this.drizzle.db
+      .update(users)
+      .set({
+        displayName: input.displayName?.trim(),
+        jobTitle: optionalText(input.jobTitle),
+        institution: optionalText(input.institution),
+        department: optionalText(input.department),
+        phone: optionalText(input.phone),
+        researchInterests: optionalText(input.researchInterests),
+        updatedAt: new Date(),
+      })
+      .where(eq(users.id, userId))
+      .returning();
+
+    if (!updated) {
+      throw new NotFoundException('User not found');
+    }
+
+    return updated;
   }
 
   private async fetchCognitoUserInfo(accessToken: string) {

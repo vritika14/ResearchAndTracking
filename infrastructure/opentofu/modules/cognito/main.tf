@@ -25,6 +25,15 @@ resource "aws_cognito_user_pool" "this" {
     mutable             = true
   }
 
+  # Keep initial registration intentionally small: name, email, and password.
+  # Additional professional profile details are collected in application settings.
+  schema {
+    name                = "name"
+    attribute_data_type = "String"
+    required            = true
+    mutable             = true
+  }
+
   tags = {
     Environment = var.environment
     ManagedBy   = "opentofu"

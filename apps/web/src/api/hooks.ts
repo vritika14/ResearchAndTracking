@@ -4,6 +4,7 @@ import { ApiError, apiClient, responseData } from "@/api/client";
 import type { components } from "@/api/schema";
 
 export type Me = components["schemas"]["Me"];
+export type UpdateProfile = components["schemas"]["UpdateProfile"];
 export type Workspace = components["schemas"]["Workspace"];
 export type InvitationPreview = components["schemas"]["InvitationPreview"];
 export type Membership = components["schemas"]["Membership"];
@@ -23,6 +24,21 @@ export function useMe(enabled = true) {
     queryKey: apiKeys.me,
     enabled,
     queryFn: async () => responseData(await apiClient.GET("/api/v1/me")),
+  });
+}
+
+export function useUpdateMe() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async (profile: UpdateProfile) =>
+      responseData(
+        await apiClient.PATCH("/api/v1/me", {
+          body: profile,
+        }),
+      ),
+    onSuccess(profile) {
+      queryClient.setQueryData(apiKeys.me, profile);
+    },
   });
 }
 
