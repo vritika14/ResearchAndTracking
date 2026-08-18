@@ -17,7 +17,7 @@ export interface paths {
         delete?: never;
         options?: never;
         head?: never;
-        patch?: never;
+        patch: operations["MeController_updateMe"];
         trace?: never;
     };
     "/api/v1/workspaces": {
@@ -142,7 +142,22 @@ export interface components {
             /** Format: email */
             email: string;
             displayName: string;
+            jobTitle: string | null;
+            institution: string | null;
+            department: string | null;
+            phone: string | null;
+            researchInterests: string | null;
             status: string;
+            profileComplete: boolean;
+            missingProfileFields: ("jobTitle" | "institution" | "department")[];
+        };
+        UpdateProfile: {
+            displayName?: string;
+            jobTitle?: string;
+            institution?: string;
+            department?: string;
+            phone?: string;
+            researchInterests?: string;
         };
         CreateWorkspace: {
             name: string;
@@ -250,6 +265,30 @@ export interface operations {
         requestBody?: never;
         responses: {
             /** @description Authenticated user */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Me"];
+                };
+            };
+        };
+    };
+    MeController_updateMe: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["UpdateProfile"];
+            };
+        };
+        responses: {
+            /** @description Updated authenticated user */
             200: {
                 headers: {
                     [name: string]: unknown;

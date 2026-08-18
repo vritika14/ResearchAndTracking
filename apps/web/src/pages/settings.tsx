@@ -1,11 +1,22 @@
-import { Building2, Mail, Palette, ShieldCheck, UserRound } from "lucide-react";
+import { useEffect, useState, type FormEvent } from "react";
+import {
+  AlertTriangle,
+  Building2,
+  CheckCircle2,
+  Mail,
+  Palette,
+  Save,
+  ShieldCheck,
+  UserRound,
+} from "lucide-react";
 
-import { useCurrentWorkspace, useMe } from "@/api/hooks";
+import { useCurrentWorkspace, useMe, useUpdateMe } from "@/api/hooks";
 import { WorkspaceMembers } from "@/components/settings/workspace-members";
 import { ErrorState } from "@/components/shared/error-state";
 import { LoadingState } from "@/components/shared/loading-state";
 import { Heading } from "@/components/typography/heading";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import {
   Card,
   CardContent,
@@ -14,6 +25,7 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
 import {
   Select,
   SelectContent,
@@ -31,6 +43,32 @@ export default function SettingsPage() {
   const me = useMe();
   const workspace = useCurrentWorkspace();
   const colorTheme = useColorTheme();
+  const updateProfile = useUpdateMe();
+  const [profile, setProfile] = useState({
+    displayName: "",
+    jobTitle: "",
+    institution: "",
+    department: "",
+    phone: "",
+    researchInterests: "",
+  });
+
+  useEffect(() => {
+    if (!me.data) return;
+    setProfile({
+      displayName: me.data.displayName,
+      jobTitle: me.data.jobTitle ?? "",
+      institution: me.data.institution ?? "",
+      department: me.data.department ?? "",
+      phone: me.data.phone ?? "",
+      researchInterests: me.data.researchInterests ?? "",
+    });
+  }, [me.data]);
+
+  function saveProfile(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    updateProfile.mutate(profile);
+  }
 
   if (me.isPending || workspace.isPending) {
     return (
@@ -56,6 +94,22 @@ export default function SettingsPage() {
         </p>
       </div>
 
+      {me.data.profileComplete ? null : (
+        <div
+          role="alert"
+          className="mx-auto mt-7 flex w-full max-w-5xl items-start gap-3 rounded-lg border border-amber-300 bg-amber-50 p-4 text-amber-950 dark:border-amber-900 dark:bg-amber-950/30 dark:text-amber-200"
+        >
+          <AlertTriangle className="mt-0.5 h-5 w-5 shrink-0 text-amber-500" />
+          <div>
+            <p className="font-semibold">Complete your profile</p>
+            <p className="mt-1 text-sm">
+              Add your job title, institution, and department. The alert beside Settings will
+              disappear when these required details are saved.
+            </p>
+          </div>
+        </div>
+      )}
+
       <div className="mx-auto mt-7 grid w-full max-w-5xl gap-6 lg:grid-cols-[1.2fr_0.8fr]">
         <Card>
           <CardHeader>
@@ -64,40 +118,130 @@ export default function SettingsPage() {
               Profile
             </CardTitle>
             <CardDescription>
-              These details come from your authenticated Cognito account.
+              Your name and email are collected during registration. Add your professional
+              details here after signing in.
             </CardDescription>
           </CardHeader>
-          <CardContent className="grid gap-5">
-            <div className="grid gap-2">
-              <label htmlFor="display-name" className="text-sm font-medium">
-                Display name
-              </label>
-              <Input
-                id="display-name"
-                value={me.data.displayName}
-                readOnly
-                className="bg-muted/30"
-              />
-            </div>
-            <div className="grid gap-2">
-              <label htmlFor="email" className="text-sm font-medium">
-                Email
-              </label>
-              <div className="relative">
-                <Mail className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+          <CardContent>
+            <form onSubmit={saveProfile} className="grid gap-5">
+              <div className="grid gap-2">
+                <label htmlFor="display-name" className="text-sm font-medium">
+                  Name <span className="text-destructive">*</span>
+                </label>
                 <Input
-                  id="email"
-                  type="email"
-                  value={me.data.email}
-                  readOnly
-                  className="bg-muted/30 pl-9"
+                  id="display-name"
+                  value={profile.displayName}
+                  onChange={(event) =>
+                    setProfile((current) => ({ ...current, displayName: event.target.value }))
+                  }
+                  minLength={2}
+                  maxLength={100}
+                  required
                 />
               </div>
-            </div>
-            <p className="text-xs leading-5 text-muted-foreground">
-              Profile changes are managed by the identity provider. Contact an
-              administrator if these details are incorrect.
-            </p>
+              <div className="grid gap-2">
+                <label htmlFor="email" className="text-sm font-medium">Email</label>
+                <div className="relative">
+                  <Mail className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+                  <Input
+                    id="email"
+                    type="email"
+                    value={me.data.email}
+                    readOnly
+                    className="bg-muted/30 pl-9"
+                  />
+                </div>
+              </div>
+              <div className="grid gap-4 sm:grid-cols-2">
+                <div className="grid gap-2">
+                  <label htmlFor="job-title" className="text-sm font-medium">
+                    Job title <span className="text-destructive">*</span>
+                  </label>
+                  <Input
+                    id="job-title"
+                    value={profile.jobTitle}
+                    onChange={(event) =>
+                      setProfile((current) => ({ ...current, jobTitle: event.target.value }))
+                    }
+                    placeholder="Research Fellow"
+                    maxLength={120}
+                    required
+                  />
+                </div>
+                <div className="grid gap-2">
+                  <label htmlFor="institution" className="text-sm font-medium">
+                    Institution <span className="text-destructive">*</span>
+                  </label>
+                  <Input
+                    id="institution"
+                    value={profile.institution}
+                    onChange={(event) =>
+                      setProfile((current) => ({ ...current, institution: event.target.value }))
+                    }
+                    placeholder="University or organisation"
+                    maxLength={200}
+                    required
+                  />
+                </div>
+                <div className="grid gap-2">
+                  <label htmlFor="department" className="text-sm font-medium">
+                    Department <span className="text-destructive">*</span>
+                  </label>
+                  <Input
+                    id="department"
+                    value={profile.department}
+                    onChange={(event) =>
+                      setProfile((current) => ({ ...current, department: event.target.value }))
+                    }
+                    placeholder="School or department"
+                    maxLength={200}
+                    required
+                  />
+                </div>
+                <div className="grid gap-2">
+                  <label htmlFor="phone" className="text-sm font-medium">Phone (optional)</label>
+                  <Input
+                    id="phone"
+                    type="tel"
+                    value={profile.phone}
+                    onChange={(event) =>
+                      setProfile((current) => ({ ...current, phone: event.target.value }))
+                    }
+                    placeholder="+61 400 000 000"
+                    maxLength={40}
+                  />
+                </div>
+              </div>
+              <div className="grid gap-2">
+                <label htmlFor="research-interests" className="text-sm font-medium">
+                  Research interests (optional)
+                </label>
+                <Textarea
+                  id="research-interests"
+                  value={profile.researchInterests}
+                  onChange={(event) =>
+                    setProfile((current) => ({ ...current, researchInterests: event.target.value }))
+                  }
+                  placeholder="Research areas, methods, or topics"
+                  maxLength={1000}
+                  rows={3}
+                />
+              </div>
+              {updateProfile.isError ? (
+                <p role="alert" className="text-sm text-destructive">
+                  {updateProfile.error.message}
+                </p>
+              ) : null}
+              {updateProfile.isSuccess && me.data.profileComplete ? (
+                <p className="flex items-center gap-2 text-sm text-emerald-600 dark:text-emerald-400">
+                  <CheckCircle2 className="h-4 w-4" /> Profile saved.
+                </p>
+              ) : null}
+              <Button type="submit" className="w-fit" disabled={updateProfile.isPending}>
+                <Save />
+                {updateProfile.isPending ? "Saving…" : "Save Profile"}
+              </Button>
+            </form>
           </CardContent>
         </Card>
 
