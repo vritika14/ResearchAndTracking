@@ -36,5 +36,6 @@ package-lock.json
 .terraform.lock.hcl
 *.tfstate
 *.tfstate.*
+*.plan
 terraform.tfvars
 *.auto.tfvars
