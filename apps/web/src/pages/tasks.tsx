@@ -1,5 +1,6 @@
 import { useMemo, useState } from "react";
 import { ChevronDown, Pencil, Trash2 } from "lucide-react";
+import { Link } from "react-router-dom";
 
 import { ColumnVisibilityMenu } from "@/components/dashboard/column-visibility-menu";
 import { PageHeading } from "@/components/typography/heading";
@@ -383,7 +384,12 @@ export default function TasksPage() {
                   {columns.isColumnVisible("task") ? (
                   <div className="flex flex-col gap-0.5">
                     <div className="flex items-start gap-2">
-                      <span className="font-semibold leading-tight">{task.title}</span>
+                      <Link
+                        to={`/tasks/${task.code}`}
+                        className="font-semibold leading-tight text-foreground transition-colors hover:text-primary hover:underline"
+                      >
+                        {task.title}
+                      </Link>
                       <button
                         type="button"
                         onClick={() => setEditingTask(task)}
