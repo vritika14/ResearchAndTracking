@@ -12,6 +12,8 @@ vi.mock("@/api/hooks", () => ({
       membershipRole: "owner",
     },
   }),
+  useProjects: () => ({ data: [] }),
+  useTasks: () => ({ data: [] }),
 }));
 
 vi.mock("@/components/dashboard/priority-tasks-table", () => ({

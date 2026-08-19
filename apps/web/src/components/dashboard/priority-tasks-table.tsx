@@ -1,10 +1,8 @@
 import { useMemo, useState } from "react";
 
+import { useCurrentWorkspace, useModules, useProjects, useTasks } from "@/api/hooks";
 import { ColumnVisibilityMenu } from "@/components/dashboard/column-visibility-menu";
 import { priorityBadgeClass } from "@/components/dashboard/priority-badge-styles";
-import {
-  priorityTasks,
-} from "@/data/priority-tasks";
 import { Badge } from "@/components/ui/badge";
 import {
   Card,
@@ -39,17 +37,69 @@ const TASK_COLUMNS = [
   { id: "due", label: "Due" },
   { id: "priority", label: "Priority" },
 ] as const;
+const PRIORITY_ORDER: Record<string, number> = { Critical: 0, High: 1, Medium: 2, Low: 3 };
 
 type PriorityFilter = (typeof PRIORITY_FILTERS)[number];
 
+function formatDueDate(iso: string | null) {
+  if (!iso) return "—";
+  return new Date(`${iso}T00:00:00`).toLocaleDateString("en-US", {
+    month: "short",
+    day: "numeric",
+    year: "numeric",
+  });
+}
+
 export function PriorityTasksTable() {
+  const workspace = useCurrentWorkspace();
+  const tenantId = workspace.data?.id ?? "";
+  const tasksQuery = useTasks(tenantId);
+  const projectsQuery = useProjects(tenantId);
+  const modulesQuery = useModules(tenantId);
+
   const [search, setSearch] = useState("");
   const [priority, setPriority] = useState<PriorityFilter>("All");
   const columns = useColumnVisibility(TASK_COLUMNS.map((column) => column.id));
 
+  const projectById = useMemo(() => {
+    const map = new Map<string, string>();
+    for (const project of projectsQuery.data ?? []) map.set(project.id, project.title);
+    return map;
+  }, [projectsQuery.data]);
+  const moduleById = useMemo(() => {
+    const map = new Map<string, string>();
+    for (const module of modulesQuery.data ?? []) map.set(module.id, module.title);
+    return map;
+  }, [modulesQuery.data]);
+
+  const today = new Date().toISOString().slice(0, 10);
+
+  const rows = useMemo(() => {
+    return (tasksQuery.data ?? [])
+      .filter((task) => task.status !== "Complete")
+      .map((task) => ({
+        id: task.id,
+        project: task.moduleId
+          ? (moduleById.get(task.moduleId) ?? "Unknown module")
+          : task.projectId
+            ? (projectById.get(task.projectId) ?? "Unknown project")
+            : "General",
+        task: task.title,
+        due: formatDueDate(task.dueDate),
+        overdue: Boolean(task.dueDate && task.dueDate < today),
+        priority: task.priority,
+      }))
+      .sort((a, b) => {
+        const priorityDiff =
+          (PRIORITY_ORDER[a.priority ?? ""] ?? 99) - (PRIORITY_ORDER[b.priority ?? ""] ?? 99);
+        if (priorityDiff !== 0) return priorityDiff;
+        return a.due.localeCompare(b.due);
+      });
+  }, [tasksQuery.data, projectById, moduleById, today]);
+
   const filtered = useMemo(() => {
     const query = search.trim().toLowerCase();
-    return priorityTasks.filter((row) => {
+    return rows.filter((row) => {
       if (priority !== "All" && row.priority !== priority) return false;
       if (
         query &&
@@ -60,7 +110,7 @@ export function PriorityTasksTable() {
       }
       return true;
     });
-  }, [search, priority]);
+  }, [rows, search, priority]);
 
   const hasActiveFilters = search !== "" || priority !== "All";
 
@@ -158,7 +208,7 @@ export function PriorityTasksTable() {
                         variant="outline"
                         className={priorityBadgeClass(row.priority)}
                       >
-                        {row.priority}
+                        {row.priority ?? "—"}
                       </Badge>
                     </TableCell>
                   ) : null}

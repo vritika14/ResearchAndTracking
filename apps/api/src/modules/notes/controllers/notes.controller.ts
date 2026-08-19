@@ -48,9 +48,11 @@ export class NotesController {
   @Get()
   async list(
     @Param('tenantId') tenantId: string,
+    @Req() req: AuthenticatedRequest,
     @Query('projectId') projectId?: string,
   ) {
-    return this.notesService.list(tenantId, projectId);
+    const user = await this.usersService.findByExternalAuthId(req.user.sub);
+    return this.notesService.list(tenantId, user.id, projectId);
   }
 
   @ApiOperation({ summary: 'Get a single note' })
@@ -59,8 +61,10 @@ export class NotesController {
   async findOne(
     @Param('tenantId') tenantId: string,
     @Param('noteId') noteId: string,
+    @Req() req: AuthenticatedRequest,
   ) {
-    return this.notesService.findOne(tenantId, noteId);
+    const user = await this.usersService.findByExternalAuthId(req.user.sub);
+    return this.notesService.findOne(tenantId, noteId, user.id);
   }
 
   @ApiOperation({
@@ -84,9 +88,11 @@ export class NotesController {
   async update(
     @Param('tenantId') tenantId: string,
     @Param('noteId') noteId: string,
+    @Req() req: AuthenticatedRequest,
     @Body() dto: UpdateNoteDto,
   ) {
-    return this.notesService.update(tenantId, noteId, dto);
+    const user = await this.usersService.findByExternalAuthId(req.user.sub);
+    return this.notesService.update(tenantId, noteId, user.id, dto);
   }
 
   @ApiOperation({ summary: 'Delete a note' })
@@ -95,7 +101,9 @@ export class NotesController {
   async remove(
     @Param('tenantId') tenantId: string,
     @Param('noteId') noteId: string,
+    @Req() req: AuthenticatedRequest,
   ) {
-    return this.notesService.delete(tenantId, noteId);
+    const user = await this.usersService.findByExternalAuthId(req.user.sub);
+    return this.notesService.delete(tenantId, noteId, user.id);
   }
 }

@@ -2,12 +2,24 @@ import { useMemo, useState } from "react";
 import { ChevronRight, Pencil } from "lucide-react";
 import { Link } from "react-router-dom";
 
-import { useCurrentWorkspace, useMe, useMembers } from "@/api/hooks";
-import { ColumnVisibilityMenu } from "@/components/dashboard/column-visibility-menu";
+import { apiClient } from "@/api/client";
 import {
-  moduleImportanceBadgeClass,
-  moduleStatusBadgeClass,
-} from "@/components/modules/module-badge-styles";
+  apiKeys,
+  useCurrentWorkspace,
+  useMe,
+  useMembers,
+  useModules,
+  useNotes,
+  usePipelineStages,
+  useProjects,
+  useCreateProject,
+  useTasks,
+  type ApiProject,
+} from "@/api/hooks";
+import { useQueryClient } from "@tanstack/react-query";
+import { ColumnVisibilityMenu } from "@/components/dashboard/column-visibility-menu";
+import { LoadingState } from "@/components/shared/loading-state";
+import { ErrorState } from "@/components/shared/error-state";
 import { PageHeading } from "@/components/typography/heading";
 import {
   NewProjectDialog,
@@ -23,22 +35,11 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import type { ResearchModule } from "@/data/modules";
-import {
-  projects,
-  type Project,
-  type ProjectPriority,
-  type ProjectRole,
-  type ProjectStatus,
-} from "@/data/projects";
 import { cn } from "@/lib/utils";
 import { useColumnVisibility } from "@/hooks/use-column-visibility";
-import { useModules } from "@/hooks/use-modules";
-import { usePipelineStages } from "@/hooks/use-pipeline-stages";
-import { useProjectStageOverrides } from "@/hooks/use-project-stage-overrides";
 
 const STATUS_FILTERS = ["All", "Active", "Review", "Stalled", "Complete"] as const;
-const ROLE_FILTERS = ["All roles", "Owner", "Lead", "Collaborator", "Supervisor"] as const;
+const ROLE_FILTERS = ["All roles", "owner", "collaborator", "supervisor", "lead"] as const;
 const SORT_OPTIONS = ["Due date", "Stage", "Tasks outstanding"] as const;
 
 type StatusFilter = (typeof STATUS_FILTERS)[number];
@@ -57,7 +58,7 @@ const PROJECT_COLUMNS = [
   { id: "due", label: "Due Date", width: "110px" },
 ] as const;
 
-function priorityPillClass(priority: ProjectPriority) {
+function priorityPillClass(priority: string | null) {
   switch (priority) {
     case "Critical":
       return "border-red-300 text-red-700 dark:border-red-800 dark:text-red-400";
@@ -65,12 +66,12 @@ function priorityPillClass(priority: ProjectPriority) {
       return "border-orange-300 text-orange-700 dark:border-orange-800 dark:text-orange-400";
     case "Medium":
       return "border-blue-300 text-blue-700 dark:border-blue-800 dark:text-blue-400";
-    case "Low":
+    default:
       return "border-border text-muted-foreground";
   }
 }
 
-function statusPillClass(status: ProjectStatus) {
+function statusPillClass(status: string | null) {
   switch (status) {
     case "Active":
     case "Complete":
@@ -79,18 +80,20 @@ function statusPillClass(status: ProjectStatus) {
       return "border-orange-300 text-orange-700 dark:border-orange-800 dark:text-orange-400";
     case "Stalled":
       return "border-red-300 text-red-700 dark:border-red-800 dark:text-red-400";
+    default:
+      return "border-border text-muted-foreground";
   }
 }
 
-function rolePillClass(role: ProjectRole) {
+function rolePillClass(role: string | null) {
   switch (role) {
-    case "Owner":
+    case "owner":
       return "border-blue-300 text-blue-700 dark:border-blue-800 dark:text-blue-400";
-    case "Lead":
+    case "lead":
       return "border-emerald-300 text-emerald-700 dark:border-emerald-800 dark:text-emerald-400";
-    case "Collaborator":
+    case "collaborator":
       return "border-orange-300 text-orange-700 dark:border-orange-800 dark:text-orange-400";
-    case "Supervisor":
+    default:
       return "border-border text-muted-foreground";
   }
 }
@@ -105,7 +108,7 @@ function controlPillClass(selected: boolean) {
   );
 }
 
-function formatDate(iso: string) {
+function formatDate(iso: string | null) {
   if (!iso) return "—";
   const [year, month, day] = iso.split("-");
   return `${day}/${month}/${year}`;
@@ -123,18 +126,24 @@ function ProgressCell({ completed, total }: { completed: number; total: number }
   );
 }
 
-function ProjectOverviewDetails({ project }: { project: Project }) {
-  const budgetPercent =
-    project.budgetTotal > 0 ? Math.round((project.budgetUsed / project.budgetTotal) * 100) : 0;
-
+function ProjectOverviewDetails({
+  project,
+  moduleCount,
+  taskCount,
+  noteCount,
+}: {
+  project: ApiProject;
+  moduleCount: number;
+  taskCount: number;
+  noteCount: number;
+}) {
   const fields = [
-    { label: "Funder", value: project.funder },
-    {
-      label: "Task Completion",
-      value: `${project.tasksCompleted}/${project.tasksTotal} complete`,
-    },
-    { label: "Budget Usage", value: `${budgetPercent}% used` },
-    { label: "Target Journal", value: project.targetJournal },
+    { label: "Research area", value: project.researchArea ?? "—" },
+    { label: "Modules", value: String(moduleCount) },
+    { label: "Tasks", value: String(taskCount) },
+    { label: "Notes", value: String(noteCount) },
+    { label: "Total budget", value: project.totalBudget ? `$${project.totalBudget}` : "—" },
+    { label: "Target journal(s)", value: project.targetJournals ?? "—" },
   ];
 
   return (
@@ -142,7 +151,10 @@ function ProjectOverviewDetails({ project }: { project: Project }) {
       <span className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
         Overview
       </span>
-      <div className="grid grid-cols-2 gap-4 sm:grid-cols-4">
+      {project.description ? (
+        <p className="max-w-2xl text-sm text-muted-foreground">{project.description}</p>
+      ) : null}
+      <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-6">
         {fields.map((field) => (
           <div key={field.label} className="flex flex-col gap-1">
             <span className="text-xs text-muted-foreground">{field.label}</span>
@@ -154,92 +166,51 @@ function ProjectOverviewDetails({ project }: { project: Project }) {
   );
 }
 
-function ProjectModulesDetails({
-  modules,
-  stageNames,
-}: {
-  modules: ResearchModule[];
-  stageNames: readonly string[];
-}) {
-  return (
-    <div className="flex flex-col gap-3 border-t border-border pt-4">
-      <div className="flex items-center justify-between gap-3">
-        <span className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-          Modules ({modules.length})
-        </span>
-        <Button asChild variant="ghost" size="sm">
-          <Link to="/modules">Manage modules</Link>
-        </Button>
-      </div>
-      {modules.length === 0 ? (
-        <p className="text-sm text-muted-foreground">No modules are linked to this project.</p>
-      ) : (
-        <div className="grid gap-2 lg:grid-cols-2">
-          {modules.map((module) => (
-            <div key={module.id} className="rounded-md border border-border bg-card p-3">
-              <div className="flex flex-wrap items-start justify-between gap-2">
-                <div className="min-w-0">
-                  <span className="block font-mono text-[10px] text-muted-foreground">
-                    {module.id}
-                  </span>
-                  <span className="block text-sm font-semibold">{module.title}</span>
-                </div>
-                <div className="flex flex-wrap gap-1">
-                  <Badge variant="outline" className={moduleStatusBadgeClass(module.status)}>
-                    {module.status}
-                  </Badge>
-                  <Badge
-                    variant="outline"
-                    className={moduleImportanceBadgeClass(module.importance)}
-                  >
-                    {module.importance}
-                  </Badge>
-                </div>
-              </div>
-              <div className="mt-2 flex flex-wrap gap-x-4 gap-y-1 text-xs text-muted-foreground">
-                <span>{stageNames[module.stageIndex] ?? "Unknown stage"}</span>
-                <span>Due {formatDate(module.dueDate)}</span>
-              </div>
-            </div>
-          ))}
-        </div>
-      )}
-    </div>
-  );
+function isOverdue(project: ApiProject) {
+  if (!project.dueDate || project.status === "Complete") return false;
+  return project.dueDate < new Date().toISOString().slice(0, 10);
 }
 
-function sortProjects(rows: Project[], sortBy: SortOption) {
+function sortProjects(rows: ApiProject[], sortBy: SortOption, stageOrder: Map<string, number>) {
   const sorted = [...rows];
   switch (sortBy) {
     case "Due date":
-      sorted.sort((a, b) => a.dueDate.localeCompare(b.dueDate));
+      sorted.sort((a, b) => (a.dueDate ?? "").localeCompare(b.dueDate ?? ""));
       break;
     case "Stage":
-      sorted.sort((a, b) => a.stageIndex - b.stageIndex);
+      sorted.sort(
+        (a, b) =>
+          (stageOrder.get(a.pipelineStage ?? "") ?? Number.MAX_SAFE_INTEGER) -
+          (stageOrder.get(b.pipelineStage ?? "") ?? Number.MAX_SAFE_INTEGER),
+      );
       break;
     case "Tasks outstanding":
-      sorted.sort(
-        (a, b) => b.tasksTotal - b.tasksCompleted - (a.tasksTotal - a.tasksCompleted),
-      );
+      // Handled by the caller, which has live task counts per project.
       break;
   }
   return sorted;
 }
 
 export default function ProjectsPage() {
-  const [projectRows, setProjectRows] = useState<Project[]>(projects);
-  const { moduleRows } = useModules();
-  const { pipelineStages } = usePipelineStages();
-  const stageNames = pipelineStages.map((stage) => stage.name);
-  const { stageOverrides } = useProjectStageOverrides();
-  const stagedProjectRows = useMemo(
-    () =>
-      projectRows.map((project) => ({
-        ...project,
-        stageIndex: stageOverrides[project.id] ?? project.stageIndex,
-      })),
-    [projectRows, stageOverrides],
-  );
+  const workspace = useCurrentWorkspace();
+  const tenantId = workspace.data?.id ?? "";
+  const queryClient = useQueryClient();
+
+  const projectsQuery = useProjects(tenantId);
+  const modulesQuery = useModules(tenantId);
+  const tasksQuery = useTasks(tenantId);
+  const notesQuery = useNotes(tenantId);
+  const pipelineStagesQuery = usePipelineStages(tenantId);
+  const stageOrder = useMemo(() => {
+    const map = new Map<string, number>();
+    for (const stage of pipelineStagesQuery.data ?? []) {
+      map.set(stage.value, stage.sortOrder);
+    }
+    return map;
+  }, [pipelineStagesQuery.data]);
+
+  const createProject = useCreateProject(tenantId);
+
   const [isNewProjectOpen, setIsNewProjectOpen] = useState(false);
   const [search, setSearch] = useState("");
   const [status, setStatus] = useState<StatusFilter>("All");
@@ -255,34 +226,66 @@ export default function ProjectsPage() {
     .map((column) => column.width)
     .join(" ");
   const me = useMe();
-  const workspace = useCurrentWorkspace();
-  const workspaceMembers = useMembers(
-    workspace.data?.id ?? "",
-    isNewProjectOpen,
-  );
+  const workspaceMembers = useMembers(tenantId, isNewProjectOpen);
 
   function toggleExpanded(id: string) {
     setExpandedId((prev) => (prev === id ? null : id));
   }
 
+  const taskCountByProject = useMemo(() => {
+    const counts = new Map<string, { completed: number; total: number }>();
+    for (const task of tasksQuery.data ?? []) {
+      if (!task.projectId) continue;
+      const entry = counts.get(task.projectId) ?? { completed: 0, total: 0 };
+      entry.total += 1;
+      if (task.status === "Complete") entry.completed += 1;
+      counts.set(task.projectId, entry);
+    }
+    return counts;
+  }, [tasksQuery.data]);
+
+  const noteCountByProject = useMemo(() => {
+    const counts = new Map<string, number>();
+    for (const note of notesQuery.data ?? []) {
+      if (!note.projectId) continue;
+      counts.set(note.projectId, (counts.get(note.projectId) ?? 0) + 1);
+    }
+    return counts;
+  }, [notesQuery.data]);
+
+  const moduleCountByProject = useMemo(() => {
+    const counts = new Map<string, number>();
+    for (const module of modulesQuery.data ?? []) {
+      if (!module.projectId) continue;
+      counts.set(module.projectId, (counts.get(module.projectId) ?? 0) + 1);
+    }
+    return counts;
+  }, [modulesQuery.data]);
+
   const visibleProjects = useMemo(() => {
+    const rows = projectsQuery.data ?? [];
     const query = search.trim().toLowerCase();
-    const filtered = stagedProjectRows.filter((project) => {
+    const filtered = rows.filter((project) => {
       if (status !== "All" && project.status !== status) return false;
-      if (role !== "All roles" && project.myRole !== role) return false;
+      if (role !== "All roles" && project.role !== role) return false;
       if (
         query &&
         !project.title.toLowerCase().includes(query) &&
-        !project.id.toLowerCase().includes(query) &&
-        !project.pi.toLowerCase().includes(query) &&
-        !project.funder.toLowerCase().includes(query)
+        !(project.researchArea?.toLowerCase().includes(query) ?? false)
       ) {
         return false;
       }
       return true;
     });
-    return sortProjects(filtered, sortBy);
-  }, [stagedProjectRows, search, status, role, sortBy]);
+    if (sortBy === "Tasks outstanding") {
+      return [...filtered].sort((a, b) => {
+        const aCounts = taskCountByProject.get(a.id) ?? { completed: 0, total: 0 };
+        const bCounts = taskCountByProject.get(b.id) ?? { completed: 0, total: 0 };
+        return (bCounts.total - bCounts.completed) - (aCounts.total - aCounts.completed);
+      });
+    }
+    return sortProjects(filtered, sortBy, stageOrder);
+  }, [projectsQuery.data, search, status, role, sortBy, stageOrder, taskCountByProject]);
 
   const hasActiveFilters = search !== "" || status !== "All" || role !== "All roles";
 
@@ -292,26 +295,49 @@ export default function ProjectsPage() {
     setRole("All roles");
   }
 
-  function createProject(input: NewProjectInput) {
-    const highestId = projectRows.reduce((highest, project) => {
-      const numericId = Number(project.id.replace(/\D/g, ""));
-      return Number.isNaN(numericId) ? highest : Math.max(highest, numericId);
-    }, 100);
-    const today = new Date().toISOString().slice(0, 10);
+  async function handleCreateProject(input: NewProjectInput) {
+    const project = await createProject.mutateAsync({
+      title: input.title,
+      description: input.description || undefined,
+      researchArea: input.researchArea || undefined,
+      status: input.status,
+      importance: input.priority,
+      pipelineStage: input.pipelineStage || undefined,
+      scheduledFor: input.scheduledFor || undefined,
+      dueDate: input.dueDate || undefined,
+      totalBudget: input.totalBudget || undefined,
+      targetJournals: input.targetJournals || undefined,
+    });
 
-    setProjectRows((current) => [
-      {
-        id: `PRJ-${highestId + 1}`,
-        ...input,
-        tasksCompleted: 0,
-        tasksTotal: 0,
-        budgetUsed: 0,
-        notes: 0,
-        wordCount: 0,
-        overdue: Boolean(input.dueDate) && input.status !== "Complete" && input.dueDate < today,
-      },
-      ...current,
-    ]);
+    await Promise.all(
+      input.collaboratorUserIds.map((userId) =>
+        apiClient.POST(
+          "/api/v1/tenant/{tenantId}/projects/{projectId}/collaborators",
+          {
+            params: { path: { tenantId, projectId: project.id } },
+            body: { userId, role: "Collaborator" },
+          },
+        ),
+      ),
+    );
+    if (input.collaboratorUserIds.length > 0) {
+      await queryClient.invalidateQueries({
+        queryKey: apiKeys.projectCollaborators(tenantId, project.id),
+      });
+    }
+  }
+
+  if (workspace.isPending || projectsQuery.isPending) {
+    return <LoadingState title="Loading projects" className="min-h-[50vh]" />;
+  }
+  if (projectsQuery.isError) {
+    return (
+      <ErrorState
+        title="Projects could not be loaded"
+        description={projectsQuery.error.message}
+        onRetry={() => void projectsQuery.refetch()}
+      />
+    );
   }
 
   return (
@@ -326,11 +352,11 @@ export default function ProjectsPage() {
       <NewProjectDialog
         open={isNewProjectOpen}
         onOpenChange={setIsNewProjectOpen}
-        onCreate={createProject}
-        principalInvestigator={me.data?.displayName ?? me.data?.email ?? ""}
+        onCreate={(input) => void handleCreateProject(input)}
         currentUserId={me.data?.id ?? ""}
         members={workspaceMembers.data ?? []}
         membersLoading={workspaceMembers.isPending}
+        pipelineStages={pipelineStagesQuery.data ?? []}
       />
 
       <div className="flex flex-col gap-4 rounded-lg border p-4 lg:flex-row lg:items-start lg:justify-between">
@@ -360,7 +386,7 @@ export default function ProjectsPage() {
             <SelectContent>
               {ROLE_FILTERS.map((option) => (
                 <SelectItem key={option} value={option}>
-                  {option}
+                  {option === "All roles" ? option : option.replace(/^\w/, (c) => c.toUpperCase())}
                 </SelectItem>
               ))}
             </SelectContent>
@@ -421,6 +447,10 @@ export default function ProjectsPage() {
             ) : (
               visibleProjects.map((project) => {
                 const isExpanded = expandedId === project.id;
+                const taskCounts = taskCountByProject.get(project.id) ?? {
+                  completed: 0,
+                  total: 0,
+                };
 
                 return (
                   <div key={project.id} className="flex flex-col">
@@ -450,9 +480,11 @@ export default function ProjectsPage() {
                           )}
                         />
                         <div className="flex flex-col gap-0.5">
-                          <span className="font-mono text-[11px] text-muted-foreground">
-                            {project.id}
-                          </span>
+                          {project.displayId ? (
+                            <span className="font-mono text-[11px] text-muted-foreground">
+                              {project.displayId}
+                            </span>
+                          ) : null}
                           <div className="flex items-start gap-2">
                             <Link
                               to={`/projects/${project.id}`}
@@ -471,46 +503,50 @@ export default function ProjectsPage() {
                               <Pencil className="h-3.5 w-3.5" />
                             </Link>
                           </div>
-                          <span className="text-xs text-muted-foreground">
-                            {project.pi} · {project.funder} · {project.collaborators}
-                          </span>
+                          {project.researchArea ? (
+                            <span className="text-xs text-muted-foreground">
+                              {project.researchArea}
+                            </span>
+                          ) : null}
                         </div>
                       </div>
                       ) : null}
 
                       {columns.isColumnVisible("role") ? (
-                      <Badge variant="outline" className={rolePillClass(project.myRole)}>
-                        {project.myRole}
+                      <Badge variant="outline" className={rolePillClass(project.role)}>
+                        {project.role ?? "—"}
                       </Badge>
                       ) : null}
 
                       {columns.isColumnVisible("importance") ? (
-                      <Badge variant="outline" className={priorityPillClass(project.priority)}>
-                        {project.priority}
+                      <Badge variant="outline" className={priorityPillClass(project.importance)}>
+                        {project.importance ?? "—"}
                       </Badge>
                       ) : null}
 
                       {columns.isColumnVisible("status") ? (
                       <Badge variant="outline" className={statusPillClass(project.status)}>
-                        {project.status}
+                        {project.status ?? "—"}
                       </Badge>
                       ) : null}
 
                       {columns.isColumnVisible("stage") ? (
                       <span className="text-sm text-muted-foreground">
-                        {stageNames[project.stageIndex] ?? "Unknown stage"}
+                        {project.pipelineStage ?? "Unknown stage"}
                       </span>
                       ) : null}
 
                       {columns.isColumnVisible("progress") ? (
                       <ProgressCell
-                        completed={project.tasksCompleted}
-                        total={project.tasksTotal}
+                        completed={taskCounts.completed}
+                        total={taskCounts.total}
                       />
                       ) : null}
 
                       {columns.isColumnVisible("notes") ? (
-                      <span className="text-sm text-muted-foreground">{project.notes}</span>
+                      <span className="text-sm text-muted-foreground">
+                        {noteCountByProject.get(project.id) ?? 0}
+                      </span>
                       ) : null}
 
                       {columns.isColumnVisible("scheduled") ? (
@@ -523,7 +559,7 @@ export default function ProjectsPage() {
                       <span
                         className={cn(
                           "text-sm",
-                          project.overdue
+                          isOverdue(project)
                             ? "font-semibold text-destructive"
                             : "text-muted-foreground",
                         )}
@@ -535,11 +571,15 @@ export default function ProjectsPage() {
 
                     {isExpanded ? (
                       <div className="flex flex-col gap-5 rounded-b-lg border border-t-0 border-border bg-muted/30 px-4 py-5">
-                        <ProjectOverviewDetails project={project} />
-                        <ProjectModulesDetails
-                          modules={moduleRows.filter((module) => module.projectId === project.id)}
-                          stageNames={stageNames}
+                        <ProjectOverviewDetails
+                          project={project}
+                          moduleCount={moduleCountByProject.get(project.id) ?? 0}
+                          taskCount={taskCounts.total}
+                          noteCount={noteCountByProject.get(project.id) ?? 0}
                         />
+                        <Button asChild variant="outline" size="sm" className="w-fit">
+                          <Link to={`/projects/${project.id}`}>View full project details</Link>
+                        </Button>
                       </div>
                     ) : null}
                   </div>

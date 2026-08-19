@@ -1,4 +1,4 @@
-import { Module } from '@nestjs/common';
+import { Module, forwardRef } from '@nestjs/common';
 import { UsersModule } from '../users/users.module';
 import { NotesController } from './controllers/notes.controller';
 import { NotesRepository } from './repositories/notes.repository';
@@ -7,9 +7,18 @@ import { TenantSequencesModule } from '../tenant-sequences/tenant-sequences.modu
 import { NoteMembersModule } from '../note-members/note-members.module';
 import { EnumModule } from '../enum/enum.module';
 import { MembershipsModule } from '../memberships/memberships.module';
+import { ProjectModulesModule } from '../project-modules/project-modules.module';
 @Module({
-  imports: [UsersModule, TenantSequencesModule, NoteMembersModule, EnumModule, MembershipsModule],
+  imports: [
+    UsersModule,
+    TenantSequencesModule,
+    forwardRef(() => NoteMembersModule),
+    EnumModule,
+    ProjectModulesModule,
+    MembershipsModule,
+  ],
   controllers: [NotesController],
   providers: [NotesService, NotesRepository],
+  exports: [NotesRepository],
 })
 export class NotesModule {}

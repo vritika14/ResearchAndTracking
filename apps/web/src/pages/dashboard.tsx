@@ -9,10 +9,10 @@ import {
   SlidersHorizontal,
   Users,
 } from "lucide-react";
-import { useEffect, useState, type ComponentType } from "react";
+import { useEffect, useMemo, useState, type ComponentType } from "react";
 import { Link } from "react-router-dom";
 
-import { useCurrentWorkspace } from "@/api/hooks";
+import { useCurrentWorkspace, useProjects, useTasks } from "@/api/hooks";
 import { ConferenceSubmissionsTable } from "@/components/dashboard/conference-submissions-table";
 import {
   CustomizeDashboardDialog,
@@ -32,44 +32,48 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 
-const summary = [
-  {
-    label: "Active Projects",
-    description: "Projects currently underway",
-    value: "—",
-    icon: FolderKanban,
-    accent: "bg-blue-500",
-    iconStyle: "bg-blue-100 text-blue-700",
-    valueStyle: "text-blue-700",
-  },
-  {
-    label: "Open Tasks",
-    description: "Tasks awaiting completion",
-    value: "—",
-    icon: ListTodo,
-    accent: "bg-cyan-500",
-    iconStyle: "bg-cyan-100 text-cyan-700",
-    valueStyle: "text-cyan-700",
-  },
-  {
-    label: "In Writing Stage",
-    description: "Projects in manuscript preparation",
-    value: "—",
-    icon: FilePenLine,
-    accent: "bg-violet-500",
-    iconStyle: "bg-violet-100 text-violet-700",
-    valueStyle: "text-violet-700",
-  },
-  {
-    label: "Year to Date Accepted",
-    description: "Submissions accepted this calendar year",
-    value: "—",
-    icon: Send,
-    accent: "bg-emerald-500",
-    iconStyle: "bg-emerald-100 text-emerald-700",
-    valueStyle: "text-emerald-700",
-  },
-];
+const WRITING_STAGE = "Drafting, writing & revisiting";
+
+function buildSummary(counts: { activeProjects: number; openTasks: number; writingStage: number }) {
+  return [
+    {
+      label: "Active Projects",
+      description: "Projects currently underway",
+      value: String(counts.activeProjects),
+      icon: FolderKanban,
+      accent: "bg-blue-500",
+      iconStyle: "bg-blue-100 text-blue-700",
+      valueStyle: "text-blue-700",
+    },
+    {
+      label: "Open Tasks",
+      description: "Tasks awaiting completion",
+      value: String(counts.openTasks),
+      icon: ListTodo,
+      accent: "bg-cyan-500",
+      iconStyle: "bg-cyan-100 text-cyan-700",
+      valueStyle: "text-cyan-700",
+    },
+    {
+      label: "In Writing Stage",
+      description: "Projects in manuscript preparation",
+      value: String(counts.writingStage),
+      icon: FilePenLine,
+      accent: "bg-violet-500",
+      iconStyle: "bg-violet-100 text-violet-700",
+      valueStyle: "text-violet-700",
+    },
+    {
+      label: "Year to Date Accepted",
+      description: "Submissions accepted this calendar year",
+      value: "—",
+      icon: Send,
+      accent: "bg-emerald-500",
+      iconStyle: "bg-emerald-100 text-emerald-700",
+      valueStyle: "text-emerald-700",
+    },
+  ];
+}
 
 type DashboardTableId = "tasks" | "pipeline" | "conferences";
 
@@ -139,9 +143,25 @@ function loadDashboardLayout(): StoredDashboardLayout {
 
 export default function DashboardPage() {
   const workspace = useCurrentWorkspace();
+  const tenantId = workspace.data?.id ?? "";
+  const projectsQuery = useProjects(tenantId);
+  const tasksQuery = useTasks(tenantId);
   const isOwner = workspace.data?.membershipRole === "owner";
   const [isCustomizeOpen, setIsCustomizeOpen] = useState(false);
   const [layout, setLayout] = useState(loadDashboardLayout);
+
+  const summary = useMemo(
+    () =>
+      buildSummary({
+        activeProjects: (projectsQuery.data ?? []).filter((project) => project.status === "Active")
+          .length,
+        openTasks: (tasksQuery.data ?? []).filter((task) => task.status !== "Complete").length,
+        writingStage: (projectsQuery.data ?? []).filter(
+          (project) => project.pipelineStage === WRITING_STAGE,
+        ).length,
+      }),
+    [projectsQuery.data, tasksQuery.data],
+  );
   const visibleTables = new Set(
     layout.order.filter((id) => !layout.hidden.includes(id)),
   );

@@ -4,6 +4,7 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import { EnumRepository } from '../../enum/repositories/enum.repository';
+import { ProjectModulesRepository } from '../../project-modules/repositories/project-modules.repository';
 import { TaskMembersRepository } from '../../task-members/repositories/task-members.repository';
 import { TenantSequencesRepository } from '../../tenant-sequences/repositories/tenant-sequences.repository';
 import { TasksRepository } from '../repositories/tasks.repository';
@@ -15,16 +16,65 @@ export class TasksService {
     private readonly enumRepository: EnumRepository,
     private readonly sequences: TenantSequencesRepository,
     private readonly taskMembers: TaskMembersRepository,
+    private readonly modulesRepository: ProjectModulesRepository,
   ) {}
 
-  async list(tenantId: string, projectId?: string) {
-    const rows = await this.repository.findByTenant(tenantId, projectId);
-    return this.withDisplayValues(rows);
+  /**
+   * A task links to at most one of a project or a module, never both
+   * independently supplied. When moduleId is given, the project is derived
+   * from the module itself (which may be null, for an independent module)
+   * rather than trusted from the caller — this is what makes it possible to
+   * link a task to an independent module in the first place.
+   */
+  private async resolveLinkage(
+    tenantId: string,
+    input: { projectId?: string; moduleId?: string },
+  ): Promise<{ projectId: string | null; moduleId: string | null }> {
+    if (input.moduleId) {
+      const module = await this.modulesRepository.findById(
+        tenantId,
+        input.moduleId,
+      );
+      if (!module) {
+        throw new BadRequestException('Unknown moduleId');
+      }
+      return { projectId: module.projectId, moduleId: module.id };
+    }
+    return { projectId: input.projectId ?? null, moduleId: null };
   }
 
-  async findOne(tenantId: string, taskId: string) {
+  /**
+   * A task is visible only to its creator or a task_members row for the
+   * caller. A Private task's members are always empty (creation/update
+   * clears them), and a Shared task always has its creator auto-inserted as
+   * a member, so this single check correctly covers both visibility states.
+   */
+  private async canAccess(
+    tenantId: string,
+    task: { id: string; createdBy: string },
+    callerUserId: string,
+  ): Promise<boolean> {
+    if (task.createdBy === callerUserId) return true;
+    const membership = await this.taskMembers.findByTaskAndUser(
+      tenantId,
+      task.id,
+      callerUserId,
+    );
+    return Boolean(membership);
+  }
+
+  async list(tenantId: string, callerUserId: string, projectId?: string) {
+    const rows = await this.repository.findByTenant(tenantId, projectId);
+    const accessFlags = await Promise.all(
+      rows.map((row) => this.canAccess(tenantId, row, callerUserId)),
+    );
+    const visibleRows = rows.filter((_row, index) => accessFlags[index]);
+    return this.withDisplayValues(visibleRows);
+  }
+
+  async findOne(tenantId: string, taskId: string, callerUserId: string) {
     const task = await this.repository.findById(tenantId, taskId);
-    if (!task) {
+    if (!task || !(await this.canAccess(tenantId, task, callerUserId))) {
       throw new NotFoundException('Task not found');
     }
     const [shaped] = await this.withDisplayValues([task]);
@@ -47,11 +97,6 @@ export class TasksService {
       dueDate?: string;
     },
   ) {
-    if (input.moduleId && !input.projectId) {
-      throw new BadRequestException(
-        'moduleId requires projectId to also be provided',
-      );
-    }
     const visibilityValue = input.visibility ?? 'Private';
     if (visibilityValue === 'Private' && input.workingWith) {
       throw new BadRequestException(
@@ -59,17 +104,19 @@ export class TasksService {
       );
     }
 
-    const [statusId, priorityId, visibilityId, displayId] = await Promise.all([
-      this.resolveEnum('task_status', input.status),
-      this.resolveEnum('importance', input.priority),
-      this.resolveEnum('visibility', visibilityValue),
-      this.sequences.nextDisplayId(tenantId, 'task'),
-    ]);
+    const [{ projectId, moduleId }, statusId, priorityId, visibilityId, displayId] =
+      await Promise.all([
+        this.resolveLinkage(tenantId, input),
+        this.resolveEnum('task_status', input.status),
+        this.resolveEnum('importance', input.priority),
+        this.resolveEnum('visibility', visibilityValue),
+        this.sequences.nextDisplayId(tenantId, 'task'),
+      ]);
 
     const task = await this.repository.create({
       tenantId,
-      projectId: input.projectId,
-      moduleId: input.moduleId,
+      projectId: projectId ?? undefined,
+      moduleId: moduleId ?? undefined,
       createdBy,
       title: input.title,
       description: input.description,
@@ -100,6 +147,7 @@ export class TasksService {
   async update(
     tenantId: string,
     taskId: string,
+    callerUserId: string,
     input: Partial<{
       title: string;
       description: string;
@@ -109,9 +157,11 @@ export class TasksService {
       workingWith: string;
       estimatedHours: string;
       dueDate: string;
+      projectId: string;
+      moduleId: string;
     }>,
   ) {
-    const existing = await this.findOne(tenantId, taskId);
+    const existing = await this.findOne(tenantId, taskId, callerUserId);
     if (!existing) {
       throw new NotFoundException('Task not found');
     }
@@ -122,7 +172,10 @@ export class TasksService {
       );
     }
 
-    const [statusId, priorityId, visibilityId] = await Promise.all([
+    const changesLinkage =
+      input.projectId !== undefined || input.moduleId !== undefined;
+    const [linkage, statusId, priorityId, visibilityId] = await Promise.all([
+      changesLinkage ? this.resolveLinkage(tenantId, input) : undefined,
       input.status ? this.resolveEnum('task_status', input.status) : undefined,
       input.priority
         ? this.resolveEnum('importance', input.priority)
@@ -141,6 +194,8 @@ export class TasksService {
       workingWith: input.visibility === 'Private' ? null : input.workingWith,
       estimatedHours: input.estimatedHours,
       dueDate: input.dueDate,
+      projectId: linkage ? linkage.projectId : undefined,
+      moduleId: linkage ? linkage.moduleId : undefined,
     });
 
     if (!task) {
@@ -154,7 +209,14 @@ export class TasksService {
     return shaped;
   }
 
-  async delete(tenantId: string, taskId: string) {
+  async delete(tenantId: string, taskId: string, callerUserId: string) {
+    const existing = await this.repository.findById(tenantId, taskId);
+    if (
+      !existing ||
+      !(await this.canAccess(tenantId, existing, callerUserId))
+    ) {
+      throw new NotFoundException('Task not found');
+    }
     const task = await this.repository.delete(tenantId, taskId);
     if (!task) {
       throw new NotFoundException('Task not found');

@@ -4,6 +4,22 @@
  */
 
 export interface paths {
+    "/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["AppController_getHello"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/me": {
         parameters: {
             query?: never;
@@ -11,42 +27,66 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
+        /** Return or provision the authenticated user profile */
         get: operations["MeController_getMe"];
         put?: never;
         post?: never;
         delete?: never;
         options?: never;
         head?: never;
+        /** Update the authenticated user profile */
         patch: operations["MeController_updateMe"];
         trace?: never;
     };
-    "/api/v1/workspaces": {
+    "/api/v1/tenant/{tenantId}/members": {
         parameters: {
             query?: never;
             header?: never;
             path?: never;
             cookie?: never;
         };
-        get: operations["WorkspacesController_list"];
+        /** List active members of a tenant */
+        get: operations["MembershipsController_listMembers"];
         put?: never;
-        post: operations["WorkspacesController_create"];
+        post?: never;
         delete?: never;
         options?: never;
         head?: never;
         patch?: never;
         trace?: never;
     };
-    "/api/v1/workspaces/current": {
+    "/api/v1/tenant/{tenantId}/invitations": {
         parameters: {
             query?: never;
             header?: never;
             path?: never;
             cookie?: never;
         };
-        get: operations["WorkspacesController_getCurrent"];
-        put: operations["WorkspacesController_switchCurrent"];
-        post?: never;
+        get?: never;
+        put?: never;
+        /**
+         * Invite and email a limited workspace member (owner only)
+         * @description Creates a one-time invitation and delivers its acceptance link through Amazon SES. Workspace invitations never create another owner.
+         */
+        post: operations["MembershipsController_inviteMember"];
         delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/tenant/{tenantId}/members/{membershipId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /** Revoke a non-owner workspace member */
+        delete: operations["MembershipsController_revokeMember"];
         options?: never;
         head?: never;
         patch?: never;
@@ -59,6 +99,7 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
+        /** Preview a workspace invitation before sign-in */
         get: operations["InvitationsController_preview"];
         put?: never;
         post?: never;
@@ -77,6 +118,7 @@ export interface paths {
         };
         get?: never;
         put?: never;
+        /** Accept the invitation for the authenticated email */
         post: operations["InvitationsController_accept"];
         delete?: never;
         options?: never;
@@ -84,14 +126,14 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/v1/tenant/{tenantId}/members": {
+    "/health/live": {
         parameters: {
             query?: never;
             header?: never;
             path?: never;
             cookie?: never;
         };
-        get: operations["MembershipsController_listMembers"];
+        get: operations["HealthController_checkLiveness"];
         put?: never;
         post?: never;
         delete?: never;
@@ -100,7 +142,131 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/v1/tenant/{tenantId}/members/{membershipId}": {
+    "/health/ready": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["HealthController_checkReadiness"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/workspaces": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List workspaces available to the authenticated user */
+        get: operations["WorkspacesController_list"];
+        put?: never;
+        /** Create a new workspace owned by the authenticated user */
+        post: operations["WorkspacesController_create"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/workspaces/current": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get the authenticated user's current workspace */
+        get: operations["WorkspacesController_getCurrent"];
+        /** Switch the authenticated user's current workspace */
+        put: operations["WorkspacesController_switchCurrent"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/enum": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List dropdown values for a given category */
+        get: operations["EnumController_list"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/tenant/{tenantId}/projects": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List active (non-archived) projects for a workspace */
+        get: operations["ProjectsController_list"];
+        put?: never;
+        /** Create a project */
+        post: operations["ProjectsController_create"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/tenant/{tenantId}/projects/{projectId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get a single project */
+        get: operations["ProjectsController_findOne"];
+        put?: never;
+        post?: never;
+        /** Archive a project (auto-deleted after 14 days) */
+        delete: operations["ProjectsController_archive"];
+        options?: never;
+        head?: never;
+        /** Update a project */
+        patch: operations["ProjectsController_update"];
+        trace?: never;
+    };
+    "/api/v1/tenant/{tenantId}/projects/{projectId}/collaborators": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List collaborators on a project */
+        get: operations["ProjectCollaboratorsController_list"];
+        put?: never;
+        /** Add a collaborator to a project */
+        post: operations["ProjectCollaboratorsController_add"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/tenant/{tenantId}/projects/{projectId}/collaborators/{userId}": {
         parameters: {
             query?: never;
             header?: never;
@@ -110,13 +276,70 @@ export interface paths {
         get?: never;
         put?: never;
         post?: never;
-        delete: operations["MembershipsController_revokeMember"];
+        /** Remove a collaborator from a project */
+        delete: operations["ProjectCollaboratorsController_remove"];
+        options?: never;
+        head?: never;
+        /** Update a collaborator's role */
+        patch: operations["ProjectCollaboratorsController_updateRole"];
+        trace?: never;
+    };
+    "/api/v1/tenant/{tenantId}/modules": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List active modules for a workspace, optionally filtered by project */
+        get: operations["ProjectModulesController_list"];
+        put?: never;
+        /** Create a module, optionally associated with a project */
+        post: operations["ProjectModulesController_create"];
+        delete?: never;
         options?: never;
         head?: never;
         patch?: never;
         trace?: never;
     };
-    "/api/v1/tenant/{tenantId}/invitations": {
+    "/api/v1/tenant/{tenantId}/modules/{moduleId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get a single module */
+        get: operations["ProjectModulesController_findOne"];
+        put?: never;
+        post?: never;
+        /** Archive a module (auto-deleted after 14 days) */
+        delete: operations["ProjectModulesController_archive"];
+        options?: never;
+        head?: never;
+        /** Update a module */
+        patch: operations["ProjectModulesController_update"];
+        trace?: never;
+    };
+    "/api/v1/tenant/{tenantId}/modules/{moduleId}/collaborators": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List collaborators on a module */
+        get: operations["ModuleCollaboratorsController_list"];
+        put?: never;
+        /** Add a collaborator to a module */
+        post: operations["ModuleCollaboratorsController_add"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/tenant/{tenantId}/modules/{moduleId}/collaborators/{userId}": {
         parameters: {
             query?: never;
             header?: never;
@@ -125,76 +348,216 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        post: operations["MembershipsController_inviteMember"];
+        post?: never;
+        /** Remove a collaborator from a module */
+        delete: operations["ModuleCollaboratorsController_remove"];
+        options?: never;
+        head?: never;
+        /** Update a collaborator's role */
+        patch: operations["ModuleCollaboratorsController_updateRole"];
+        trace?: never;
+    };
+    "/api/v1/tenant/{tenantId}/notes": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List notes for a workspace, optionally filtered by project */
+        get: operations["NotesController_list"];
+        put?: never;
+        /** Create a note, optionally associated with a project and module */
+        post: operations["NotesController_create"];
         delete?: never;
         options?: never;
         head?: never;
         patch?: never;
+        trace?: never;
+    };
+    "/api/v1/tenant/{tenantId}/notes/{noteId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get a single note */
+        get: operations["NotesController_findOne"];
+        put?: never;
+        post?: never;
+        /** Delete a note */
+        delete: operations["NotesController_remove"];
+        options?: never;
+        head?: never;
+        /** Update a note */
+        patch: operations["NotesController_update"];
+        trace?: never;
+    };
+    "/api/v1/tenant/{tenantId}/notes/{noteId}/members": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List members who can see this shared note */
+        get: operations["NoteMembersController_list"];
+        put?: never;
+        /** Grant a user access to this shared note */
+        post: operations["NoteMembersController_add"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/tenant/{tenantId}/notes/{noteId}/members/{userId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /** Remove a user's access to this shared note */
+        delete: operations["NoteMembersController_remove"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/tenant/{tenantId}/tasks": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List tasks for a workspace, optionally filtered by project */
+        get: operations["TasksController_list"];
+        put?: never;
+        /** Create a task, optionally associated with a project and module */
+        post: operations["TasksController_create"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/tenant/{tenantId}/tasks/{taskId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get a single task */
+        get: operations["TasksController_findOne"];
+        put?: never;
+        post?: never;
+        /** Delete a task */
+        delete: operations["TasksController_remove"];
+        options?: never;
+        head?: never;
+        /** Update a task */
+        patch: operations["TasksController_update"];
+        trace?: never;
+    };
+    "/api/v1/tenant/{tenantId}/tasks/{taskId}/members": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List members who can see this shared task */
+        get: operations["TaskMembersController_list"];
+        put?: never;
+        /** Grant a user access to this shared task */
+        post: operations["TaskMembersController_add"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/tenant/{tenantId}/tasks/{taskId}/members/{userId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /** Remove a user's access to this shared task */
+        delete: operations["TaskMembersController_remove"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/tenant/{tenantId}/pipeline-stages": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List pipeline stages available to this workspace (base + custom) */
+        get: operations["PipelineStagesController_list"];
+        put?: never;
+        /** Create a custom pipeline stage for this workspace (owner only) */
+        post: operations["PipelineStagesController_create"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/tenant/{tenantId}/pipeline-stages/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /** Remove a custom pipeline stage (owner only) */
+        delete: operations["PipelineStagesController_remove"];
+        options?: never;
+        head?: never;
+        /** Rename or reorder a custom pipeline stage (owner only) */
+        patch: operations["PipelineStagesController_update"];
         trace?: never;
     };
 }
 export type webhooks = Record<string, never>;
 export interface components {
     schemas: {
-        Me: {
-            /** Format: uuid */
-            id: string;
-            /** Format: email */
-            email: string;
-            displayName: string;
-            jobTitle: string | null;
-            institution: string | null;
-            department: string | null;
-            phone: string | null;
-            researchInterests: string | null;
-            status: string;
-            profileComplete: boolean;
-            missingProfileFields: ("jobTitle" | "institution" | "department")[];
-        };
-        UpdateProfile: {
+        UpdateProfileDto: {
+            /** @example Dr Avery Morgan */
             displayName?: string;
+            /** @example Research Fellow */
             jobTitle?: string;
+            /** @example University of Sydney */
             institution?: string;
+            /** @example School of Medical Sciences */
             department?: string;
+            /** @example +61 400 000 000 */
             phone?: string;
+            /** @example Clinical trials, biomarkers, implementation science */
             researchInterests?: string;
         };
-        CreateWorkspace: {
-            name: string;
-        };
-        SwitchWorkspace: {
-            /** Format: uuid */
-            workspaceId: string;
-        };
-        Workspace: {
-            /** Format: uuid */
+        MembershipResponseDto: {
             id: string;
-            name: string;
-            slug: string;
-            status: string;
-            /** Format: uuid */
-            ownerUserId: string;
-            /** @enum {string} */
-            membershipRole: "owner" | "limited_member";
-            /** Format: date-time */
-            createdAt: string;
-            /** Format: date-time */
-            updatedAt: string;
-        };
-        InvitationPreview: {
-            workspaceName: string;
-            invitedEmail: string;
-            /** @enum {string} */
-            role: "limited_member";
-            /** Format: date-time */
-            expiresAt: string;
-        };
-        Membership: {
-            /** Format: uuid */
-            id: string;
-            /** Format: uuid */
             tenantId: string;
-            /** Format: uuid */
             userId: string;
             /** Format: email */
             email: string;
@@ -205,56 +568,180 @@ export interface components {
             status: "active" | "revoked";
             /** Format: date-time */
             invitedAt: string;
-            /** Format: date-time */
-            joinedAt?: string | null;
-            /** Format: date-time */
-            createdAt: string;
-            /** Format: date-time */
-            updatedAt: string;
-        };
-        CreateInvitation: {
-            /** Format: email */
-            email: string;
-        };
-        Invitation: {
-            /** Format: uuid */
-            id: string;
-            /** Format: uuid */
-            tenantId: string;
-            /** Format: email */
-            email: string;
-            /** @enum {string} */
-            role: "limited_member";
-            /** Format: uuid */
-            invitedBy: string;
-            /** @enum {string} */
-            status: "pending";
-            /** Format: date-time */
-            expiresAt: string;
+            joinedAt: Record<string, never> | null;
             /** Format: date-time */
             createdAt: string;
             /** Format: date-time */
             updatedAt: string;
         };
-        CreatedInvitation: {
-            invitation: components["schemas"]["Invitation"];
-            acceptanceToken: string;
-            /** @enum {boolean} */
-            emailSent: true;
+        CreateInvitationDto: {
+            /** @example colleague@example.com */
+            email: string;
+        };
+        CreateWorkspaceDto: {
+            /** @example Acme Research */
+            name: string;
+        };
+        SwitchWorkspaceDto: {
+            /** Format: uuid */
+            workspaceId: string;
+        };
+        CreateProjectDto: {
+            /** @example Novel Biomarkers in Early-Stage Detection */
+            title: string;
+            description?: string;
+            researchArea?: string;
+            /** @example Active */
+            status?: string;
+            /** @example Concept & Ideation */
+            pipelineStage?: string;
+            /** @example High */
+            importance?: string;
+            scheduledFor?: string;
+            dueDate?: string;
+            totalBudget?: string;
+            targetJournals?: string;
+        };
+        UpdateProjectDto: {
+            /** @example Novel Biomarkers in Early-Stage Detection */
+            title?: string;
+            description?: string;
+            researchArea?: string;
+            /** @example Active */
+            status?: string;
+            /** @example Concept & Ideation */
+            pipelineStage?: string;
+            /** @example High */
+            importance?: string;
+            scheduledFor?: string;
+            dueDate?: string;
+            totalBudget?: string;
+            targetJournals?: string;
+        };
+        AddCollaboratorDto: {
+            /** @description The internal user ID to add as a collaborator */
+            userId: string;
+            /** @example Collaborator */
+            role: string;
+        };
+        UpdateRoleDto: {
+            /** @example Supervisor */
+            role: string;
+        };
+        CreateModuleDto: {
+            /** @example Draft Manuscript */
+            title: string;
+            description?: string;
+            projectId?: string;
+            /** @example Research Paper */
+            tag?: string;
+            /** @example Active */
+            status?: string;
+            assignedToUserId?: string;
+        };
+        UpdateModuleDto: {
+            /** @example Draft Manuscript */
+            title?: string;
+            description?: string;
+            projectId?: string;
+            /** @example Research Paper */
+            tag?: string;
+            /** @example Active */
+            status?: string;
+            assignedToUserId?: string;
+        };
+        CreateNoteDto: {
+            /** @example Meeting notes — kickoff */
+            title: string;
+            content?: string;
+            projectId?: string;
+            moduleId?: string;
+            /** @example Private */
+            visibility?: string;
+        };
+        UpdateNoteDto: {
+            /** @example Meeting notes — kickoff */
+            title?: string;
+            content?: string;
+            projectId?: string;
+            moduleId?: string;
+            /** @example Private */
+            visibility?: string;
+        };
+        AddMemberDto: {
+            /** @description The internal user ID to grant access */
+            userId: string;
+        };
+        CreateTaskDto: {
+            /** @example Draft introduction section */
+            title: string;
+            description?: string;
+            projectId?: string;
+            moduleId?: string;
+            /** @example To_do */
+            status?: string;
+            /** @example High */
+            priority?: string;
+            /** @example Private */
+            visibility?: string;
+            workingWith?: string;
+            estimatedHours?: string;
+            dueDate?: string;
+        };
+        UpdateTaskDto: {
+            /** @example Draft introduction section */
+            title?: string;
+            description?: string;
+            projectId?: string;
+            moduleId?: string;
+            /** @example To_do */
+            status?: string;
+            /** @example High */
+            priority?: string;
+            /** @example Private */
+            visibility?: string;
+            workingWith?: string;
+            estimatedHours?: string;
+            dueDate?: string;
+        };
+        CreatePipelineStageDto: {
+            /** @example Peer Review */
+            value: string;
+            /** @example 5 */
+            sortOrder?: number;
+        };
+        UpdatePipelineStageDto: {
+            /** @example Peer Review */
+            value?: string;
+            /** @example 5 */
+            sortOrder?: number;
         };
     };
     responses: never;
-    parameters: {
-        InvitationToken: string;
-        TenantId: string;
-        MembershipId: string;
-    };
+    parameters: never;
     requestBodies: never;
     headers: never;
     pathItems: never;
 }
 export type $defs = Record<string, never>;
 export interface operations {
+    AppController_getHello: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
     MeController_getMe: {
         parameters: {
             query?: never;
@@ -264,14 +751,11 @@ export interface operations {
         };
         requestBody?: never;
         responses: {
-            /** @description Authenticated user */
             200: {
                 headers: {
                     [name: string]: unknown;
                 };
-                content: {
-                    "application/json": components["schemas"]["Me"];
-                };
+                content?: never;
             };
         };
     };
@@ -284,17 +768,361 @@ export interface operations {
         };
         requestBody: {
             content: {
-                "application/json": components["schemas"]["UpdateProfile"];
+                "application/json": components["schemas"]["UpdateProfileDto"];
             };
         };
         responses: {
-            /** @description Updated authenticated user */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    MembershipsController_listMembers: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                tenantId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
             200: {
                 headers: {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["Me"];
+                    "application/json": components["schemas"]["MembershipResponseDto"][];
+                };
+            };
+        };
+    };
+    MembershipsController_inviteMember: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                tenantId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CreateInvitationDto"];
+            };
+        };
+        responses: {
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Email delivery unavailable */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    MembershipsController_revokeMember: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                tenantId: string;
+                membershipId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["MembershipResponseDto"];
+                };
+            };
+        };
+    };
+    InvitationsController_preview: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                token: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    InvitationsController_accept: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                token: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    HealthController_checkLiveness: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The Health Check is successful */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        /** @example ok */
+                        status?: string;
+                        /**
+                         * @example {
+                         *       "database": {
+                         *         "status": "up"
+                         *       }
+                         *     }
+                         */
+                        info?: {
+                            [key: string]: {
+                                status: string;
+                            } & {
+                                [key: string]: unknown;
+                            };
+                        } | null;
+                        /** @example {} */
+                        error?: {
+                            [key: string]: {
+                                status: string;
+                            } & {
+                                [key: string]: unknown;
+                            };
+                        } | null;
+                        /**
+                         * @example {
+                         *       "database": {
+                         *         "status": "up"
+                         *       }
+                         *     }
+                         */
+                        details?: {
+                            [key: string]: {
+                                status: string;
+                            } & {
+                                [key: string]: unknown;
+                            };
+                        };
+                    };
+                };
+            };
+            /** @description The Health Check is not successful */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        /** @example error */
+                        status?: string;
+                        /**
+                         * @example {
+                         *       "database": {
+                         *         "status": "up"
+                         *       }
+                         *     }
+                         */
+                        info?: {
+                            [key: string]: {
+                                status: string;
+                            } & {
+                                [key: string]: unknown;
+                            };
+                        } | null;
+                        /**
+                         * @example {
+                         *       "redis": {
+                         *         "status": "down",
+                         *         "message": "Could not connect"
+                         *       }
+                         *     }
+                         */
+                        error?: {
+                            [key: string]: {
+                                status: string;
+                            } & {
+                                [key: string]: unknown;
+                            };
+                        } | null;
+                        /**
+                         * @example {
+                         *       "database": {
+                         *         "status": "up"
+                         *       },
+                         *       "redis": {
+                         *         "status": "down",
+                         *         "message": "Could not connect"
+                         *       }
+                         *     }
+                         */
+                        details?: {
+                            [key: string]: {
+                                status: string;
+                            } & {
+                                [key: string]: unknown;
+                            };
+                        };
+                    };
+                };
+            };
+        };
+    };
+    HealthController_checkReadiness: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The Health Check is successful */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        /** @example ok */
+                        status?: string;
+                        /**
+                         * @example {
+                         *       "database": {
+                         *         "status": "up"
+                         *       }
+                         *     }
+                         */
+                        info?: {
+                            [key: string]: {
+                                status: string;
+                            } & {
+                                [key: string]: unknown;
+                            };
+                        } | null;
+                        /** @example {} */
+                        error?: {
+                            [key: string]: {
+                                status: string;
+                            } & {
+                                [key: string]: unknown;
+                            };
+                        } | null;
+                        /**
+                         * @example {
+                         *       "database": {
+                         *         "status": "up"
+                         *       }
+                         *     }
+                         */
+                        details?: {
+                            [key: string]: {
+                                status: string;
+                            } & {
+                                [key: string]: unknown;
+                            };
+                        };
+                    };
+                };
+            };
+            /** @description The Health Check is not successful */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        /** @example error */
+                        status?: string;
+                        /**
+                         * @example {
+                         *       "database": {
+                         *         "status": "up"
+                         *       }
+                         *     }
+                         */
+                        info?: {
+                            [key: string]: {
+                                status: string;
+                            } & {
+                                [key: string]: unknown;
+                            };
+                        } | null;
+                        /**
+                         * @example {
+                         *       "redis": {
+                         *         "status": "down",
+                         *         "message": "Could not connect"
+                         *       }
+                         *     }
+                         */
+                        error?: {
+                            [key: string]: {
+                                status: string;
+                            } & {
+                                [key: string]: unknown;
+                            };
+                        } | null;
+                        /**
+                         * @example {
+                         *       "database": {
+                         *         "status": "up"
+                         *       },
+                         *       "redis": {
+                         *         "status": "down",
+                         *         "message": "Could not connect"
+                         *       }
+                         *     }
+                         */
+                        details?: {
+                            [key: string]: {
+                                status: string;
+                            } & {
+                                [key: string]: unknown;
+                            };
+                        };
+                    };
                 };
             };
         };
@@ -308,14 +1136,11 @@ export interface operations {
         };
         requestBody?: never;
         responses: {
-            /** @description Available workspaces */
             200: {
                 headers: {
                     [name: string]: unknown;
                 };
-                content: {
-                    "application/json": components["schemas"]["Workspace"][];
-                };
+                content?: never;
             };
         };
     };
@@ -328,18 +1153,15 @@ export interface operations {
         };
         requestBody: {
             content: {
-                "application/json": components["schemas"]["CreateWorkspace"];
+                "application/json": components["schemas"]["CreateWorkspaceDto"];
             };
         };
         responses: {
-            /** @description Workspace created */
             201: {
                 headers: {
                     [name: string]: unknown;
                 };
-                content: {
-                    "application/json": components["schemas"]["Workspace"];
-                };
+                content?: never;
             };
         };
     };
@@ -352,17 +1174,7 @@ export interface operations {
         };
         requestBody?: never;
         responses: {
-            /** @description Current workspace */
             200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["Workspace"];
-                };
-            };
-            /** @description User has no workspace */
-            404: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -379,21 +1191,11 @@ export interface operations {
         };
         requestBody: {
             content: {
-                "application/json": components["schemas"]["SwitchWorkspace"];
+                "application/json": components["schemas"]["SwitchWorkspaceDto"];
             };
         };
         responses: {
-            /** @description Current workspace switched */
             200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["Workspace"];
-                };
-            };
-            /** @description Workspace unavailable to user */
-            404: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -401,169 +1203,848 @@ export interface operations {
             };
         };
     };
-    InvitationsController_preview: {
+    EnumController_list: {
+        parameters: {
+            query: {
+                category: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    ProjectsController_list: {
         parameters: {
             query?: never;
             header?: never;
             path: {
-                token: components["parameters"]["InvitationToken"];
+                tenantId: string;
             };
             cookie?: never;
         };
         requestBody?: never;
         responses: {
-            /** @description Invitation preview */
             200: {
                 headers: {
                     [name: string]: unknown;
                 };
-                content: {
-                    "application/json": components["schemas"]["InvitationPreview"];
-                };
-            };
-            /** @description Invitation not found */
-            404: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
-            /** @description Invitation unavailable */
-            410: {
-                headers: {
-                    [name: string]: unknown;
-                };
                 content?: never;
             };
         };
     };
-    InvitationsController_accept: {
+    ProjectsController_create: {
         parameters: {
             query?: never;
             header?: never;
             path: {
-                token: components["parameters"]["InvitationToken"];
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Invitation accepted */
-            201: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": {
-                        membership: components["schemas"]["Membership"];
-                    };
-                };
-            };
-            /** @description Authenticated email does not match */
-            403: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
-            /** @description Invitation not found */
-            404: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
-            /** @description Invitation unavailable */
-            410: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
-        };
-    };
-    MembershipsController_listMembers: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                tenantId: components["parameters"]["TenantId"];
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Active members */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["Membership"][];
-                };
-            };
-        };
-    };
-    MembershipsController_revokeMember: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                tenantId: components["parameters"]["TenantId"];
-                membershipId: components["parameters"]["MembershipId"];
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Membership revoked */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["Membership"];
-                };
-            };
-            /** @description Owner access required */
-            403: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
-            /** @description Membership not found */
-            404: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
-        };
-    };
-    MembershipsController_inviteMember: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                tenantId: components["parameters"]["TenantId"];
+                tenantId: string;
             };
             cookie?: never;
         };
         requestBody: {
             content: {
-                "application/json": components["schemas"]["CreateInvitation"];
+                "application/json": components["schemas"]["CreateProjectDto"];
             };
         };
         responses: {
-            /** @description Invitation created */
             201: {
                 headers: {
                     [name: string]: unknown;
                 };
-                content: {
-                    "application/json": components["schemas"]["CreatedInvitation"];
+                content?: never;
+            };
+        };
+    };
+    ProjectsController_findOne: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                tenantId: string;
+                projectId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
                 };
+                content?: never;
+            };
+        };
+    };
+    ProjectsController_archive: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                tenantId: string;
+                projectId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    ProjectsController_update: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                tenantId: string;
+                projectId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["UpdateProjectDto"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    ProjectCollaboratorsController_list: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                tenantId: string;
+                projectId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    ProjectCollaboratorsController_add: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                tenantId: string;
+                projectId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["AddCollaboratorDto"];
+            };
+        };
+        responses: {
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    ProjectCollaboratorsController_remove: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                tenantId: string;
+                projectId: string;
+                userId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    ProjectCollaboratorsController_updateRole: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                tenantId: string;
+                projectId: string;
+                userId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["UpdateRoleDto"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    ProjectModulesController_list: {
+        parameters: {
+            query: {
+                projectId: string;
+            };
+            header?: never;
+            path: {
+                tenantId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    ProjectModulesController_create: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                tenantId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CreateModuleDto"];
+            };
+        };
+        responses: {
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    ProjectModulesController_findOne: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                tenantId: string;
+                moduleId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    ProjectModulesController_archive: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                tenantId: string;
+                moduleId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    ProjectModulesController_update: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                tenantId: string;
+                moduleId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["UpdateModuleDto"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    ModuleCollaboratorsController_list: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                tenantId: string;
+                moduleId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    ModuleCollaboratorsController_add: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                tenantId: string;
+                moduleId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["AddCollaboratorDto"];
+            };
+        };
+        responses: {
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    ModuleCollaboratorsController_remove: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                tenantId: string;
+                moduleId: string;
+                userId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    ModuleCollaboratorsController_updateRole: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                tenantId: string;
+                moduleId: string;
+                userId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["UpdateRoleDto"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    NotesController_list: {
+        parameters: {
+            query?: {
+                projectId?: string;
+            };
+            header?: never;
+            path: {
+                tenantId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    NotesController_create: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                tenantId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CreateNoteDto"];
+            };
+        };
+        responses: {
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    NotesController_findOne: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                tenantId: string;
+                noteId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    NotesController_remove: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                tenantId: string;
+                noteId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    NotesController_update: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                tenantId: string;
+                noteId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["UpdateNoteDto"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    NoteMembersController_list: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                tenantId: string;
+                noteId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    NoteMembersController_add: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                tenantId: string;
+                noteId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["AddMemberDto"];
+            };
+        };
+        responses: {
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    NoteMembersController_remove: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                tenantId: string;
+                noteId: string;
+                userId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    TasksController_list: {
+        parameters: {
+            query?: {
+                projectId?: string;
+            };
+            header?: never;
+            path: {
+                tenantId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    TasksController_create: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                tenantId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CreateTaskDto"];
+            };
+        };
+        responses: {
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    TasksController_findOne: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                tenantId: string;
+                taskId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    TasksController_remove: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                tenantId: string;
+                taskId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    TasksController_update: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                tenantId: string;
+                taskId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["UpdateTaskDto"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    TaskMembersController_list: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                tenantId: string;
+                taskId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    TaskMembersController_add: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                tenantId: string;
+                taskId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["AddMemberDto"];
+            };
+        };
+        responses: {
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    TaskMembersController_remove: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                tenantId: string;
+                taskId: string;
+                userId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    PipelineStagesController_list: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                tenantId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    PipelineStagesController_create: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                tenantId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CreatePipelineStageDto"];
+            };
+        };
+        responses: {
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    PipelineStagesController_remove: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                tenantId: string;
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    PipelineStagesController_update: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                tenantId: string;
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["UpdatePipelineStageDto"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
             };
         };
     };

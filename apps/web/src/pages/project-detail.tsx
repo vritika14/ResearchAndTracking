@@ -1,14 +1,37 @@
-import { useState, type FormEvent, type ReactNode } from "react";
-import { ArrowLeft, Pencil, Save, Users, X } from "lucide-react";
+import { useEffect, useMemo, useState, type FormEvent, type ReactNode } from "react";
+import { ArrowLeft, Pencil, Save, Search, Users, X } from "lucide-react";
 import { Link, useNavigate, useParams, useSearchParams } from "react-router-dom";
 
+import {
+  useAddProjectCollaborator,
+  useCurrentWorkspace,
+  useMe,
+  useMembers,
+  useModules,
+  useNotes,
+  usePipelineStages,
+  useProject,
+  useProjectCollaborators,
+  useRemoveProjectCollaborator,
+  useTasks,
+  useUpdateProject,
+  type ApiModule,
+  type ApiNote,
+  type ApiProject,
+  type ApiTask,
+  type Membership,
+} from "@/api/hooks";
 import { EmptyState } from "@/components/shared/empty-state";
+import { ErrorState } from "@/components/shared/error-state";
+import { LoadingState } from "@/components/shared/loading-state";
 import { StatusBadge } from "@/components/shared/status-badge";
 import { PageHeading } from "@/components/typography/heading";
+import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { DatePickerInput } from "@/components/ui/date-picker-input";
 import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
 import {
   Select,
   SelectContent,
@@ -16,41 +39,53 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import {
-  projects,
-  type Project,
-  type ProjectPriority,
-  type ProjectRole,
-  type ProjectStatus,
-} from "@/data/projects";
-import { useProjectStageOverrides } from "@/hooks/use-project-stage-overrides";
-import { usePipelineStages } from "@/hooks/use-pipeline-stages";
 
-const PROJECT_ROLES: ProjectRole[] = ["Owner", "Lead", "Collaborator", "Supervisor"];
-const PROJECT_PRIORITIES: ProjectPriority[] = ["Low", "Medium", "High", "Critical"];
-const PROJECT_STATUSES: ProjectStatus[] = ["Active", "Review", "Stalled", "Complete"];
+const PROJECT_PRIORITIES = ["Low", "Medium", "High", "Critical"] as const;
+const PROJECT_STATUSES = ["Active", "Review", "Stalled", "Complete"] as const;
 
-type EditableProject = Omit<Project, "id" | "overdue">;
-
-function editableValues(project: Project): EditableProject {
-  const { id: _id, overdue: _overdue, ...values } = project;
-  void _id;
-  void _overdue;
-  return values;
+interface EditableProject {
+  title: string;
+  description: string;
+  researchArea: string;
+  status: string;
+  importance: string;
+  pipelineStage: string;
+  scheduledFor: string;
+  dueDate: string;
+  totalBudget: string;
+  targetJournals: string;
 }
 
-function formatDate(iso: string) {
+function editableValues(project: ApiProject): EditableProject {
+  return {
+    title: project.title,
+    description: project.description ?? "",
+    researchArea: project.researchArea ?? "",
+    status: project.status ?? "Active",
+    importance: project.importance ?? "Medium",
+    pipelineStage: project.pipelineStage ?? "",
+    scheduledFor: project.scheduledFor ?? "",
+    dueDate: project.dueDate ?? "",
+    totalBudget: project.totalBudget ?? "",
+    targetJournals: project.targetJournals ?? "",
+  };
+}
+
+function formatDate(iso: string | null) {
   if (!iso) return "—";
   const [year, month, day] = iso.split("-");
   return `${day}/${month}/${year}`;
 }
 
-function formatCurrency(value: number) {
+function formatCurrency(value: string | null) {
+  if (!value) return "—";
+  const amount = Number(value);
+  if (Number.isNaN(amount)) return "—";
   return new Intl.NumberFormat("en-AU", {
     style: "currency",
     currency: "AUD",
     maximumFractionDigits: 0,
-  }).format(value);
+  }).format(amount);
 }
 
 function DetailItem({ label, children, className = "" }: {
@@ -84,28 +119,319 @@ function FormField({ label, htmlFor, required, children, className = "" }: {
   );
 }
 
+function ProjectModulesDetails({ modules }: { modules: ApiModule[] }) {
+  return (
+    <div className="flex flex-col gap-3 border-t border-border pt-4">
+      <div className="flex items-center justify-between gap-3">
+        <span className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+          Modules ({modules.length})
+        </span>
+        <Button asChild variant="ghost" size="sm">
+          <Link to="/modules">Manage modules</Link>
+        </Button>
+      </div>
+      {modules.length === 0 ? (
+        <p className="text-sm text-muted-foreground">No modules are linked to this project.</p>
+      ) : (
+        <div className="grid gap-2 lg:grid-cols-2">
+          {modules.map((module) => (
+            <div key={module.id} className="rounded-md border border-border bg-card p-3">
+              <div className="flex flex-wrap items-start justify-between gap-2">
+                <div className="min-w-0">
+                  {module.displayId ? (
+                    <span className="block font-mono text-[10px] text-muted-foreground">
+                      {module.displayId}
+                    </span>
+                  ) : null}
+                  <span className="block text-sm font-semibold">{module.title}</span>
+                </div>
+                <StatusBadge status={module.status ?? "—"} />
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
+function ProjectTasksDetails({ tasks }: { tasks: ApiTask[] }) {
+  return (
+    <div className="flex flex-col gap-3 border-t border-border pt-4">
+      <div className="flex items-center justify-between gap-3">
+        <span className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+          Tasks ({tasks.length})
+        </span>
+        <Button asChild variant="ghost" size="sm">
+          <Link to="/tasks">Manage tasks</Link>
+        </Button>
+      </div>
+      {tasks.length === 0 ? (
+        <p className="text-sm text-muted-foreground">No tasks are linked to this project.</p>
+      ) : (
+        <div className="grid gap-2 lg:grid-cols-2">
+          {tasks.map((task) => (
+            <div key={task.id} className="rounded-md border border-border bg-card p-3">
+              <div className="flex flex-wrap items-start justify-between gap-2">
+                <div className="min-w-0">
+                  {task.displayId ? (
+                    <span className="block font-mono text-[10px] text-muted-foreground">
+                      {task.displayId}
+                    </span>
+                  ) : null}
+                  <span className="block text-sm font-semibold">{task.title}</span>
+                </div>
+                <div className="flex flex-wrap gap-1">
+                  <StatusBadge status={task.status ?? "—"} />
+                  <StatusBadge status={task.priority ?? "—"} />
+                </div>
+              </div>
+              <div className="mt-2 flex flex-wrap gap-x-4 gap-y-1 text-xs text-muted-foreground">
+                <span>Due {formatDate(task.dueDate)}</span>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
+function ProjectNotesDetails({ notes }: { notes: ApiNote[] }) {
+  return (
+    <div className="flex flex-col gap-3 border-t border-border pt-4">
+      <div className="flex items-center justify-between gap-3">
+        <span className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+          Notes ({notes.length})
+        </span>
+        <Button asChild variant="ghost" size="sm">
+          <Link to="/daily-notes">Manage notes</Link>
+        </Button>
+      </div>
+      {notes.length === 0 ? (
+        <p className="text-sm text-muted-foreground">No notes are linked to this project.</p>
+      ) : (
+        <div className="grid gap-2 lg:grid-cols-2">
+          {notes.map((note) => (
+            <div key={note.id} className="rounded-md border border-border bg-card p-3">
+              <span className="text-sm font-semibold">{note.title}</span>
+              {note.content ? (
+                <p className="mt-1 line-clamp-2 text-xs text-muted-foreground">{note.content}</p>
+              ) : null}
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
+function ProjectCollaborators({
+  tenantId,
+  projectId,
+  ownerUserId,
+  members,
+  membersLoading,
+}: {
+  tenantId: string;
+  projectId: string;
+  ownerUserId: string | undefined;
+  members: Membership[];
+  membersLoading: boolean;
+}) {
+  const collaboratorsQuery = useProjectCollaborators(tenantId, projectId);
+  const addCollaborator = useAddProjectCollaborator(tenantId, projectId);
+  const removeCollaborator = useRemoveProjectCollaborator(tenantId, projectId);
+  const [search, setSearch] = useState("");
+  const [pickerOpen, setPickerOpen] = useState(false);
+
+  const memberByUserId = useMemo(() => {
+    const map = new Map<string, Membership>();
+    for (const member of members) map.set(member.userId, member);
+    return map;
+  }, [members]);
+
+  const collaboratorUserIds = useMemo(
+    () => new Set((collaboratorsQuery.data ?? []).map((collaborator) => collaborator.userId)),
+    [collaboratorsQuery.data],
+  );
+
+  const matchingMembers = useMemo(() => {
+    const query = search.trim().toLowerCase();
+    return members
+      .filter(
+        (member) =>
+          member.userId !== ownerUserId && !collaboratorUserIds.has(member.userId),
+      )
+      .filter(
+        (member) =>
+          !query ||
+          member.displayName.toLowerCase().includes(query) ||
+          member.email.toLowerCase().includes(query),
+      )
+      .slice(0, 8);
+  }, [collaboratorUserIds, members, ownerUserId, search]);
+
+  if (collaboratorsQuery.isPending) {
+    return <LoadingState title="Loading collaborators" className="min-h-32" />;
+  }
+
+  return (
+    <div className="flex flex-col gap-4">
+      <div className="flex flex-col gap-2">
+        {ownerUserId && memberByUserId.has(ownerUserId) ? (
+          <div className="flex items-center justify-between gap-3 rounded-md border border-border bg-card p-3">
+            <span className="min-w-0">
+              <span className="block truncate text-sm font-medium">
+                {memberByUserId.get(ownerUserId)!.displayName}
+              </span>
+              <span className="block truncate text-xs text-muted-foreground">
+                {memberByUserId.get(ownerUserId)!.email}
+              </span>
+            </span>
+            <Badge variant="outline">Owner</Badge>
+          </div>
+        ) : null}
+        {(collaboratorsQuery.data ?? []).map((collaborator) => {
+          const member = memberByUserId.get(collaborator.userId);
+          return (
+            <div
+              key={collaborator.id}
+              className="flex items-center justify-between gap-3 rounded-md border border-border bg-card p-3"
+            >
+              <span className="min-w-0">
+                <span className="block truncate text-sm font-medium">
+                  {member?.displayName ?? collaborator.userId}
+                </span>
+                {member ? (
+                  <span className="block truncate text-xs text-muted-foreground">
+                    {member.email}
+                  </span>
+                ) : null}
+              </span>
+              <div className="flex items-center gap-2">
+                <Badge variant="outline">{collaborator.role ?? "Collaborator"}</Badge>
+                <button
+                  type="button"
+                  aria-label={`Remove ${member?.displayName ?? "collaborator"}`}
+                  onClick={() => removeCollaborator.mutate(collaborator.userId)}
+                  className="rounded-full p-1 text-muted-foreground hover:text-destructive focus:outline-none focus:ring-1 focus:ring-ring"
+                >
+                  <X className="h-3.5 w-3.5" />
+                </button>
+              </div>
+            </div>
+          );
+        })}
+        {(collaboratorsQuery.data ?? []).length === 0 ? (
+          <p className="text-sm text-muted-foreground">No collaborators added yet.</p>
+        ) : null}
+      </div>
+
+      <div
+        className="relative"
+        onBlur={(event) => {
+          if (!event.currentTarget.contains(event.relatedTarget)) setPickerOpen(false);
+        }}
+      >
+        <Search className="pointer-events-none absolute left-3 top-2.5 h-4 w-4 text-muted-foreground" />
+        <Input
+          role="combobox"
+          aria-expanded={pickerOpen}
+          aria-controls="project-detail-collaborator-options"
+          aria-autocomplete="list"
+          value={search}
+          onFocus={() => setPickerOpen(true)}
+          onChange={(event) => {
+            setSearch(event.target.value);
+            setPickerOpen(true);
+          }}
+          placeholder="Add a workspace member as a collaborator"
+          className="pl-9"
+          autoComplete="off"
+        />
+        {pickerOpen ? (
+          <div
+            id="project-detail-collaborator-options"
+            role="listbox"
+            className="absolute z-50 mt-1 max-h-56 w-full overflow-y-auto rounded-md border bg-popover p-1 text-popover-foreground shadow-lg"
+          >
+            {membersLoading ? (
+              <p className="px-3 py-2 text-sm text-muted-foreground">Loading workspace members…</p>
+            ) : matchingMembers.length ? (
+              matchingMembers.map((member) => (
+                <button
+                  key={member.id}
+                  type="button"
+                  role="option"
+                  aria-selected="false"
+                  className="flex w-full items-center justify-between gap-3 rounded-sm px-3 py-2 text-left hover:bg-accent focus:bg-accent focus:outline-none"
+                  onClick={() => {
+                    addCollaborator.mutate({ userId: member.userId, role: "Collaborator" });
+                    setSearch("");
+                  }}
+                >
+                  <span className="min-w-0">
+                    <span className="block truncate text-sm font-medium">{member.displayName}</span>
+                    <span className="block truncate text-xs text-muted-foreground">{member.email}</span>
+                  </span>
+                </button>
+              ))
+            ) : (
+              <p className="px-3 py-2 text-sm text-muted-foreground">No matching workspace members.</p>
+            )}
+          </div>
+        ) : null}
+      </div>
+    </div>
+  );
+}
+
 export default function ProjectDetailPage() {
-  const { projectId } = useParams();
+  const { projectId = "" } = useParams();
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
-  const { pipelineStages } = usePipelineStages();
-  const { stageOverrides, updateProjectStage } = useProjectStageOverrides();
-  const sourceProject = projects.find((item) => item.id === projectId);
-  const initialProject = sourceProject
-    ? { ...sourceProject, stageIndex: stageOverrides[sourceProject.id] ?? sourceProject.stageIndex }
-    : undefined;
-  const [project, setProject] = useState<Project | undefined>(() =>
-    initialProject ? { ...initialProject } : undefined,
-  );
-  const [form, setForm] = useState<EditableProject | null>(() =>
-    initialProject && searchParams.get("edit") === "true" ? editableValues(initialProject) : null,
-  );
+  const workspace = useCurrentWorkspace();
+  const tenantId = workspace.data?.id ?? "";
+
+  const projectQuery = useProject(tenantId, projectId);
+  const modulesQuery = useModules(tenantId, projectId);
+  const tasksQuery = useTasks(tenantId, projectId);
+  const notesQuery = useNotes(tenantId, projectId);
+  const pipelineStagesQuery = usePipelineStages(tenantId);
+  const membersQuery = useMembers(tenantId);
+  const me = useMe();
+  const updateProject = useUpdateProject(tenantId);
+
+  const project = projectQuery.data;
+  const [isEditing, setIsEditing] = useState(() => searchParams.get("edit") === "true");
+  const [form, setForm] = useState<EditableProject | null>(null);
+
+  useEffect(() => {
+    if (project && isEditing && form === null) {
+      setForm(editableValues(project));
+    }
+  }, [project, isEditing, form]);
+
+  if (workspace.isPending || projectQuery.isPending) {
+    return <LoadingState title="Loading project" className="min-h-[50vh]" />;
+  }
+
+  if (projectQuery.isError) {
+    return (
+      <ErrorState
+        title="Project could not be loaded"
+        description={projectQuery.error.message}
+        onRetry={() => void projectQuery.refetch()}
+      />
+    );
+  }
 
   if (!project) {
     return (
       <EmptyState
         title="Project not found"
-        description="The requested project is not part of the current local shell."
+        description="This project doesn't exist, or you don't have access to it."
         action={
           <Button asChild variant="outline">
             <Link to="/projects">Back to Projects</Link>
@@ -119,43 +445,49 @@ export default function ProjectDetailPage() {
   const editOrigin = searchParams.get("from");
 
   function beginEditing() {
-    if (!project) return;
-    setForm(editableValues(project));
+    setForm(editableValues(project!));
+    setIsEditing(true);
   }
 
   function cancelEditing() {
     setForm(null);
+    setIsEditing(false);
     if (searchParams.get("edit") === "true") {
       navigate(editOrigin === "pipeline" ? "/pipeline" : projectPath, { replace: true });
     }
   }
 
-  function saveProject(event: FormEvent<HTMLFormElement>) {
+  async function saveProject(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    if (!form || !project) return;
+    if (!form) return;
 
-    const dueDate = form.dueDate;
-    const today = new Date().toISOString().slice(0, 10);
-    updateProjectStage(project.id, form.stageIndex);
-    setProject((current) =>
-      current
-        ? {
-            ...current,
-            ...form,
-            title: form.title.trim(),
-            pi: form.pi.trim(),
-            funder: form.funder.trim() || "Not specified",
-            collaborators: form.collaborators.trim() || "None listed",
-            targetJournal: form.targetJournal.trim() || "Not specified",
-            overdue: form.status !== "Complete" && dueDate < today,
-          }
-        : current,
-    );
+    await updateProject.mutateAsync({
+      projectId,
+      input: {
+        title: form.title.trim(),
+        description: form.description.trim() || undefined,
+        researchArea: form.researchArea.trim() || undefined,
+        status: form.status,
+        importance: form.importance,
+        pipelineStage: form.pipelineStage || undefined,
+        scheduledFor: form.scheduledFor || undefined,
+        dueDate: form.dueDate || undefined,
+        totalBudget: form.totalBudget || undefined,
+        targetJournals: form.targetJournals.trim() || undefined,
+      },
+    });
     setForm(null);
+    setIsEditing(false);
     if (searchParams.get("edit") === "true") {
       navigate(projectPath, { replace: true });
     }
   }
+
+  const myRole = project.userId === me.data?.id ? "Owner" : project.role ?? "—";
+  const taskCounts = {
+    completed: (tasksQuery.data ?? []).filter((task) => task.status === "Complete").length,
+    total: (tasksQuery.data ?? []).length,
+  };
 
   return (
     <div className="flex flex-col gap-8">
@@ -167,12 +499,12 @@ export default function ProjectDetailPage() {
       </Button>
 
       <PageHeading
-        eyebrow={project.id}
+        eyebrow={project.displayId ?? project.id}
         title={project.title}
         description="Review and update the project’s core details, planning information and progress."
         actions={
           <div className="flex flex-wrap items-center gap-3">
-            <StatusBadge status={project.status} />
+            <StatusBadge status={project.status ?? "—"} />
             {form ? (
               <Button type="button" variant="outline" onClick={cancelEditing}>
                 <X />
@@ -194,9 +526,9 @@ export default function ProjectDetailPage() {
             <CardTitle>Edit project details</CardTitle>
           </CardHeader>
           <CardContent>
-            <form onSubmit={saveProject} className="grid gap-6">
+            <form onSubmit={(event) => void saveProject(event)} className="grid gap-6">
               <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
-                <FormField label="Project title" htmlFor="edit-project-title" required className="sm:col-span-2">
+                <FormField label="Project title" htmlFor="edit-project-title" required className="sm:col-span-2 lg:col-span-3">
                   <Input
                     id="edit-project-title"
                     value={form.title}
@@ -206,47 +538,27 @@ export default function ProjectDetailPage() {
                   />
                 </FormField>
 
-                <FormField label="Principal investigator" htmlFor="edit-project-pi" required>
-                  <Input
-                    id="edit-project-pi"
-                    value={form.pi}
-                    onChange={(event) => setForm({ ...form, pi: event.target.value })}
-                    required
+                <FormField label="Description" htmlFor="edit-project-description" className="sm:col-span-2 lg:col-span-3">
+                  <Textarea
+                    id="edit-project-description"
+                    value={form.description}
+                    onChange={(event) => setForm({ ...form, description: event.target.value })}
+                    rows={3}
                   />
                 </FormField>
 
-                <FormField label="Funder" htmlFor="edit-project-funder">
+                <FormField label="Research area" htmlFor="edit-project-research-area">
                   <Input
-                    id="edit-project-funder"
-                    value={form.funder}
-                    onChange={(event) => setForm({ ...form, funder: event.target.value })}
+                    id="edit-project-research-area"
+                    value={form.researchArea}
+                    onChange={(event) => setForm({ ...form, researchArea: event.target.value })}
                   />
-                </FormField>
-
-                <FormField label="Collaborators" htmlFor="edit-project-collaborators" className="sm:col-span-2">
-                  <Input
-                    id="edit-project-collaborators"
-                    value={form.collaborators}
-                    onChange={(event) => setForm({ ...form, collaborators: event.target.value })}
-                  />
-                </FormField>
-
-                <FormField label="My role" htmlFor="edit-project-role">
-                  <Select
-                    value={form.myRole}
-                    onValueChange={(value) => setForm({ ...form, myRole: value as ProjectRole })}
-                  >
-                    <SelectTrigger id="edit-project-role"><SelectValue /></SelectTrigger>
-                    <SelectContent>
-                      {PROJECT_ROLES.map((role) => <SelectItem key={role} value={role}>{role}</SelectItem>)}
-                    </SelectContent>
-                  </Select>
                 </FormField>
 
                 <FormField label="Importance" htmlFor="edit-project-priority">
                   <Select
-                    value={form.priority}
-                    onValueChange={(value) => setForm({ ...form, priority: value as ProjectPriority })}
+                    value={form.importance}
+                    onValueChange={(value) => setForm({ ...form, importance: value })}
                   >
                     <SelectTrigger id="edit-project-priority"><SelectValue /></SelectTrigger>
                     <SelectContent>
@@ -258,7 +570,7 @@ export default function ProjectDetailPage() {
                 <FormField label="Status" htmlFor="edit-project-status">
                   <Select
                     value={form.status}
-                    onValueChange={(value) => setForm({ ...form, status: value as ProjectStatus })}
+                    onValueChange={(value) => setForm({ ...form, status: value })}
                   >
                     <SelectTrigger id="edit-project-status"><SelectValue /></SelectTrigger>
                     <SelectContent>
@@ -269,13 +581,13 @@ export default function ProjectDetailPage() {
 
                 <FormField label="Pipeline stage" htmlFor="edit-project-stage">
                   <Select
-                    value={String(form.stageIndex)}
-                    onValueChange={(value) => setForm({ ...form, stageIndex: Number(value) })}
+                    value={form.pipelineStage}
+                    onValueChange={(value) => setForm({ ...form, pipelineStage: value })}
                   >
-                    <SelectTrigger id="edit-project-stage"><SelectValue /></SelectTrigger>
+                    <SelectTrigger id="edit-project-stage"><SelectValue placeholder="Select a stage" /></SelectTrigger>
                     <SelectContent>
-                      {pipelineStages.map((stage, index) => (
-                        <SelectItem key={stage.name} value={String(index)}>{stage.name}</SelectItem>
+                      {(pipelineStagesQuery.data ?? []).map((stage) => (
+                        <SelectItem key={stage.id} value={stage.value}>{stage.value}</SelectItem>
                       ))}
                     </SelectContent>
                   </Select>
@@ -299,81 +611,29 @@ export default function ProjectDetailPage() {
                   />
                 </FormField>
 
-                <FormField label="Target journal or output" htmlFor="edit-project-journal" className="sm:col-span-2">
-                  <Input
-                    id="edit-project-journal"
-                    value={form.targetJournal}
-                    onChange={(event) => setForm({ ...form, targetJournal: event.target.value })}
-                  />
-                </FormField>
-
-                <FormField label="Tasks completed" htmlFor="edit-project-tasks-completed">
-                  <Input
-                    id="edit-project-tasks-completed"
-                    type="number"
-                    min="0"
-                    max={form.tasksTotal}
-                    value={form.tasksCompleted}
-                    onChange={(event) => setForm({ ...form, tasksCompleted: Number(event.target.value) })}
-                  />
-                </FormField>
-
-                <FormField label="Total tasks" htmlFor="edit-project-tasks-total">
-                  <Input
-                    id="edit-project-tasks-total"
-                    type="number"
-                    min="0"
-                    value={form.tasksTotal}
-                    onChange={(event) => setForm({ ...form, tasksTotal: Number(event.target.value) })}
-                  />
-                </FormField>
-
-                <FormField label="Notes" htmlFor="edit-project-notes">
-                  <Input
-                    id="edit-project-notes"
-                    type="number"
-                    min="0"
-                    value={form.notes}
-                    onChange={(event) => setForm({ ...form, notes: Number(event.target.value) })}
-                  />
-                </FormField>
-
-                <FormField label="Word count" htmlFor="edit-project-word-count">
-                  <Input
-                    id="edit-project-word-count"
-                    type="number"
-                    min="0"
-                    value={form.wordCount}
-                    onChange={(event) => setForm({ ...form, wordCount: Number(event.target.value) })}
-                  />
-                </FormField>
-
-                <FormField label="Budget used" htmlFor="edit-project-budget-used">
-                  <Input
-                    id="edit-project-budget-used"
-                    type="number"
-                    min="0"
-                    step="100"
-                    value={form.budgetUsed}
-                    onChange={(event) => setForm({ ...form, budgetUsed: Number(event.target.value) })}
-                  />
-                </FormField>
-
                 <FormField label="Total budget" htmlFor="edit-project-budget-total">
                   <Input
                     id="edit-project-budget-total"
                     type="number"
                     min="0"
                     step="100"
-                    value={form.budgetTotal}
-                    onChange={(event) => setForm({ ...form, budgetTotal: Number(event.target.value) })}
+                    value={form.totalBudget}
+                    onChange={(event) => setForm({ ...form, totalBudget: event.target.value })}
+                  />
+                </FormField>
+
+                <FormField label="Target journal(s) or output" htmlFor="edit-project-journal" className="sm:col-span-2 lg:col-span-3">
+                  <Input
+                    id="edit-project-journal"
+                    value={form.targetJournals}
+                    onChange={(event) => setForm({ ...form, targetJournals: event.target.value })}
                   />
                 </FormField>
               </div>
 
               <div className="flex flex-col-reverse gap-3 border-t pt-5 sm:flex-row sm:justify-end">
                 <Button type="button" variant="outline" onClick={cancelEditing}>Cancel</Button>
-                <Button type="submit">
+                <Button type="submit" disabled={updateProject.isPending}>
                   <Save />
                   Save Changes
                 </Button>
@@ -388,21 +648,20 @@ export default function ProjectDetailPage() {
               <CardTitle>Project overview</CardTitle>
             </CardHeader>
             <CardContent className="grid gap-5 text-sm sm:grid-cols-2">
-              <DetailItem label="Principal investigator">{project.pi}</DetailItem>
-              <DetailItem label="Funder">{project.funder}</DetailItem>
-              <DetailItem label="My role">{project.myRole}</DetailItem>
-              <DetailItem label="Importance">{project.priority}</DetailItem>
-              <DetailItem label="Pipeline stage">
-                {pipelineStages[project.stageIndex]?.name ?? "Unknown stage"}
-              </DetailItem>
+              <DetailItem label="Research area">{project.researchArea ?? "—"}</DetailItem>
+              <DetailItem label="My role">{myRole}</DetailItem>
+              <DetailItem label="Importance">{project.importance ?? "—"}</DetailItem>
+              <DetailItem label="Pipeline stage">{project.pipelineStage ?? "Unknown stage"}</DetailItem>
               <DetailItem label="Scheduled for">{formatDate(project.scheduledFor)}</DetailItem>
               <DetailItem label="Due date">{formatDate(project.dueDate)}</DetailItem>
               <DetailItem label="Target journal or output" className="sm:col-span-2">
-                {project.targetJournal}
+                {project.targetJournals ?? "—"}
               </DetailItem>
-              <DetailItem label="Working with" className="sm:col-span-2">
-                <span className="text-muted-foreground">{project.collaborators}</span>
-              </DetailItem>
+              {project.description ? (
+                <DetailItem label="Description" className="sm:col-span-2">
+                  <span className="font-normal text-muted-foreground">{project.description}</span>
+                </DetailItem>
+              ) : null}
             </CardContent>
           </Card>
 
@@ -411,10 +670,21 @@ export default function ProjectDetailPage() {
               <CardTitle>Progress and resources</CardTitle>
             </CardHeader>
             <CardContent className="grid gap-5 text-sm sm:grid-cols-2 lg:grid-cols-1 xl:grid-cols-2">
-              <DetailItem label="Tasks">{project.tasksCompleted}/{project.tasksTotal} complete</DetailItem>
-              <DetailItem label="Notes">{project.notes}</DetailItem>
-              <DetailItem label="Word count">{project.wordCount.toLocaleString()}</DetailItem>
-              <DetailItem label="Budget">{formatCurrency(project.budgetUsed)} / {formatCurrency(project.budgetTotal)}</DetailItem>
+              <DetailItem label="Tasks">{taskCounts.completed}/{taskCounts.total} complete</DetailItem>
+              <DetailItem label="Notes">{(notesQuery.data ?? []).length}</DetailItem>
+              <DetailItem label="Modules">{(modulesQuery.data ?? []).length}</DetailItem>
+              <DetailItem label="Total budget">{formatCurrency(project.totalBudget)}</DetailItem>
+            </CardContent>
+          </Card>
+
+          <Card className="lg:col-span-2">
+            <CardHeader>
+              <CardTitle>Linked work</CardTitle>
+            </CardHeader>
+            <CardContent className="flex flex-col gap-5">
+              <ProjectModulesDetails modules={modulesQuery.data ?? []} />
+              <ProjectTasksDetails tasks={tasksQuery.data ?? []} />
+              <ProjectNotesDetails notes={notesQuery.data ?? []} />
             </CardContent>
           </Card>
 
@@ -423,20 +693,26 @@ export default function ProjectDetailPage() {
               <CardTitle>Project collaborators</CardTitle>
             </CardHeader>
             <CardContent>
-              <EmptyState
-                icon={Users}
-                title="Collaborator records coming later"
-                description={`Current collaborator summary: ${project.collaborators}. Detailed membership records will appear here when the collaboration module is connected.`}
-                className="min-h-40 border-0 bg-muted/30"
-              />
+              {tenantId ? (
+                <ProjectCollaborators
+                  tenantId={tenantId}
+                  projectId={project.id}
+                  ownerUserId={project.userId}
+                  members={membersQuery.data ?? []}
+                  membersLoading={membersQuery.isPending}
+                />
+              ) : (
+                <EmptyState
+                  icon={Users}
+                  title="No workspace selected"
+                  description="Select a workspace to manage collaborators."
+                  className="min-h-40 border-0 bg-muted/30"
+                />
+              )}
             </CardContent>
           </Card>
         </div>
       )}
-
-      <p className="text-xs text-muted-foreground">
-        Project edits are stored locally in this interface until the projects API is connected.
-      </p>
     </div>
   );
 }

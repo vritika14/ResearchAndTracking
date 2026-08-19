@@ -60,6 +60,8 @@ export class TasksRepository {
       workingWith: string | null;
       estimatedHours: string;
       dueDate: string;
+      projectId: string | null;
+      moduleId: string | null;
     }>,
   ) {
     const [task] = await this.drizzle.db

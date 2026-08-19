@@ -2,7 +2,21 @@ import { useMemo, useState, type DragEvent } from "react";
 import { GripVertical, Pencil, Settings2 } from "lucide-react";
 import { Link } from "react-router-dom";
 
+import {
+  useCreatePipelineStage,
+  useCurrentWorkspace,
+  useDeletePipelineStage,
+  useMe,
+  usePipelineStages,
+  useProjects,
+  useTasks,
+  useUpdateProject,
+  type ApiPipelineStage,
+  type ApiProject,
+} from "@/api/hooks";
 import { ManageStagesDialog } from "@/components/pipeline/manage-stages-dialog";
+import { ErrorState } from "@/components/shared/error-state";
+import { LoadingState } from "@/components/shared/loading-state";
 import { PageHeading } from "@/components/typography/heading";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -13,17 +27,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import {
-  pipelineRows,
-  type PipelineStageInfo,
-  type PipelineRow,
-} from "@/data/pipeline-rows";
-import type { ProjectPriority } from "@/data/pipeline-projects";
-import type { ProjectStatus } from "@/data/projects";
 import { cn } from "@/lib/utils";
-import { reindexModulesAfterStageDeletion } from "@/hooks/use-modules";
-import { usePipelineStages } from "@/hooks/use-pipeline-stages";
-import { useProjectStageOverrides } from "@/hooks/use-project-stage-overrides";
 
 const VIEW_OPTIONS = ["Flow", "Columns"] as const;
 type ViewOption = (typeof VIEW_OPTIONS)[number];
@@ -34,15 +38,25 @@ type PriorityFilter = (typeof PRIORITY_FILTERS)[number];
 const STATUS_FILTERS = ["All", "Active", "Review", "Stalled", "Complete"] as const;
 type StatusFilter = (typeof STATUS_FILTERS)[number];
 
-const ROLE_FILTERS = ["All", "Owner", "Lead", "Collaborator", "Supervisor"] as const;
-type RoleFilter = (typeof ROLE_FILTERS)[number];
 const STAGE_TITLE_CLASS = "text-sm font-bold text-foreground";
 const PROJECT_ID_CLASS = "font-mono text-[11px] text-muted-foreground";
 const PROJECT_TITLE_CLASS = "text-sm font-medium text-foreground";
 const COMPLETION_CLASS = "text-sm font-semibold text-primary";
 const OUTSTANDING_CLASS = "text-xs font-medium";
 
-function priorityPillClass(priority: ProjectPriority) {
+interface PipelineRow {
+  id: string;
+  displayId: string | null;
+  title: string;
+  priority: string | null;
+  status: string | null;
+  role: string | null;
+  completion: number;
+  outstanding: number;
+  stageIndex: number | undefined;
+}
+
+function priorityPillClass(priority: string | null) {
   switch (priority) {
     case "Critical":
       return "border-red-300 text-red-700 dark:border-red-800 dark:text-red-400";
@@ -50,12 +64,12 @@ function priorityPillClass(priority: ProjectPriority) {
       return "border-orange-300 text-orange-700 dark:border-orange-800 dark:text-orange-400";
     case "Medium":
       return "border-blue-300 text-blue-700 dark:border-blue-800 dark:text-blue-400";
-    case "Low":
+    default:
       return "border-border text-muted-foreground";
   }
 }
 
-function statusPillClass(status: ProjectStatus) {
+function statusPillClass(status: string | null) {
   switch (status) {
     case "Active":
     case "Complete":
@@ -64,6 +78,8 @@ function statusPillClass(status: ProjectStatus) {
       return "border-orange-300 text-orange-700 dark:border-orange-800 dark:text-orange-400";
     case "Stalled":
       return "border-red-300 text-red-700 dark:border-red-800 dark:text-red-400";
+    default:
+      return "border-border text-muted-foreground";
   }
 }
 
@@ -80,6 +96,7 @@ function controlPillClass(selected: boolean) {
 function groupByStage(rows: PipelineRow[], stageCount: number) {
   const groups: PipelineRow[][] = Array.from({ length: stageCount }, () => []);
   for (const row of rows) {
+    if (row.stageIndex === undefined) continue;
     groups[row.stageIndex]?.push(row);
   }
   return groups;
@@ -92,7 +109,7 @@ interface PipelineProjectRowProps {
   onDragStart: (event: DragEvent<HTMLDivElement>, row: PipelineRow) => void;
   onDragEnd: () => void;
   onStageChange: (projectId: string, stageIndex: number) => void;
-  stages: readonly PipelineStageInfo[];
+  stages: readonly ApiPipelineStage[];
 }
 
 function ProjectEditLink({ row }: { row: PipelineRow }) {
@@ -110,12 +127,12 @@ function ProjectEditLink({ row }: { row: PipelineRow }) {
 
 function StageSelect({ row, stages, onStageChange }: {
   row: PipelineRow;
-  stages: readonly PipelineStageInfo[];
+  stages: readonly ApiPipelineStage[];
   onStageChange: (projectId: string, stageIndex: number) => void;
 }) {
   return (
     <select
-      value={row.stageIndex}
+      value={row.stageIndex ?? ""}
       onChange={(event) => onStageChange(row.id, Number(event.target.value))}
       onMouseDown={(event) => event.stopPropagation()}
       aria-label={`Move ${row.title} to stage`}
@@ -123,7 +140,7 @@ function StageSelect({ row, stages, onStageChange }: {
       className="h-7 max-w-44 rounded-md border border-input bg-background px-2 text-xs text-muted-foreground focus:outline-none focus:ring-1 focus:ring-ring"
     >
       {stages.map((stage, index) => (
-        <option key={stage.name} value={index}>{stage.name}</option>
+        <option key={stage.id} value={index}>{stage.value}</option>
       ))}
     </select>
   );
@@ -157,7 +174,7 @@ function PipelineProjectRow({
         <div className="flex items-start justify-between gap-2">
           <span className="flex items-center gap-1">
             <GripVertical className="h-3.5 w-3.5 text-muted-foreground" aria-hidden="true" />
-            <span className={PROJECT_ID_CLASS}>{row.id}</span>
+            <span className={PROJECT_ID_CLASS}>{row.displayId ?? row.id}</span>
           </span>
           <div className="flex items-center gap-1">
             <ProjectEditLink row={row} />
@@ -166,10 +183,10 @@ function PipelineProjectRow({
         <span className={cn(PROJECT_TITLE_CLASS, "leading-snug")}>{row.title}</span>
         <div className="flex flex-wrap items-center gap-1.5">
           <Badge variant="outline" className={priorityPillClass(row.priority)}>
-            {row.priority}
+            {row.priority ?? "—"}
           </Badge>
           <Badge variant="outline" className={statusPillClass(row.status)}>
-            {row.status}
+            {row.status ?? "—"}
           </Badge>
         </div>
         <div className="flex items-center justify-between">
@@ -195,16 +212,16 @@ function PipelineProjectRow({
     >
       <span className="flex items-center gap-1">
         <GripVertical className="h-4 w-4 text-muted-foreground" aria-hidden="true" />
-        <span className={PROJECT_ID_CLASS}>{row.id}</span>
+        <span className={PROJECT_ID_CLASS}>{row.displayId ?? row.id}</span>
       </span>
       <span className={PROJECT_TITLE_CLASS}>{row.title}</span>
       <ProjectEditLink row={row} />
       <div className="ml-auto flex flex-wrap items-center gap-3">
         <Badge variant="outline" className={priorityPillClass(row.priority)}>
-          {row.priority}
+          {row.priority ?? "—"}
         </Badge>
         <Badge variant="outline" className={statusPillClass(row.status)}>
-          {row.status}
+          {row.status ?? "—"}
         </Badge>
         <span className={COMPLETION_CLASS}>{row.completion}%</span>
         <span className={cn(OUTSTANDING_CLASS, outstandingClass)}>
@@ -217,91 +234,136 @@ function PipelineProjectRow({
 }
 
 export default function PipelinePage() {
-  const { pipelineStages, setPipelineStages } = usePipelineStages();
-  const [visibleStageNames, setVisibleStageNames] = useState<Set<string>>(
-    () => new Set(pipelineStages.map((stage) => stage.name)),
-  );
+  const workspace = useCurrentWorkspace();
+  const tenantId = workspace.data?.id ?? "";
+
+  const projectsQuery = useProjects(tenantId);
+  const tasksQuery = useTasks(tenantId);
+  const pipelineStagesQuery = usePipelineStages(tenantId);
+  const me = useMe();
+
+  const updateProject = useUpdateProject(tenantId);
+  const createStage = useCreatePipelineStage(tenantId);
+  const deleteStageMutation = useDeletePipelineStage(tenantId);
+
+  const [hiddenStageValues, setHiddenStageValues] = useState<Set<string>>(new Set());
   const [isManageStagesOpen, setIsManageStagesOpen] = useState(false);
   const [view, setView] = useState<ViewOption>("Flow");
   const [priority, setPriority] = useState<PriorityFilter>("All");
   const [status, setStatus] = useState<StatusFilter>("All");
-  const [role, setRole] = useState<RoleFilter>("All");
+  const [role, setRole] = useState<string>("All");
   const [draggedProjectId, setDraggedProjectId] = useState<string | null>(null);
   const [dragOverStageIndex, setDragOverStageIndex] = useState<number | null>(null);
-  const { stageOverrides, updateProjectStage, updateProjectStages } = useProjectStageOverrides();
-  const projectRows = useMemo(
-    () =>
-      pipelineRows.map((row) => ({
-        ...row,
-        stageIndex: stageOverrides[row.id] ?? row.stageIndex,
-      })),
-    [stageOverrides],
+
+  const stages = useMemo(
+    () => [...(pipelineStagesQuery.data ?? [])].sort((a, b) => a.sortOrder - b.sortOrder),
+    [pipelineStagesQuery.data],
   );
+  const stageIndexByValue = useMemo(() => {
+    const map = new Map<string, number>();
+    stages.forEach((stage, index) => map.set(stage.value, index));
+    return map;
+  }, [stages]);
+
+  const taskCountByProject = useMemo(() => {
+    const counts = new Map<string, { completed: number; total: number }>();
+    for (const task of tasksQuery.data ?? []) {
+      if (!task.projectId) continue;
+      const entry = counts.get(task.projectId) ?? { completed: 0, total: 0 };
+      entry.total += 1;
+      if (task.status === "Complete") entry.completed += 1;
+      counts.set(task.projectId, entry);
+    }
+    return counts;
+  }, [tasksQuery.data]);
+
+  const roleOptions = useMemo(() => {
+    const roles = new Set<string>();
+    for (const project of projectsQuery.data ?? []) {
+      if (project.role) roles.add(project.role);
+      else if (project.userId === me.data?.id) roles.add("Owner");
+    }
+    return ["All", ...Array.from(roles).sort()];
+  }, [projectsQuery.data, me.data?.id]);
+
+  const projectRows: PipelineRow[] = useMemo(
+    () =>
+      (projectsQuery.data ?? []).map((project: ApiProject) => {
+        const counts = taskCountByProject.get(project.id) ?? { completed: 0, total: 0 };
+        return {
+          id: project.id,
+          displayId: project.displayId,
+          title: project.title,
+          priority: project.importance,
+          status: project.status,
+          role: project.role ?? (project.userId === me.data?.id ? "Owner" : null),
+          completion: counts.total > 0 ? Math.round((counts.completed / counts.total) * 100) : 0,
+          outstanding: counts.total - counts.completed,
+          stageIndex: project.pipelineStage ? stageIndexByValue.get(project.pipelineStage) : undefined,
+        };
+      }),
+    [projectsQuery.data, taskCountByProject, stageIndexByValue, me.data?.id],
+  );
+
+  const unassignedCount = projectRows.filter((row) => row.stageIndex === undefined).length;
+
   const filteredRows = useMemo(() => {
     return projectRows.filter((row) => {
       if (priority !== "All" && row.priority !== priority) return false;
       if (status !== "All" && row.status !== status) return false;
-      if (role !== "All" && row.myRole !== role) return false;
+      if (role !== "All" && row.role !== role) return false;
       return true;
     });
   }, [projectRows, priority, status, role]);
 
   const grouped = useMemo(
-    () => groupByStage(filteredRows, pipelineStages.length),
-    [filteredRows, pipelineStages.length],
+    () => groupByStage(filteredRows, stages.length),
+    [filteredRows, stages.length],
   );
-  const visibleStages = pipelineStages.map((stage, index) => ({
-    stage,
-    index,
-  })).filter(({ stage }) => visibleStageNames.has(stage.name));
+  const visibleStages = stages
+    .map((stage, index) => ({ stage, index }))
+    .filter(({ stage }) => !hiddenStageValues.has(stage.value));
 
-  function toggleStageVisibility(stageName: string) {
-    setVisibleStageNames((current) => {
+  function toggleStageVisibility(stageValue: string) {
+    setHiddenStageValues((current) => {
       const next = new Set(current);
-      if (next.has(stageName)) {
-        if (next.size === 1) return current;
-        next.delete(stageName);
+      if (next.has(stageValue)) {
+        next.delete(stageValue);
       } else {
-        next.add(stageName);
+        if (stages.length - current.size <= 1) return current;
+        next.add(stageValue);
       }
       return next;
     });
   }
 
-  function addStage(name: string, description: string) {
-    setPipelineStages([...pipelineStages, { name, description }]);
-    setVisibleStageNames((current) => new Set(current).add(name));
+  async function addStage(value: string) {
+    const maxSortOrder = stages.reduce((max, stage) => Math.max(max, stage.sortOrder), 0);
+    await createStage.mutateAsync({ value, sortOrder: maxSortOrder + 1 });
   }
 
-  function deleteStage(index: number) {
-    const stage = pipelineStages[index];
-    if (!stage || pipelineStages.length === 1) return;
-    if (!window.confirm(`Delete "${stage.name}"? Projects in this stage will move to the previous stage.`)) {
+  async function deleteStage(stage: ApiPipelineStage) {
+    if (stages.length === 1) return;
+    if (
+      !window.confirm(
+        `Delete "${stage.value}"? Projects in this stage will no longer show a pipeline stage.`,
+      )
+    ) {
       return;
     }
-
-    const stageUpdates = Object.fromEntries(
-      projectRows.map((project) => [
-        project.id,
-        project.stageIndex === index
-          ? Math.max(0, index - 1)
-          : project.stageIndex > index
-            ? project.stageIndex - 1
-            : project.stageIndex,
-      ]),
-    );
-    updateProjectStages(stageUpdates);
-    reindexModulesAfterStageDeletion(index);
-    setPipelineStages(pipelineStages.filter((_, stageIndex) => stageIndex !== index));
-    setVisibleStageNames((current) => {
+    await deleteStageMutation.mutateAsync(stage.id);
+    setHiddenStageValues((current) => {
+      if (!current.has(stage.value)) return current;
       const next = new Set(current);
-      next.delete(stage.name);
-      return next.size > 0 ? next : new Set([pipelineStages[index === 0 ? 1 : index - 1].name]);
+      next.delete(stage.value);
+      return next;
     });
   }
 
   function moveProject(projectId: string, stageIndex: number) {
-    updateProjectStage(projectId, stageIndex);
+    const stageValue = stages[stageIndex]?.value;
+    if (!stageValue) return;
+    void updateProject.mutateAsync({ projectId, input: { pipelineStage: stageValue } });
   }
 
   function handleDragStart(event: DragEvent<HTMLDivElement>, row: PipelineRow) {
@@ -327,6 +389,19 @@ export default function PipelinePage() {
   function handleDragEnd() {
     setDraggedProjectId(null);
     setDragOverStageIndex(null);
+  }
+
+  if (workspace.isPending || projectsQuery.isPending || pipelineStagesQuery.isPending) {
+    return <LoadingState title="Loading pipeline" className="min-h-[50vh]" />;
+  }
+  if (projectsQuery.isError) {
+    return (
+      <ErrorState
+        title="Pipeline could not be loaded"
+        description={projectsQuery.error.message}
+        onRetry={() => void projectsQuery.refetch()}
+      />
+    );
   }
 
   return (
@@ -380,12 +455,12 @@ export default function PipelinePage() {
               ))}
             </SelectContent>
           </Select>
-          <Select value={role} onValueChange={(value) => setRole(value as RoleFilter)}>
+          <Select value={role} onValueChange={setRole}>
             <SelectTrigger className="sm:w-40">
               <SelectValue placeholder="Role" />
             </SelectTrigger>
             <SelectContent>
-              {ROLE_FILTERS.map((option) => (
+              {roleOptions.map((option) => (
                 <SelectItem key={option} value={option}>
                   {option === "All" ? "All roles" : option}
                 </SelectItem>
@@ -397,6 +472,16 @@ export default function PipelinePage() {
             Manage stages
           </Button>
         </div>
+        {unassignedCount > 0 ? (
+          <p className="text-xs text-muted-foreground">
+            {unassignedCount} project{unassignedCount === 1 ? "" : "s"} without a pipeline stage
+            {" "}aren't shown here — set one from the{" "}
+            <Link to="/projects" className="text-primary hover:underline">
+              Projects
+            </Link>{" "}
+            page.
+          </p>
+        ) : null}
       </div>
 
       {view === "Flow" ? (
@@ -407,7 +492,7 @@ export default function PipelinePage() {
             const isLast = visibleIndex === visibleStages.length - 1;
 
             return (
-              <div key={stage.name} className="flex gap-4">
+              <div key={stage.id} className="flex gap-4">
                 <div className="flex w-4 shrink-0 flex-col items-center">
                   <span
                     className={cn(
@@ -420,7 +505,7 @@ export default function PipelinePage() {
 
                 <div
                   role="group"
-                  aria-label={`${stage.name} stage drop zone`}
+                  aria-label={`${stage.value} stage drop zone`}
                   onDragOver={(event) => handleDragOver(event, index)}
                   onDrop={(event) => handleDrop(event, index)}
                   className={cn(
@@ -434,7 +519,7 @@ export default function PipelinePage() {
                     <h3
                       className={cn(STAGE_TITLE_CLASS, !hasProjects && "text-muted-foreground")}
                     >
-                      {stage.name}
+                      {stage.value}
                     </h3>
                     {hasProjects ? (
                       <span className="rounded-full bg-primary/10 px-2 py-0.5 text-xs font-semibold text-primary">
@@ -442,9 +527,6 @@ export default function PipelinePage() {
                       </span>
                     ) : null}
                   </div>
-                  <p className="mt-1 max-w-2xl text-sm text-muted-foreground">
-                    {stage.description}
-                  </p>
 
                   {hasProjects ? (
                     <div className="mt-3 flex flex-col gap-2">
@@ -456,7 +538,7 @@ export default function PipelinePage() {
                           onDragStart={handleDragStart}
                           onDragEnd={handleDragEnd}
                           onStageChange={moveProject}
-                          stages={pipelineStages}
+                          stages={stages}
                         />
                       ))}
                     </div>
@@ -478,9 +560,9 @@ export default function PipelinePage() {
 
               return (
                 <div
-                  key={stage.name}
+                  key={stage.id}
                   role="group"
-                  aria-label={`${stage.name} stage drop zone`}
+                  aria-label={`${stage.value} stage drop zone`}
                   onDragOver={(event) => handleDragOver(event, index)}
                   onDrop={(event) => handleDrop(event, index)}
                   className={cn(
@@ -496,7 +578,7 @@ export default function PipelinePage() {
                         !hasProjects && "text-muted-foreground",
                       )}
                     >
-                      {stage.name}
+                      {stage.value}
                     </h3>
                     {hasProjects ? (
                       <span className="rounded-full bg-primary/10 px-2 py-0.5 text-xs font-semibold text-primary">
@@ -515,7 +597,7 @@ export default function PipelinePage() {
                           onDragStart={handleDragStart}
                           onDragEnd={handleDragEnd}
                           onStageChange={moveProject}
-                          stages={pipelineStages}
+                          stages={stages}
                         />
                       ))
                     ) : (
@@ -531,11 +613,11 @@ export default function PipelinePage() {
       <ManageStagesDialog
         open={isManageStagesOpen}
         onOpenChange={setIsManageStagesOpen}
-        stages={pipelineStages}
-        visibleStages={visibleStageNames}
+        stages={stages}
+        visibleStages={new Set(stages.filter((stage) => !hiddenStageValues.has(stage.value)).map((stage) => stage.value))}
         onToggleVisibility={toggleStageVisibility}
-        onAdd={addStage}
-        onDelete={deleteStage}
+        onAdd={(value) => void addStage(value)}
+        onDelete={(stage) => void deleteStage(stage)}
       />
     </div>
   );

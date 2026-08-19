@@ -1,6 +1,24 @@
-import { useMemo, useState } from "react";
-import { ArrowUpDown, Pencil, Plus, Save, Trash2, X } from "lucide-react";
+import { useEffect, useMemo, useState } from "react";
+import { ArrowUpDown, Pencil, Plus, Save, Search, Trash2, X } from "lucide-react";
+import { Link, useNavigate, useParams } from "react-router-dom";
 
+import { apiClient } from "@/api/client";
+import {
+  useCreateNote,
+  useCurrentWorkspace,
+  useDeleteNote,
+  useMembers,
+  useModules,
+  useNotes,
+  useProjects,
+  useUpdateNote,
+  type ApiNote,
+  type Membership,
+} from "@/api/hooks";
+import { NoteMembersManager } from "@/components/notes/note-members";
+import { ErrorState } from "@/components/shared/error-state";
+import { LoadingState } from "@/components/shared/loading-state";
+import { Badge } from "@/components/ui/badge";
 import { Heading } from "@/components/typography/heading";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -12,18 +30,25 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
-import { dailyNotes, type DailyNote } from "@/data/daily-notes";
+import { resolveLinkTargetType, type LinkTargetType } from "@/lib/link-target";
 import { cn } from "@/lib/utils";
 
-const ALL_PROJECTS = "All projects";
-const INDEPENDENT_NOTE = "Independent note";
+const ALL_NOTES = "All notes";
+const LINK_TARGET_OPTIONS: { value: LinkTargetType; label: string }[] = [
+  { value: "project", label: "Project" },
+  { value: "module", label: "Module" },
+  { value: "none", label: "General" },
+];
+const VISIBILITY_OPTIONS = ["Private", "Shared"] as const;
 
 interface NoteDraft {
   title: string;
-  isIndependent: boolean;
-  projectName: string;
-  tags: string;
+  linkTarget: LinkTargetType;
+  projectId: string;
+  moduleId: string;
+  visibility: string;
   content: string;
+  collaboratorUserIds: string[];
 }
 
 function formatDate(iso: string) {
@@ -41,62 +66,152 @@ function formatTime(iso: string) {
   });
 }
 
-function draftFromNote(note: DailyNote): NoteDraft {
+const EMPTY_DRAFT: NoteDraft = {
+  title: "",
+  linkTarget: "none",
+  projectId: "",
+  moduleId: "",
+  visibility: "Private",
+  content: "",
+  collaboratorUserIds: [],
+};
+
+function draftFromNote(note: ApiNote): NoteDraft {
   return {
     title: note.title,
-    isIndependent: note.projectName === INDEPENDENT_NOTE,
-    projectName: note.projectName,
-    tags: note.tags.join(", "),
-    content: note.content,
+    linkTarget: resolveLinkTargetType(note),
+    projectId: note.projectId ?? "",
+    moduleId: note.moduleId ?? "",
+    visibility: note.visibility ?? "Private",
+    content: note.content ?? "",
+    collaboratorUserIds: [],
   };
 }
 
+function linkTargetPillClass(selected: boolean) {
+  return cn(
+    "rounded-full border px-3 py-1 text-xs font-medium transition-colors",
+    selected
+      ? "border-primary bg-primary text-primary-foreground"
+      : "border-border bg-background text-muted-foreground hover:bg-accent hover:text-accent-foreground",
+  );
+}
+
 export default function DailyNotesPage() {
-  const [notes, setNotes] = useState<DailyNote[]>(dailyNotes);
-  const [selectedId, setSelectedId] = useState(dailyNotes[0].id);
+  const { noteId } = useParams();
+  const navigate = useNavigate();
+  const workspace = useCurrentWorkspace();
+  const tenantId = workspace.data?.id ?? "";
+
+  const notesQuery = useNotes(tenantId);
+  const projectsQuery = useProjects(tenantId);
+  const modulesQuery = useModules(tenantId);
+
+  const createNote = useCreateNote(tenantId);
+  const updateNote = useUpdateNote(tenantId);
+  const deleteNote = useDeleteNote(tenantId);
+
+  const [selectedId, setSelectedId] = useState<string | null>(noteId ?? null);
   const [sortOrder, setSortOrder] = useState<"newest" | "oldest">("newest");
-  const [projectFilter, setProjectFilter] = useState(ALL_PROJECTS);
+  const [linkFilter, setLinkFilter] = useState(ALL_NOTES);
   const [editingId, setEditingId] = useState<string | "new" | null>(null);
-  const [draft, setDraft] = useState<NoteDraft>(() => draftFromNote(dailyNotes[0]));
+  const [draft, setDraft] = useState<NoteDraft>(EMPTY_DRAFT);
+  const [memberSearch, setMemberSearch] = useState("");
+  const [memberPickerOpen, setMemberPickerOpen] = useState(false);
+  const [selectedMembers, setSelectedMembers] = useState<Membership[]>([]);
+  const membersQuery = useMembers(tenantId, editingId !== null);
+
+  const notes = notesQuery.data ?? [];
+
+  useEffect(() => {
+    if (!selectedId && notes.length > 0) {
+      setSelectedId(notes[0].id);
+    }
+  }, [notes, selectedId]);
+
+  useEffect(() => {
+    if (noteId && notes.some((note) => note.id === noteId)) {
+      setSelectedId(noteId);
+      setEditingId(null);
+    }
+  }, [noteId, notes]);
+
+  const projectById = useMemo(() => {
+    const map = new Map<string, string>();
+    for (const project of projectsQuery.data ?? []) map.set(project.id, project.title);
+    return map;
+  }, [projectsQuery.data]);
+
+  const moduleById = useMemo(() => {
+    const map = new Map<string, string>();
+    for (const module of modulesQuery.data ?? []) map.set(module.id, module.title);
+    return map;
+  }, [modulesQuery.data]);
+
+  function linkTargetLabel(note: ApiNote) {
+    if (note.moduleId) return moduleById.get(note.moduleId) ?? "Unknown module";
+    if (note.projectId) return projectById.get(note.projectId) ?? "Unknown project";
+    return "General";
+  }
 
   const filterOptions = useMemo(
-    () => Array.from(new Set(notes.map((note) => note.projectName))),
-    [notes],
-  );
-  const projectOptions = filterOptions.filter(
-    (projectName) => projectName !== INDEPENDENT_NOTE,
+    () => Array.from(new Set(notes.map((note) => linkTargetLabel(note)))),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [notes, projectById, moduleById],
   );
 
   const visibleNotes = useMemo(() => {
     const filtered = notes.filter(
-      (note) => projectFilter === ALL_PROJECTS || note.projectName === projectFilter,
+      (note) => linkFilter === ALL_NOTES || linkTargetLabel(note) === linkFilter,
     );
     const sorted = [...filtered].sort(
       (a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime(),
     );
     return sortOrder === "newest" ? sorted.reverse() : sorted;
-  }, [notes, projectFilter, sortOrder]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [notes, linkFilter, sortOrder, projectById, moduleById]);
 
   const selectedNote = visibleNotes.find((note) => note.id === selectedId) ?? visibleNotes[0];
   const isEditing = editingId !== null;
 
+  const matchingMembers = useMemo(() => {
+    const query = memberSearch.trim().toLowerCase();
+    const selectedIds = new Set(selectedMembers.map((member) => member.userId));
+    return (membersQuery.data ?? [])
+      .filter((member) => !selectedIds.has(member.userId))
+      .filter(
+        (member) =>
+          !query ||
+          member.displayName.toLowerCase().includes(query) ||
+          member.email.toLowerCase().includes(query),
+      )
+      .slice(0, 8);
+  }, [memberSearch, membersQuery.data, selectedMembers]);
+
+  function resolveLink(input: { linkTarget: LinkTargetType; projectId: string; moduleId: string }) {
+    if (input.linkTarget === "project") {
+      if (!input.projectId) return null;
+      return { projectId: input.projectId, moduleId: undefined as string | undefined };
+    }
+    if (input.linkTarget === "module") {
+      if (!input.moduleId) return null;
+      return { projectId: undefined as string | undefined, moduleId: input.moduleId };
+    }
+    return { projectId: undefined as string | undefined, moduleId: undefined as string | undefined };
+  }
+
   function selectNote(id: string) {
     setSelectedId(id);
     setEditingId(null);
+    navigate(`/daily-notes/${id}`, { replace: true });
   }
 
   function startAdding() {
     setEditingId("new");
-    setDraft({
-      title: "",
-      isIndependent: projectFilter === INDEPENDENT_NOTE,
-      projectName:
-        projectFilter === ALL_PROJECTS || projectFilter === INDEPENDENT_NOTE
-          ? (projectOptions[0] ?? "")
-          : projectFilter,
-      tags: "",
-      content: "",
-    });
+    setDraft(EMPTY_DRAFT);
+    setMemberSearch("");
+    setMemberPickerOpen(false);
+    setSelectedMembers([]);
   }
 
   function startEditing() {
@@ -109,57 +224,73 @@ export default function DailyNotesPage() {
     setEditingId(null);
   }
 
-  function saveNote() {
-    const projectName = draft.isIndependent
-      ? INDEPENDENT_NOTE
-      : draft.projectName || projectOptions[0] || "No project selected";
-    const projectId = draft.isIndependent
-      ? ""
-      : notes.find((note) => note.projectName === projectName)?.projectId ?? "PRJ-000";
-    const tags = draft.tags
-      .split(",")
-      .map((tag) => tag.trim().replace(/^#/, ""))
-      .filter(Boolean);
+  async function saveNote() {
+    const link = resolveLink(draft);
+    if (!link) return;
+    const title = draft.title.trim() || "Untitled note";
+    const content = draft.content.trim() || undefined;
 
     if (editingId === "new") {
-      const newNote: DailyNote = {
-        id: `note-${Date.now()}`,
-        title: draft.title.trim() || "Untitled note",
-        projectId,
-        projectName,
-        createdAt: new Date().toISOString(),
-        tags,
-        content: draft.content.trim(),
-      };
-      setNotes((current) => [newNote, ...current]);
-      setProjectFilter(ALL_PROJECTS);
-      setSelectedId(newNote.id);
+      const note = await createNote.mutateAsync({
+        title,
+        content,
+        projectId: link.projectId,
+        moduleId: link.moduleId,
+        visibility: draft.visibility,
+      });
+
+      if (draft.visibility === "Shared") {
+        await Promise.all(
+          selectedMembers.map((member) =>
+            apiClient.POST("/api/v1/tenant/{tenantId}/notes/{noteId}/members", {
+              params: { path: { tenantId, noteId: note.id } },
+              body: { userId: member.userId },
+            }),
+          ),
+        );
+      }
+
+      setLinkFilter(ALL_NOTES);
+      setSelectedId(note.id);
+      navigate(`/daily-notes/${note.id}`, { replace: true });
     } else if (editingId) {
-      setNotes((current) =>
-        current.map((note) =>
-          note.id === editingId
-            ? {
-                ...note,
-                title: draft.title.trim() || "Untitled note",
-                projectId,
-                projectName,
-                tags,
-                content: draft.content.trim(),
-              }
-            : note,
-        ),
-      );
+      await updateNote.mutateAsync({
+        noteId: editingId,
+        input: {
+          title,
+          content,
+          visibility: draft.visibility,
+          projectId: link.projectId,
+          // A note's link is cleared server-side only when this key is present
+          // and falsy — see NotesService.resolveLinkage's changesLinkage check.
+          moduleId: draft.linkTarget === "module" ? link.moduleId : "",
+        },
+      });
     }
 
     setEditingId(null);
   }
 
-  function deleteSelectedNote() {
+  async function deleteSelectedNote() {
     if (!selectedNote) return;
-    const remainingNotes = notes.filter((note) => note.id !== selectedNote.id);
-    setNotes(remainingNotes);
-    setSelectedId(remainingNotes[0]?.id ?? "");
+    if (!window.confirm(`Delete "${selectedNote.title}"? This cannot be undone.`)) return;
+    await deleteNote.mutateAsync(selectedNote.id);
     setEditingId(null);
+    setSelectedId(null);
+    navigate("/daily-notes", { replace: true });
+  }
+
+  if (workspace.isPending || notesQuery.isPending) {
+    return <LoadingState title="Loading notes" className="min-h-[50vh]" />;
+  }
+  if (notesQuery.isError) {
+    return (
+      <ErrorState
+        title="Notes could not be loaded"
+        description={notesQuery.error.message}
+        onRetry={() => void notesQuery.refetch()}
+      />
+    );
   }
 
   return (
@@ -177,12 +308,12 @@ export default function DailyNotesPage() {
             Sort: {sortOrder === "newest" ? "Newest" : "Oldest"}
           </button>
 
-          <Select value={projectFilter} onValueChange={setProjectFilter}>
+          <Select value={linkFilter} onValueChange={setLinkFilter}>
             <SelectTrigger>
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value={ALL_PROJECTS}>{ALL_PROJECTS}</SelectItem>
+              <SelectItem value={ALL_NOTES}>{ALL_NOTES}</SelectItem>
               {filterOptions.map((name) => (
                 <SelectItem key={name} value={name}>
                   {name}
@@ -194,7 +325,7 @@ export default function DailyNotesPage() {
           <div className="flex flex-col gap-1 lg:max-h-[560px] lg:overflow-y-auto">
             {visibleNotes.length === 0 ? (
               <p className="px-2 py-6 text-center text-sm text-muted-foreground">
-                No notes for this project.
+                No notes match this filter.
               </p>
             ) : (
               visibleNotes.map((note) => {
@@ -210,7 +341,9 @@ export default function DailyNotesPage() {
                     )}
                   >
                     <span className="text-sm font-semibold leading-snug">{note.title}</span>
-                    <span className="text-xs font-medium text-primary">{note.projectName}</span>
+                    <span className="text-xs font-medium text-primary">
+                      {linkTargetLabel(note)}
+                    </span>
                     <span className="text-xs text-muted-foreground">
                       {formatDate(note.createdAt)} · {formatTime(note.createdAt)}
                     </span>
@@ -241,7 +374,7 @@ export default function DailyNotesPage() {
                     <X />
                     Cancel
                   </Button>
-                  <Button size="sm" onClick={saveNote}>
+                  <Button size="sm" onClick={() => void saveNote()}>
                     <Save />
                     Save note
                   </Button>
@@ -264,7 +397,7 @@ export default function DailyNotesPage() {
                   <Button
                     variant="destructive"
                     size="sm"
-                    onClick={deleteSelectedNote}
+                    onClick={() => void deleteSelectedNote()}
                     disabled={!selectedNote}
                   >
                     <Trash2 />
@@ -293,50 +426,70 @@ export default function DailyNotesPage() {
                 />
               </div>
 
-              <div className="grid gap-4 sm:grid-cols-2">
-                <label className="flex items-start gap-3 rounded-md border border-border bg-muted/30 p-3 sm:col-span-2">
-                  <input
-                    type="checkbox"
-                    checked={draft.isIndependent}
-                    onChange={(event) =>
-                      setDraft((current) => ({
-                        ...current,
-                        isIndependent: event.target.checked,
-                        projectName: event.target.checked
-                          ? current.projectName
-                          : current.projectName === INDEPENDENT_NOTE
-                            ? projectOptions[0] || ""
-                            : current.projectName || projectOptions[0] || "",
-                      }))
-                    }
-                    className="mt-0.5 h-4 w-4 accent-primary"
-                  />
-                  <span>
-                    <span className="block text-sm font-medium">Independent note</span>
-                    <span className="block text-xs text-muted-foreground">
-                      Save this note without linking it to a project.
-                    </span>
-                  </span>
-                </label>
+              <div className="grid gap-2">
+                <label className="text-xs font-semibold text-muted-foreground">Link to</label>
+                <div className="flex flex-wrap gap-2">
+                  {LINK_TARGET_OPTIONS.map((option) => (
+                    <button
+                      key={option.value}
+                      type="button"
+                      onClick={() =>
+                        setDraft((current) => ({
+                          ...current,
+                          linkTarget: option.value,
+                          projectId: option.value === "project" ? current.projectId : "",
+                          moduleId: option.value === "module" ? current.moduleId : "",
+                        }))
+                      }
+                      aria-pressed={draft.linkTarget === option.value}
+                      className={linkTargetPillClass(draft.linkTarget === option.value)}
+                    >
+                      {option.label}
+                    </button>
+                  ))}
+                </div>
+              </div>
 
-                {!draft.isIndependent ? (
+              <div className="grid gap-4 sm:grid-cols-2">
+                {draft.linkTarget === "project" ? (
                 <div className="grid gap-2">
-                  <label className="text-xs font-semibold text-muted-foreground">
-                    Attached project
-                  </label>
+                  <label className="text-xs font-semibold text-muted-foreground">Project</label>
                   <Select
-                    value={draft.projectName}
-                    onValueChange={(projectName) =>
-                      setDraft((current) => ({ ...current, projectName }))
+                    value={draft.projectId}
+                    onValueChange={(projectId) =>
+                      setDraft((current) => ({ ...current, projectId }))
                     }
                   >
                     <SelectTrigger>
-                      <SelectValue />
+                      <SelectValue placeholder="Select a project" />
                     </SelectTrigger>
                     <SelectContent>
-                      {projectOptions.map((name) => (
-                        <SelectItem key={name} value={name}>
-                          {name}
+                      {(projectsQuery.data ?? []).map((project) => (
+                        <SelectItem key={project.id} value={project.id}>
+                          {project.title}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                ) : null}
+
+                {draft.linkTarget === "module" ? (
+                <div className="grid gap-2">
+                  <label className="text-xs font-semibold text-muted-foreground">Module</label>
+                  <Select
+                    value={draft.moduleId}
+                    onValueChange={(moduleId) =>
+                      setDraft((current) => ({ ...current, moduleId }))
+                    }
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select a module" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {(modulesQuery.data ?? []).map((module) => (
+                        <SelectItem key={module.id} value={module.id}>
+                          {module.title}
                         </SelectItem>
                       ))}
                     </SelectContent>
@@ -345,19 +498,120 @@ export default function DailyNotesPage() {
                 ) : null}
 
                 <div className="grid gap-2">
-                  <label htmlFor="note-tags" className="text-xs font-semibold text-muted-foreground">
-                    Tags
-                  </label>
-                  <Input
-                    id="note-tags"
-                    value={draft.tags}
-                    onChange={(event) =>
-                      setDraft((current) => ({ ...current, tags: event.target.value }))
+                  <label className="text-xs font-semibold text-muted-foreground">Visibility</label>
+                  <Select
+                    value={draft.visibility}
+                    onValueChange={(visibility) =>
+                      setDraft((current) => ({ ...current, visibility }))
                     }
-                    placeholder="research, analysis, follow-up"
-                  />
+                  >
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {VISIBILITY_OPTIONS.map((option) => (
+                        <SelectItem key={option} value={option}>
+                          {option}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
                 </div>
               </div>
+
+              {draft.visibility === "Shared" && editingId === "new" ? (
+                <div className="grid gap-2">
+                  <label className="text-xs font-semibold text-muted-foreground">
+                    Share with
+                  </label>
+                  <div
+                    className="relative"
+                    onBlur={(event) => {
+                      if (!event.currentTarget.contains(event.relatedTarget)) {
+                        setMemberPickerOpen(false);
+                      }
+                    }}
+                  >
+                    <Search className="pointer-events-none absolute left-3 top-2.5 h-4 w-4 text-muted-foreground" />
+                    <Input
+                      role="combobox"
+                      aria-expanded={memberPickerOpen}
+                      aria-controls="note-new-member-options"
+                      aria-autocomplete="list"
+                      value={memberSearch}
+                      onFocus={() => setMemberPickerOpen(true)}
+                      onChange={(event) => {
+                        setMemberSearch(event.target.value);
+                        setMemberPickerOpen(true);
+                      }}
+                      placeholder="Type a workspace member's name or email"
+                      className="pl-9"
+                      autoComplete="off"
+                    />
+                    {memberPickerOpen ? (
+                      <div
+                        id="note-new-member-options"
+                        role="listbox"
+                        className="absolute z-50 mt-1 max-h-56 w-full overflow-y-auto rounded-md border bg-popover p-1 text-popover-foreground shadow-lg"
+                      >
+                        {membersQuery.isPending ? (
+                          <p className="px-3 py-2 text-sm text-muted-foreground">
+                            Loading workspace members…
+                          </p>
+                        ) : matchingMembers.length ? (
+                          matchingMembers.map((member) => (
+                            <button
+                              key={member.id}
+                              type="button"
+                              role="option"
+                              aria-selected="false"
+                              className="flex w-full items-center justify-between gap-3 rounded-sm px-3 py-2 text-left hover:bg-accent focus:bg-accent focus:outline-none"
+                              onClick={() => {
+                                setSelectedMembers((current) => [...current, member]);
+                                setMemberSearch("");
+                              }}
+                            >
+                              <span className="min-w-0">
+                                <span className="block truncate text-sm font-medium">
+                                  {member.displayName}
+                                </span>
+                                <span className="block truncate text-xs text-muted-foreground">
+                                  {member.email}
+                                </span>
+                              </span>
+                            </button>
+                          ))
+                        ) : (
+                          <p className="px-3 py-2 text-sm text-muted-foreground">
+                            No matching workspace members.
+                          </p>
+                        )}
+                      </div>
+                    ) : null}
+                  </div>
+                  {selectedMembers.length ? (
+                    <div className="mt-2 flex flex-wrap gap-2" aria-label="Selected note members">
+                      {selectedMembers.map((member) => (
+                        <Badge key={member.id} variant="secondary" className="gap-1.5 py-1">
+                          {member.displayName}
+                          <button
+                            type="button"
+                            aria-label={`Remove ${member.displayName}`}
+                            onClick={() =>
+                              setSelectedMembers((current) =>
+                                current.filter((item) => item.id !== member.id),
+                              )
+                            }
+                            className="rounded-full hover:text-destructive focus:outline-none focus:ring-1 focus:ring-ring"
+                          >
+                            <X className="h-3 w-3" />
+                          </button>
+                        </Badge>
+                      ))}
+                    </div>
+                  ) : null}
+                </div>
+              ) : null}
 
               <div className="grid gap-2">
                 <label
@@ -382,26 +636,50 @@ export default function DailyNotesPage() {
               <Heading level="h1">{selectedNote.title}</Heading>
 
               <div className="mt-3 flex flex-wrap items-center gap-x-3 gap-y-1.5 text-sm">
-                <span className="font-medium text-primary">{selectedNote.projectName}</span>
+                {selectedNote.projectId ? (
+                  <Link
+                    to={`/projects/${selectedNote.projectId}`}
+                    className="font-medium text-primary hover:underline"
+                  >
+                    {linkTargetLabel(selectedNote)}
+                  </Link>
+                ) : selectedNote.moduleId ? (
+                  <Link
+                    to={`/modules/${selectedNote.moduleId}`}
+                    className="font-medium text-primary hover:underline"
+                  >
+                    {linkTargetLabel(selectedNote)}
+                  </Link>
+                ) : (
+                  <span className="font-medium text-primary">{linkTargetLabel(selectedNote)}</span>
+                )}
                 <span className="text-muted-foreground">·</span>
                 <span className="text-muted-foreground">{formatDate(selectedNote.createdAt)}</span>
                 <span className="text-muted-foreground">·</span>
                 <span className="text-muted-foreground">{formatTime(selectedNote.createdAt)}</span>
+                <span className="text-muted-foreground">·</span>
+                <Badge variant="outline">{selectedNote.visibility ?? "Private"}</Badge>
               </div>
-
-              {selectedNote.tags.length > 0 ? (
-                <div className="mt-2 flex flex-wrap gap-2">
-                  {selectedNote.tags.map((tag) => (
-                    <span key={tag} className="text-sm font-medium text-primary">
-                      #{tag}
-                    </span>
-                  ))}
-                </div>
-              ) : null}
 
               <p className="mt-8 whitespace-pre-wrap text-[15px] leading-7 text-foreground/90">
                 {selectedNote.content || "This note does not have any content yet."}
               </p>
+
+              {selectedNote.visibility === "Shared" && tenantId ? (
+                <div className="mt-8 border-t border-border pt-5">
+                  <span className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                    Shared with
+                  </span>
+                  <div className="mt-3 max-w-sm">
+                    <NoteMembersManager
+                      tenantId={tenantId}
+                      noteId={selectedNote.id}
+                      members={membersQuery.data ?? []}
+                      membersLoading={membersQuery.isPending}
+                    />
+                  </div>
+                </div>
+              ) : null}
             </article>
           ) : (
             <div className="flex min-h-[420px] flex-col items-center justify-center gap-3 text-center">

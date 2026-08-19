@@ -47,9 +47,11 @@ export class TasksController {
   @Get()
   async list(
     @Param('tenantId') tenantId: string,
+    @Req() req: AuthenticatedRequest,
     @Query('projectId') projectId?: string,
   ) {
-    return this.tasksService.list(tenantId, projectId);
+    const user = await this.usersService.findByExternalAuthId(req.user.sub);
+    return this.tasksService.list(tenantId, user.id, projectId);
   }
 
   @ApiOperation({ summary: 'Get a single task' })
@@ -58,8 +60,10 @@ export class TasksController {
   async findOne(
     @Param('tenantId') tenantId: string,
     @Param('taskId') taskId: string,
+    @Req() req: AuthenticatedRequest,
   ) {
-    return this.tasksService.findOne(tenantId, taskId);
+    const user = await this.usersService.findByExternalAuthId(req.user.sub);
+    return this.tasksService.findOne(tenantId, taskId, user.id);
   }
 
   @ApiOperation({
@@ -83,9 +87,11 @@ export class TasksController {
   async update(
     @Param('tenantId') tenantId: string,
     @Param('taskId') taskId: string,
+    @Req() req: AuthenticatedRequest,
     @Body() dto: UpdateTaskDto,
   ) {
-    return this.tasksService.update(tenantId, taskId, dto);
+    const user = await this.usersService.findByExternalAuthId(req.user.sub);
+    return this.tasksService.update(tenantId, taskId, user.id, dto);
   }
 
   @ApiOperation({ summary: 'Delete a task' })
@@ -94,7 +100,9 @@ export class TasksController {
   async remove(
     @Param('tenantId') tenantId: string,
     @Param('taskId') taskId: string,
+    @Req() req: AuthenticatedRequest,
   ) {
-    return this.tasksService.delete(tenantId, taskId);
+    const user = await this.usersService.findByExternalAuthId(req.user.sub);
+    return this.tasksService.delete(tenantId, taskId, user.id);
   }
 }

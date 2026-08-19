@@ -1,10 +1,116 @@
-import { fireEvent, render, screen } from "@testing-library/react";
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { fireEvent, render, screen, within } from "@testing-library/react";
 import { MemoryRouter } from "react-router-dom";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import ProjectsPage from "@/pages/projects";
 
+const fixtures = vi.hoisted(() => ({
+  tenantId: "workspace-1",
+  project: {
+    id: "PRJ-101",
+    displayId: "PRJ-101",
+    userId: "user-owner",
+    tenantId: "workspace-1",
+    title: "Enzyme Kinetics Inhibition Study Across Temperature Gradients",
+    description: "A study of enzyme kinetics under varying temperature.",
+    researchArea: "Biochemistry",
+    status: "Active",
+    pipelineStage: "Data Collection",
+    importance: "Low",
+    scheduledFor: "2026-07-01",
+    dueDate: "2026-08-01",
+    totalBudget: "5000",
+    targetJournals: "Nature Communications",
+    archivedAt: null,
+    createdAt: "2026-01-01T00:00:00.000Z",
+    updatedAt: "2026-01-01T00:00:00.000Z",
+    role: "owner",
+  },
+  module: {
+    id: "module-1",
+    displayId: "MOD-1",
+    tenantId: "workspace-1",
+    projectId: "PRJ-101",
+    title: "Assay setup",
+    description: null,
+    tag: null,
+    status: "Active",
+    assignedToUserId: null,
+    archivedAt: null,
+    createdAt: "2026-01-01T00:00:00.000Z",
+    updatedAt: "2026-01-01T00:00:00.000Z",
+  },
+  task: {
+    id: "task-1",
+    displayId: "TSK-1",
+    tenantId: "workspace-1",
+    projectId: "PRJ-101",
+    moduleId: null,
+    createdBy: "user-owner",
+    title: "Calibrate spectrophotometer",
+    description: null,
+    status: "In Progress",
+    priority: "Medium",
+    visibility: "Shared",
+    workingWith: null,
+    estimatedHours: null,
+    dueDate: null,
+    createdAt: "2026-01-01T00:00:00.000Z",
+    updatedAt: "2026-01-01T00:00:00.000Z",
+  },
+  note: {
+    id: "note-1",
+    displayId: "NTE-1",
+    tenantId: "workspace-1",
+    projectId: "PRJ-101",
+    moduleId: null,
+    createdBy: "user-owner",
+    title: "Initial observations",
+    content: null,
+    visibility: "Shared",
+    createdAt: "2026-01-01T00:00:00.000Z",
+    updatedAt: "2026-01-01T00:00:00.000Z",
+  },
+  pipelineStages: [
+    {
+      id: "stage-1",
+      tenantId: null,
+      category: "pipeline_stage",
+      value: "Data Collection",
+      sortOrder: 1,
+      createdAt: "2026-01-01T00:00:00.000Z",
+      updatedAt: "2026-01-01T00:00:00.000Z",
+    },
+    {
+      id: "stage-2",
+      tenantId: null,
+      category: "pipeline_stage",
+      value: "Analysis",
+      sortOrder: 2,
+      createdAt: "2026-01-01T00:00:00.000Z",
+      updatedAt: "2026-01-01T00:00:00.000Z",
+    },
+  ],
+}));
+
+vi.mock("@/api/client", () => ({
+  apiClient: {
+    POST: vi.fn().mockResolvedValue({ data: {}, error: undefined, response: new Response() }),
+  },
+}));
+
 vi.mock("@/api/hooks", () => ({
+  apiKeys: {
+    projectCollaborators: (tenantId: string, projectId: string) => [
+      "api",
+      "tenant",
+      tenantId,
+      "projects",
+      projectId,
+      "collaborators",
+    ],
+  },
   useMe: () => ({
     data: {
       id: "user-owner",
@@ -12,7 +118,7 @@ vi.mock("@/api/hooks", () => ({
       displayName: "Avi Researcher",
     },
   }),
-  useCurrentWorkspace: () => ({ data: { id: "workspace-1" } }),
+  useCurrentWorkspace: () => ({ data: { id: fixtures.tenantId }, isPending: false }),
   useMembers: () => ({
     data: [
       {
@@ -32,7 +138,26 @@ vi.mock("@/api/hooks", () => ({
     ],
     isPending: false,
   }),
+  useProjects: () => ({ data: [fixtures.project], isPending: false, isError: false }),
+  useCreateProject: () => ({ mutateAsync: vi.fn(), isPending: false }),
+  useModules: () => ({ data: [fixtures.module] }),
+  useTasks: () => ({ data: [fixtures.task] }),
+  useNotes: () => ({ data: [fixtures.note] }),
+  usePipelineStages: () => ({ data: fixtures.pipelineStages }),
 }));
+
+function renderPage() {
+  const queryClient = new QueryClient({
+    defaultOptions: { queries: { retry: false }, mutations: { retry: false } },
+  });
+  return render(
+    <QueryClientProvider client={queryClient}>
+      <MemoryRouter>
+        <ProjectsPage />
+      </MemoryRouter>
+    </QueryClientProvider>,
+  );
+}
 
 describe("ProjectsPage", () => {
   beforeEach(() => {
@@ -40,11 +165,7 @@ describe("ProjectsPage", () => {
   });
 
   it("provides a direct edit action for each project row", () => {
-    render(
-      <MemoryRouter>
-        <ProjectsPage />
-      </MemoryRouter>,
-    );
+    renderPage();
 
     const editLink = screen.getByRole("link", {
       name: "Edit Enzyme Kinetics Inhibition Study Across Temperature Gradients",
@@ -55,11 +176,7 @@ describe("ProjectsPage", () => {
   });
 
   it("shows scheduled dates in the table and new-project form", () => {
-    render(
-      <MemoryRouter>
-        <ProjectsPage />
-      </MemoryRouter>,
-    );
+    renderPage();
 
     expect(screen.getAllByText("Scheduled For").length).toBeGreaterThan(0);
 
@@ -76,25 +193,13 @@ describe("ProjectsPage", () => {
       screen.getByRole("button", { name: "Choose scheduled for date" }),
     ).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Choose due date" })).toBeInTheDocument();
-    expect(screen.getByLabelText(/Principal investigator/)).toHaveValue(
-      "Avi Researcher",
-    );
-    expect(screen.getByLabelText(/Principal investigator/)).toHaveAttribute(
-      "readonly",
-    );
-    expect(screen.getByLabelText("My role")).toHaveValue("Owner");
-    expect(screen.getByLabelText("My role")).toHaveAttribute("readonly");
   });
 
   it("searches database-backed workspace members for the project", () => {
-    render(
-      <MemoryRouter>
-        <ProjectsPage />
-      </MemoryRouter>,
-    );
+    renderPage();
 
     fireEvent.click(screen.getByRole("button", { name: "New Project" }));
-    const memberSearch = screen.getByRole("combobox", { name: "With whom" });
+    const memberSearch = screen.getByRole("combobox", { name: "Collaborators" });
     fireEvent.change(memberSearch, { target: { value: "Jamie" } });
 
     expect(screen.getByText("jamie@example.com")).toBeInTheDocument();
@@ -106,12 +211,8 @@ describe("ProjectsPage", () => {
     );
   });
 
-  it("shows linked modules beneath an expanded project", () => {
-    render(
-      <MemoryRouter>
-        <ProjectsPage />
-      </MemoryRouter>,
-    );
+  it("shows linked module/task/note counts and a link to the full project page when expanded", () => {
+    renderPage();
 
     const projectLink = screen.getByRole("link", {
       name: "Enzyme Kinetics Inhibition Study Across Temperature Gradients",
@@ -120,24 +221,19 @@ describe("ProjectsPage", () => {
     expect(projectRow).not.toBeNull();
     fireEvent.click(projectRow!);
 
-    expect(screen.getByText("Modules (1)")).toBeInTheDocument();
-    expect(screen.getByText("Temperature-response assay design")).toBeInTheDocument();
-    expect(screen.getByRole("link", { name: "Manage modules" })).toHaveAttribute(
+    const overview = screen.getByText("Overview").parentElement!;
+    expect(within(overview).getByText("Modules").nextElementSibling).toHaveTextContent("1");
+    expect(within(overview).getByText("Tasks").nextElementSibling).toHaveTextContent("1");
+    expect(within(overview).getByText("Notes").nextElementSibling).toHaveTextContent("1");
+
+    expect(screen.getByRole("link", { name: "View full project details" })).toHaveAttribute(
       "href",
-      "/modules",
+      "/projects/PRJ-101",
     );
   });
 
-  it("shows a project stage changed from the pipeline", () => {
-    window.localStorage.setItem(
-      "research-in-motion.project-stages.v1",
-      JSON.stringify({ "PRJ-101": 4 }),
-    );
-    render(
-      <MemoryRouter>
-        <ProjectsPage />
-      </MemoryRouter>,
-    );
+  it("shows a project's pipeline stage in the table", () => {
+    renderPage();
 
     const projectLink = screen.getByRole("link", {
       name: "Enzyme Kinetics Inhibition Study Across Temperature Gradients",
