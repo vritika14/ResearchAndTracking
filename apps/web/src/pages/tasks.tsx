@@ -2,10 +2,23 @@ import { useMemo, useState } from "react";
 import { ChevronDown, Pencil, Trash2 } from "lucide-react";
 import { Link } from "react-router-dom";
 
+import { apiClient } from "@/api/client";
+import {
+  useCreateTask,
+  useCurrentWorkspace,
+  useDeleteTask,
+  useMembers,
+  useModules,
+  useProjects,
+  useTasks,
+  useUpdateTask,
+  type ApiTask,
+} from "@/api/hooks";
 import { ColumnVisibilityMenu } from "@/components/dashboard/column-visibility-menu";
+import { ErrorState } from "@/components/shared/error-state";
+import { LoadingState } from "@/components/shared/loading-state";
 import { PageHeading } from "@/components/typography/heading";
-import { EditTaskDialog, type EditTaskInput } from "@/components/tasks/edit-task-dialog";
-import { NewTaskDialog, type NewTaskInput } from "@/components/tasks/new-task-dialog";
+import { TaskDialog, type TaskFormInput } from "@/components/tasks/task-dialog";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -16,10 +29,8 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { tasks, type TaskItem, type TaskPriority, type TaskStatus } from "@/data/tasks";
-import { projects } from "@/data/projects";
-import { cn } from "@/lib/utils";
 import { useColumnVisibility } from "@/hooks/use-column-visibility";
+import { cn } from "@/lib/utils";
 
 const STATUS_FILTERS = ["All", "To do", "Underway", "Waiting", "Complete"] as const;
 const PRIORITY_FILTERS = ["All", "Low", "Medium", "High", "Critical"] as const;
@@ -27,45 +38,24 @@ const PRIORITY_FILTERS = ["All", "Low", "Medium", "High", "Critical"] as const;
 type StatusFilter = (typeof STATUS_FILTERS)[number];
 type PriorityFilter = (typeof PRIORITY_FILTERS)[number];
 
-type SortColumn =
-  | "code"
-  | "task"
-  | "description"
-  | "project"
-  | "status"
-  | "priority"
-  | "scheduled"
-  | "due"
-  | "est";
+type SortColumn = "code" | "task" | "description" | "project" | "status" | "priority" | "due" | "est";
 type SortDirection = "asc" | "desc";
 
 const TASK_COLUMNS = [
   { id: "code", label: "Code", width: "100px" },
   { id: "task", label: "Task", width: "minmax(220px,1.5fr)" },
   { id: "description", label: "Description", width: "minmax(260px,2fr)" },
-  { id: "project", label: "Project", width: "170px" },
+  { id: "project", label: "Linked to", width: "170px" },
   { id: "status", label: "Status", width: "110px" },
   { id: "priority", label: "Priority", width: "110px" },
-  { id: "scheduled", label: "Scheduled For", width: "120px" },
   { id: "due", label: "Due", width: "110px" },
   { id: "est", label: "Est.", width: "80px" },
 ] as const;
 
-const STATUS_ORDER: Record<TaskStatus, number> = {
-  "To do": 0,
-  Underway: 1,
-  Waiting: 2,
-  Complete: 3,
-};
+const STATUS_ORDER: Record<string, number> = { "To do": 0, Underway: 1, Waiting: 2, Complete: 3 };
+const PRIORITY_ORDER: Record<string, number> = { Low: 0, Medium: 1, High: 2, Critical: 3 };
 
-const PRIORITY_ORDER: Record<TaskPriority, number> = {
-  Low: 0,
-  Medium: 1,
-  High: 2,
-  Critical: 3,
-};
-
-function statusPillClass(status: TaskStatus) {
+function statusPillClass(status: string | null) {
   switch (status) {
     case "To do":
       return "border-border text-muted-foreground";
@@ -75,10 +65,12 @@ function statusPillClass(status: TaskStatus) {
       return "border-emerald-300 text-emerald-700 dark:border-emerald-800 dark:text-emerald-400";
     case "Waiting":
       return "border-blue-300 text-blue-700 dark:border-blue-800 dark:text-blue-400";
+    default:
+      return "border-border text-muted-foreground";
   }
 }
 
-function priorityPillClass(priority: TaskPriority) {
+function priorityPillClass(priority: string | null) {
   switch (priority) {
     case "Low":
       return "border-border text-muted-foreground";
@@ -88,36 +80,15 @@ function priorityPillClass(priority: TaskPriority) {
       return "border-orange-300 text-orange-700 dark:border-orange-800 dark:text-orange-400";
     case "Critical":
       return "border-red-300 text-red-700 dark:border-red-800 dark:text-red-400";
+    default:
+      return "border-border text-muted-foreground";
   }
 }
 
-function formatDueDate(iso: string) {
+function formatDueDate(iso: string | null) {
   if (!iso) return "—";
   const [year, month, day] = iso.split("-");
   return `${day}/${month}/${year}`;
-}
-
-function compareTasks(a: TaskItem, b: TaskItem, column: SortColumn) {
-  switch (column) {
-    case "code":
-      return a.code.localeCompare(b.code);
-    case "task":
-      return a.title.localeCompare(b.title);
-    case "description":
-      return a.description.localeCompare(b.description);
-    case "project":
-      return a.projectName.localeCompare(b.projectName);
-    case "status":
-      return STATUS_ORDER[a.status] - STATUS_ORDER[b.status];
-    case "priority":
-      return PRIORITY_ORDER[a.priority] - PRIORITY_ORDER[b.priority];
-    case "scheduled":
-      return a.scheduledFor.localeCompare(b.scheduledFor);
-    case "due":
-      return a.dueDate.localeCompare(b.dueDate);
-    case "est":
-      return a.estimatedHours - b.estimatedHours;
-  }
 }
 
 interface SortableHeaderProps {
@@ -153,9 +124,21 @@ function SortableHeader({ label, column, sortColumn, sortDirection, onSort }: So
 }
 
 export default function TasksPage() {
-  const [taskRows, setTaskRows] = useState<TaskItem[]>(tasks);
+  const workspace = useCurrentWorkspace();
+  const tenantId = workspace.data?.id ?? "";
+
+  const tasksQuery = useTasks(tenantId);
+  const projectsQuery = useProjects(tenantId);
+  const modulesQuery = useModules(tenantId);
+
   const [isNewTaskOpen, setIsNewTaskOpen] = useState(false);
-  const [editingTask, setEditingTask] = useState<TaskItem | null>(null);
+  const [editingTask, setEditingTask] = useState<ApiTask | null>(null);
+  const membersQuery = useMembers(tenantId, isNewTaskOpen || editingTask !== null);
+
+  const createTask = useCreateTask(tenantId);
+  const updateTask = useUpdateTask(tenantId);
+  const deleteTask = useDeleteTask(tenantId);
+
   const [search, setSearch] = useState("");
   const [status, setStatus] = useState<StatusFilter>("All");
   const [priority, setPriority] = useState<PriorityFilter>("All");
@@ -168,6 +151,24 @@ export default function TasksPage() {
     .map((column) => column.width)
     .join(" ");
 
+  const projectById = useMemo(() => {
+    const map = new Map<string, string>();
+    for (const project of projectsQuery.data ?? []) map.set(project.id, project.title);
+    return map;
+  }, [projectsQuery.data]);
+
+  const moduleById = useMemo(() => {
+    const map = new Map<string, string>();
+    for (const module of modulesQuery.data ?? []) map.set(module.id, module.title);
+    return map;
+  }, [modulesQuery.data]);
+
+  function linkTargetLabel(task: ApiTask) {
+    if (task.moduleId) return moduleById.get(task.moduleId) ?? "Unknown module";
+    if (task.projectId) return projectById.get(task.projectId) ?? "Unknown project";
+    return "General";
+  }
+
   function handleSort(column: SortColumn) {
     if (column === sortColumn) {
       setSortDirection((prev) => (prev === "asc" ? "desc" : "asc"));
@@ -177,28 +178,49 @@ export default function TasksPage() {
     }
   }
 
+  function compareTasks(a: ApiTask, b: ApiTask, column: SortColumn) {
+    switch (column) {
+      case "code":
+        return (a.displayId ?? "").localeCompare(b.displayId ?? "");
+      case "task":
+        return a.title.localeCompare(b.title);
+      case "description":
+        return (a.description ?? "").localeCompare(b.description ?? "");
+      case "project":
+        return linkTargetLabel(a).localeCompare(linkTargetLabel(b));
+      case "status":
+        return (STATUS_ORDER[a.status ?? ""] ?? 99) - (STATUS_ORDER[b.status ?? ""] ?? 99);
+      case "priority":
+        return (PRIORITY_ORDER[a.priority ?? ""] ?? 99) - (PRIORITY_ORDER[b.priority ?? ""] ?? 99);
+      case "due":
+        return (a.dueDate ?? "").localeCompare(b.dueDate ?? "");
+      case "est":
+        return Number(a.estimatedHours ?? 0) - Number(b.estimatedHours ?? 0);
+    }
+  }
+
   const visibleTasks = useMemo(() => {
     const query = search.trim().toLowerCase();
-    const filtered = taskRows.filter((task) => {
+    const filtered = (tasksQuery.data ?? []).filter((task) => {
       if (status !== "All" && task.status !== status) return false;
       if (priority !== "All" && task.priority !== priority) return false;
       if (
         query &&
-        !task.code.toLowerCase().includes(query) &&
+        !(task.displayId?.toLowerCase().includes(query) ?? false) &&
         !task.title.toLowerCase().includes(query) &&
-        !task.description.toLowerCase().includes(query) &&
-        !task.projectName.toLowerCase().includes(query) &&
-        !(task.waitingOn?.toLowerCase().includes(query) ?? false)
+        !(task.description?.toLowerCase().includes(query) ?? false) &&
+        !linkTargetLabel(task).toLowerCase().includes(query) &&
+        !(task.workingWith?.toLowerCase().includes(query) ?? false)
       ) {
         return false;
       }
       return true;
     });
-    const sorted = [...filtered].sort(
+    return [...filtered].sort(
       (a, b) => compareTasks(a, b, sortColumn) * (sortDirection === "asc" ? 1 : -1),
     );
-    return sorted;
-  }, [taskRows, search, status, priority, sortColumn, sortDirection]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [tasksQuery.data, search, status, priority, sortColumn, sortDirection, projectById, moduleById]);
 
   const hasActiveFilters = search !== "" || status !== "All" || priority !== "All";
 
@@ -208,65 +230,71 @@ export default function TasksPage() {
     setPriority("All");
   }
 
-  function createTask(input: NewTaskInput) {
-    const highestCode = taskRows.reduce((highest, task) => {
-      const numericCode = Number(task.code.replace(/\D/g, ""));
-      return Number.isNaN(numericCode) ? highest : Math.max(highest, numericCode);
-    }, 440);
-    const projectName = input.isIndependent
-      ? "Independent task"
-      : projects.find((project) => project.id === input.projectId)?.title;
-    if (!projectName) return;
+  async function handleCreateTask(input: TaskFormInput) {
+    const task = await createTask.mutateAsync({
+      title: input.title,
+      description: input.description || undefined,
+      projectId: input.linkTarget === "project" ? input.projectId : undefined,
+      moduleId: input.linkTarget === "module" ? input.moduleId : undefined,
+      status: input.status,
+      priority: input.priority,
+      visibility: input.visibility,
+      workingWith: input.workingWith || undefined,
+      estimatedHours: input.estimatedHours || undefined,
+      dueDate: input.dueDate || undefined,
+    });
 
-    setTaskRows((current) => [
-      {
-        code: `TSK-${String(highestCode + 1).padStart(4, "0")}`,
-        title: input.title,
-        description: input.description,
-        projectName,
-        status: input.status,
-        priority: input.priority,
-        scheduledFor: input.scheduledFor,
-        dueDate: input.dueDate,
-        estimatedHours: input.estimatedHours,
-        waitingOn: input.waitingOn,
-      },
-      ...current,
-    ]);
-  }
-
-  function updateTask(code: string, input: EditTaskInput) {
-    const projectName = input.isIndependent
-      ? "Independent task"
-      : projects.find((project) => project.id === input.projectId)?.title;
-    if (!projectName) return;
-    const {
-      projectId: _projectId,
-      isIndependent: _isIndependent,
-      ...values
-    } = input;
-    void _projectId;
-    void _isIndependent;
-
-    setTaskRows((current) =>
-      current.map((task) =>
-        task.code === code
-          ? {
-              ...task,
-              ...values,
-              projectName,
-            }
-          : task,
+    await Promise.all(
+      input.collaboratorUserIds.map((userId) =>
+        apiClient.POST("/api/v1/tenant/{tenantId}/tasks/{taskId}/members", {
+          params: { path: { tenantId, taskId: task.id } },
+          body: { userId },
+        }),
       ),
     );
   }
 
-  function deleteTask(task: TaskItem) {
+  async function handleUpdateTask(input: TaskFormInput) {
+    if (!editingTask) return;
+    await updateTask.mutateAsync({
+      taskId: editingTask.id,
+      input: {
+        title: input.title,
+        description: input.description || undefined,
+        status: input.status,
+        priority: input.priority,
+        visibility: input.visibility,
+        workingWith: input.workingWith || undefined,
+        estimatedHours: input.estimatedHours || undefined,
+        dueDate: input.dueDate || undefined,
+        projectId: input.linkTarget === "project" ? input.projectId : undefined,
+        // A task's link is cleared server-side only when this key is present
+        // and falsy — see TasksService.resolveLinkage's changesLinkage check.
+        moduleId: input.linkTarget === "module" ? input.moduleId : "",
+      },
+    });
+    setEditingTask(null);
+  }
+
+  async function handleDeleteTask(task: ApiTask) {
     if (!window.confirm(`Delete "${task.title}"? This action cannot be undone.`)) {
       return;
     }
-    setTaskRows((current) => current.filter((row) => row.code !== task.code));
-    setEditingTask((current) => (current?.code === task.code ? null : current));
+    await deleteTask.mutateAsync(task.id);
+    setEditingTask((current) => (current?.id === task.id ? null : current));
+  }
+
+  if (workspace.isPending || tasksQuery.isPending) {
+    return <LoadingState title="Loading tasks" className="min-h-[50vh]" />;
+  }
+  if (tasksQuery.isError) {
+    return (
+      <ErrorState
+        title="Tasks could not be loaded"
+        description={tasksQuery.error.message}
+        onRetry={() => void tasksQuery.refetch()}
+      />
+    );
   }
 
   return (
@@ -278,23 +306,31 @@ export default function TasksPage() {
         actions={<Button onClick={() => setIsNewTaskOpen(true)}>New Task</Button>}
       />
 
-      <NewTaskDialog
+      <TaskDialog
         open={isNewTaskOpen}
         onOpenChange={setIsNewTaskOpen}
-        projects={projects}
-        onCreate={createTask}
+        tenantId={tenantId}
+        projects={projectsQuery.data ?? []}
+        modules={modulesQuery.data ?? []}
+        members={membersQuery.data ?? []}
+        membersLoading={membersQuery.isPending}
+        onSave={(input) => void handleCreateTask(input)}
       />
 
       {editingTask ? (
-        <EditTaskDialog
-          key={editingTask.code}
+        <TaskDialog
+          key={editingTask.id}
           open
+          tenantId={tenantId}
+          projects={projectsQuery.data ?? []}
+          modules={modulesQuery.data ?? []}
+          members={membersQuery.data ?? []}
+          membersLoading={membersQuery.isPending}
           task={editingTask}
-          projects={projects}
           onOpenChange={(open) => {
             if (!open) setEditingTask(null);
           }}
-          onSave={(input) => updateTask(editingTask.code, input)}
+          onSave={(input) => void handleUpdateTask(input)}
         />
       ) : null}
 
@@ -373,19 +409,21 @@ export default function TasksPage() {
             ) : (
               visibleTasks.map((task) => (
                 <div
-                  key={task.code}
+                  key={task.id}
                   className="grid items-center gap-4 rounded-lg border border-border bg-card px-4 py-4 shadow-sm"
                   style={{ gridTemplateColumns: gridTemplate }}
                 >
                   {columns.isColumnVisible("code") ? (
-                  <span className="font-mono text-[11px] text-muted-foreground">{task.code}</span>
+                  <span className="font-mono text-[11px] text-muted-foreground">
+                    {task.displayId ?? "—"}
+                  </span>
                   ) : null}
 
                   {columns.isColumnVisible("task") ? (
                   <div className="flex flex-col gap-0.5">
                     <div className="flex items-start gap-2">
                       <Link
-                        to={`/tasks/${task.code}`}
+                        to={`/tasks/${task.id}`}
                         className="font-semibold leading-tight text-foreground transition-colors hover:text-primary hover:underline"
                       >
                         {task.title}
@@ -401,7 +439,7 @@ export default function TasksPage() {
                       </button>
                       <button
                         type="button"
-                        onClick={() => deleteTask(task)}
+                        onClick={() => void handleDeleteTask(task)}
                         aria-label={`Delete ${task.title}`}
                         title="Delete task"
                         className="inline-flex h-6 w-6 shrink-0 items-center justify-center rounded-md text-destructive transition-colors hover:bg-destructive/10 hover:text-destructive focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
@@ -409,9 +447,9 @@ export default function TasksPage() {
                         <Trash2 className="h-3.5 w-3.5" />
                       </button>
                     </div>
-                    {task.waitingOn ? (
+                    {task.workingWith ? (
                       <span className="text-xs text-muted-foreground">
-                        Waiting: {task.waitingOn}
+                        Working with: {task.workingWith}
                       </span>
                     ) : null}
                   </div>
@@ -424,25 +462,19 @@ export default function TasksPage() {
                   ) : null}
 
                   {columns.isColumnVisible("project") ? (
-                  <span className="text-sm text-muted-foreground">{task.projectName}</span>
+                  <span className="text-sm text-muted-foreground">{linkTargetLabel(task)}</span>
                   ) : null}
 
                   {columns.isColumnVisible("status") ? (
                   <Badge variant="outline" className={statusPillClass(task.status)}>
-                    {task.status}
+                    {task.status ?? "—"}
                   </Badge>
                   ) : null}
 
                   {columns.isColumnVisible("priority") ? (
                   <Badge variant="outline" className={priorityPillClass(task.priority)}>
-                    {task.priority}
+                    {task.priority ?? "—"}
                   </Badge>
-                  ) : null}
-
-                  {columns.isColumnVisible("scheduled") ? (
-                  <span className="text-sm tabular-nums text-muted-foreground">
-                    {formatDueDate(task.scheduledFor)}
-                  </span>
                   ) : null}
 
                   {columns.isColumnVisible("due") ? (
@@ -451,7 +483,7 @@ export default function TasksPage() {
 
                   {columns.isColumnVisible("est") ? (
                   <span className="text-sm tabular-nums text-muted-foreground">
-                    {task.estimatedHours}h
+                    {task.estimatedHours ? `${task.estimatedHours}h` : "—"}
                   </span>
                   ) : null}
                 </div>

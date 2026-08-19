@@ -46,7 +46,13 @@ export class NotesRepository {
   async update(
     tenantId: string,
     noteId: string,
-    values: Partial<{ title: string; content: string; visibilityId: string }>,
+    values: Partial<{
+      title: string;
+      content: string;
+      visibilityId: string;
+      projectId: string | null;
+      moduleId: string | null;
+    }>,
   ) {
     const [note] = await this.drizzle.db
       .update(notes)

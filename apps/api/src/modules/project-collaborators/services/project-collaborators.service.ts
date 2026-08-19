@@ -14,7 +14,20 @@ export class ProjectCollaboratorsService {
     private readonly enumRepository: EnumRepository,
   ) {}
 
-  async list(tenantId: string, projectId: string) {
+  /**
+   * The collaborator list is itself only visible to someone who is already
+   * a collaborator on the project (the project owner is always inserted as
+   * a collaborator at creation time, so this single check covers both).
+   */
+  async list(tenantId: string, projectId: string, callerUserId: string) {
+    const membership = await this.repository.findByProjectAndUser(
+      tenantId,
+      projectId,
+      callerUserId,
+    );
+    if (!membership) {
+      throw new NotFoundException('Project not found');
+    }
     const rows = await this.repository.findByProject(tenantId, projectId);
     return this.withDisplayValues(rows);
   }

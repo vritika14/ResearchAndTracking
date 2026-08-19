@@ -3,13 +3,14 @@ import { ProjectModulesService } from './project-modules.service';
 import { ProjectModulesRepository } from '../repositories/project-modules.repository';
 import { EnumRepository } from '../../enum/repositories/enum.repository';
 import { ModuleCollaboratorsRepository } from '../../module-collaborators/repositories/module-collaborators.repository';
+import { ProjectCollaboratorsRepository } from '../../project-collaborators/repositories/project-collaborators.repository';
 import { TenantSequencesRepository } from '../../tenant-sequences/repositories/tenant-sequences.repository';
 
 describe('ProjectModulesService', () => {
   let service: ProjectModulesService;
   let repository: {
     findById: jest.Mock;
-    findActiveByProject: jest.Mock;
+    findActiveByTenant: jest.Mock;
     create: jest.Mock;
     update: jest.Mock;
     archive: jest.Mock;
@@ -18,13 +19,17 @@ describe('ProjectModulesService', () => {
     findByCategoryAndValue: jest.Mock;
     findValuesByIds: jest.Mock;
   };
-  let collaboratorsRepository: { findByModuleAndUser: jest.Mock };
+  let collaboratorsRepository: {
+    findByModuleAndUser: jest.Mock;
+    create: jest.Mock;
+  };
+  let projectCollaboratorsRepository: { findByProjectAndUser: jest.Mock };
   let sequences: { nextDisplayId: jest.Mock };
 
   beforeEach(() => {
     repository = {
       findById: jest.fn(),
-      findActiveByProject: jest.fn(),
+      findActiveByTenant: jest.fn(),
       create: jest.fn(),
       update: jest.fn(),
       archive: jest.fn(),
@@ -35,6 +40,10 @@ describe('ProjectModulesService', () => {
     };
     collaboratorsRepository = {
       findByModuleAndUser: jest.fn().mockResolvedValue(undefined),
+      create: jest.fn().mockResolvedValue({ id: 'collaborator-1' }),
+    };
+    projectCollaboratorsRepository = {
+      findByProjectAndUser: jest.fn().mockResolvedValue(undefined),
     };
     sequences = {
       nextDisplayId: jest.fn().mockResolvedValue('MOD-0001'),
@@ -44,6 +53,7 @@ describe('ProjectModulesService', () => {
       repository as unknown as ProjectModulesRepository,
       enumRepository as unknown as EnumRepository,
       collaboratorsRepository as unknown as ModuleCollaboratorsRepository,
+      projectCollaboratorsRepository as unknown as ProjectCollaboratorsRepository,
       sequences as unknown as TenantSequencesRepository,
     );
   });
@@ -54,6 +64,81 @@ describe('ProjectModulesService', () => {
       await expect(
         service.findOne('tenant-1', 'module-1', 'user-1'),
       ).rejects.toThrow(NotFoundException);
+    });
+
+    it('throws NotFoundException when the caller cannot access an independent module', async () => {
+      repository.findById.mockResolvedValue({
+        id: 'module-1',
+        projectId: null,
+        tagId: null,
+        statusId: null,
+      });
+      await expect(
+        service.findOne('tenant-1', 'module-1', 'user-1'),
+      ).rejects.toThrow(NotFoundException);
+    });
+
+    it('returns an independent module when the caller is a module collaborator', async () => {
+      repository.findById.mockResolvedValue({
+        id: 'module-1',
+        projectId: null,
+        tagId: null,
+        statusId: null,
+      });
+      collaboratorsRepository.findByModuleAndUser.mockResolvedValue({
+        roleId: 'role-1',
+      });
+      const result = await service.findOne('tenant-1', 'module-1', 'user-1');
+      expect(result).toEqual(expect.objectContaining({ id: 'module-1' }));
+    });
+
+    it('returns a project-scoped module when the caller can see the parent project', async () => {
+      repository.findById.mockResolvedValue({
+        id: 'module-1',
+        projectId: 'project-1',
+        tagId: null,
+        statusId: null,
+      });
+      projectCollaboratorsRepository.findByProjectAndUser.mockResolvedValue({
+        roleId: 'role-1',
+      });
+      const result = await service.findOne('tenant-1', 'module-1', 'user-1');
+      expect(result).toEqual(expect.objectContaining({ id: 'module-1' }));
+      expect(collaboratorsRepository.findByModuleAndUser).not.toHaveBeenCalled();
+    });
+
+    it('throws NotFoundException for a project-scoped module when the caller cannot see the parent project', async () => {
+      repository.findById.mockResolvedValue({
+        id: 'module-1',
+        projectId: 'project-1',
+        tagId: null,
+        statusId: null,
+      });
+      await expect(
+        service.findOne('tenant-1', 'module-1', 'user-1'),
+      ).rejects.toThrow(NotFoundException);
+    });
+  });
+
+  describe('listActive', () => {
+    it('filters out modules the caller cannot see', async () => {
+      repository.findActiveByTenant.mockResolvedValue([
+        { id: 'module-1', projectId: null, tagId: null, statusId: null },
+        { id: 'module-2', projectId: 'project-1', tagId: null, statusId: null },
+        { id: 'module-3', projectId: 'project-2', tagId: null, statusId: null },
+      ]);
+      collaboratorsRepository.findByModuleAndUser.mockImplementation(
+        (_tenantId: string, moduleId: string) =>
+          Promise.resolve(moduleId === 'module-1' ? { roleId: 'role-1' } : undefined),
+      );
+      projectCollaboratorsRepository.findByProjectAndUser.mockImplementation(
+        (_tenantId: string, projectId: string) =>
+          Promise.resolve(projectId === 'project-1' ? { roleId: 'role-1' } : undefined),
+      );
+
+      const result = await service.listActive('tenant-1', 'user-1');
+
+      expect(result.map((module) => module.id)).toEqual(['module-1', 'module-2']);
     });
   });
 
@@ -92,14 +177,58 @@ describe('ProjectModulesService', () => {
         }),
       ).rejects.toThrow(NotFoundException);
     });
+
+    it('adds the creator as a module collaborator for an independent module', async () => {
+      enumRepository.findByCategoryAndValue.mockImplementation(
+        (category: string, value: string) =>
+          Promise.resolve({ id: `${category}-${value}-id` }),
+      );
+      repository.create.mockResolvedValue({
+        id: 'module-1',
+        tagId: null,
+        statusId: null,
+      });
+
+      await service.create('tenant-1', 'user-1', { title: 'Independent module' });
+
+      expect(collaboratorsRepository.create).toHaveBeenCalledWith({
+        tenantId: 'tenant-1',
+        moduleId: 'module-1',
+        userId: 'user-1',
+        roleId: 'project_role-Owner-id',
+      });
+    });
+
+    it('does not add a collaborator for a project-scoped module', async () => {
+      enumRepository.findByCategoryAndValue.mockImplementation(
+        (category: string, value: string) =>
+          Promise.resolve({ id: `${category}-${value}-id` }),
+      );
+      repository.create.mockResolvedValue({
+        id: 'module-1',
+        tagId: null,
+        statusId: null,
+      });
+
+      await service.create('tenant-1', 'user-1', {
+        title: 'Project module',
+        projectId: 'project-1',
+      });
+
+      expect(collaboratorsRepository.create).not.toHaveBeenCalled();
+    });
   });
 
   describe('archive', () => {
     it('resolves the Archived status and sets archivedAt, returning a warning', async () => {
       repository.findById.mockResolvedValue({
         id: 'module-1',
+        projectId: null,
         tagId: null,
         statusId: null,
+      });
+      collaboratorsRepository.findByModuleAndUser.mockResolvedValue({
+        roleId: 'role-1',
       });
       enumRepository.findByCategoryAndValue.mockResolvedValue({
         id: 'archived-status-id',

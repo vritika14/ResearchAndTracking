@@ -1,15 +1,24 @@
 import { useMemo, useState } from "react";
-import { Pencil, Trash2 } from "lucide-react";
+import { Archive, Pencil } from "lucide-react";
 import { Link } from "react-router-dom";
 
-import { ColumnVisibilityMenu } from "@/components/dashboard/column-visibility-menu";
+import { apiClient } from "@/api/client";
 import {
-  moduleImportanceBadgeClass,
-  moduleStatusBadgeClass,
-} from "@/components/modules/module-badge-styles";
-import { ModuleDialog, type ModuleInput } from "@/components/modules/module-dialog";
+  useArchiveModule,
+  useCreateModule,
+  useCurrentWorkspace,
+  useMembers,
+  useModules,
+  useProjects,
+  useUpdateModule,
+  type ApiModule,
+} from "@/api/hooks";
+import { ColumnVisibilityMenu } from "@/components/dashboard/column-visibility-menu";
+import { ModuleDialog, type ModuleFormInput } from "@/components/modules/module-dialog";
+import { ErrorState } from "@/components/shared/error-state";
+import { LoadingState } from "@/components/shared/loading-state";
+import { StatusBadge } from "@/components/shared/status-badge";
 import { PageHeading } from "@/components/typography/heading";
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
@@ -20,116 +29,159 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import type { ResearchModule } from "@/data/modules";
-import { projects } from "@/data/projects";
 import { useColumnVisibility } from "@/hooks/use-column-visibility";
-import { useModules } from "@/hooks/use-modules";
-import { usePipelineStages } from "@/hooks/use-pipeline-stages";
 
-const STATUS_FILTERS = ["All", "Active", "Review", "Stalled", "Complete", "Archived"] as const;
-const IMPORTANCE_FILTERS = ["All", "Critical", "High", "Medium", "Low"] as const;
+const STATUS_FILTERS = ["All", "Active", "Review", "Stalled", "Complete"] as const;
 const MODULE_COLUMNS = [
   { id: "module", label: "Module" },
   { id: "project", label: "Project" },
   { id: "status", label: "Status" },
-  { id: "stage", label: "Pipeline Stage" },
-  { id: "due", label: "Due Date" },
-  { id: "importance", label: "Importance" },
+  { id: "type", label: "Type" },
+  { id: "assignee", label: "Assigned To" },
   { id: "actions", label: "Actions" },
 ] as const;
 
 type StatusFilter = (typeof STATUS_FILTERS)[number];
-type ImportanceFilter = (typeof IMPORTANCE_FILTERS)[number];
-
-function formatDate(iso: string) {
-  if (!iso) return "—";
-  const [year, month, day] = iso.split("-");
-  return `${day}/${month}/${year}`;
-}
-
-function projectName(projectId: string | null) {
-  if (!projectId) return "Independent module";
-  return projects.find((project) => project.id === projectId)?.title ?? "Unknown project";
-}
 
 export default function ModulesPage() {
-  const { moduleRows, setModuleRows } = useModules();
-  const { pipelineStages } = usePipelineStages();
+  const workspace = useCurrentWorkspace();
+  const tenantId = workspace.data?.id ?? "";
+
+  const modulesQuery = useModules(tenantId);
+  const projectsQuery = useProjects(tenantId);
   const [isNewModuleOpen, setIsNewModuleOpen] = useState(false);
-  const [editingModule, setEditingModule] = useState<ResearchModule | null>(null);
+  const [editingModule, setEditingModule] = useState<ApiModule | null>(null);
+  const workspaceMembers = useMembers(
+    tenantId,
+    isNewModuleOpen || editingModule !== null,
+  );
+
+  const createModule = useCreateModule(tenantId);
+  const updateModule = useUpdateModule(tenantId);
+  const archiveModule = useArchiveModule(tenantId);
+
   const [search, setSearch] = useState("");
   const [status, setStatus] = useState<StatusFilter>("All");
-  const [importance, setImportance] = useState<ImportanceFilter>("All");
   const columns = useColumnVisibility(MODULE_COLUMNS.map((column) => column.id));
+
+  const projectById = useMemo(() => {
+    const map = new Map<string, string>();
+    for (const project of projectsQuery.data ?? []) map.set(project.id, project.title);
+    return map;
+  }, [projectsQuery.data]);
+
+  const memberById = useMemo(() => {
+    const map = new Map<string, string>();
+    for (const member of workspaceMembers.data ?? []) map.set(member.userId, member.displayName);
+    return map;
+  }, [workspaceMembers.data]);
+
+  function projectName(projectId: string | null) {
+    if (!projectId) return "Independent module";
+    return projectById.get(projectId) ?? "Unknown project";
+  }
 
   const visibleModules = useMemo(() => {
     const query = search.trim().toLowerCase();
-    return moduleRows.filter((module) => {
+    return (modulesQuery.data ?? []).filter((module) => {
       if (status !== "All" && module.status !== status) return false;
-      if (importance !== "All" && module.importance !== importance) return false;
       const linkedProject = projectName(module.projectId);
       return (
         !query ||
-        module.id.toLowerCase().includes(query) ||
         module.title.toLowerCase().includes(query) ||
-        module.description.toLowerCase().includes(query) ||
+        (module.description?.toLowerCase().includes(query) ?? false) ||
         linkedProject.toLowerCase().includes(query)
       );
     });
-  }, [moduleRows, search, status, importance]);
+  }, [modulesQuery.data, search, status, projectById]);
 
-  function createModule(input: ModuleInput) {
-    const highestId = moduleRows.reduce((highest, module) => {
-      const numericId = Number(module.id.replace(/\D/g, ""));
-      return Number.isNaN(numericId) ? highest : Math.max(highest, numericId);
-    }, 0);
-    setModuleRows((current) => [
-      { ...input, id: `MOD-${String(highestId + 1).padStart(3, "0")}` },
-      ...current,
-    ]);
-  }
+  const hasActiveFilters = search !== "" || status !== "All";
 
-  function updateModule(input: ModuleInput) {
-    if (!editingModule) return;
-    setModuleRows((current) =>
-      current.map((module) =>
-        module.id === editingModule.id ? { ...input, id: editingModule.id } : module,
+  async function handleCreateModule(input: ModuleFormInput) {
+    const module = await createModule.mutateAsync({
+      title: input.title,
+      description: input.description || undefined,
+      projectId: input.projectId ?? undefined,
+      status: input.status,
+      tag: input.tag || undefined,
+      assignedToUserId: input.assignedToUserId ?? undefined,
+    });
+
+    await Promise.all(
+      input.collaboratorUserIds.map((userId) =>
+        apiClient.POST("/api/v1/tenant/{tenantId}/modules/{moduleId}/collaborators", {
+          params: { path: { tenantId, moduleId: module.id } },
+          body: { userId, role: "Collaborator" },
+        }),
       ),
     );
+  }
+
+  async function handleUpdateModule(input: ModuleFormInput) {
+    if (!editingModule) return;
+    await updateModule.mutateAsync({
+      moduleId: editingModule.id,
+      input: {
+        title: input.title,
+        description: input.description || undefined,
+        status: input.status,
+        tag: input.tag || undefined,
+        assignedToUserId: input.assignedToUserId ?? undefined,
+      },
+    });
     setEditingModule(null);
   }
 
-  function deleteModule(module: ResearchModule) {
-    if (!window.confirm(`Delete "${module.title}"? This action cannot be undone.`)) return;
-    setModuleRows((current) => current.filter((row) => row.id !== module.id));
+  async function archive(module: ApiModule) {
+    if (!window.confirm(`Archive "${module.title}"? It will be permanently deleted after 14 days.`)) {
+      return;
+    }
+    await archiveModule.mutateAsync(module.id);
     setEditingModule((current) => (current?.id === module.id ? null : current));
   }
 
-  const hasActiveFilters = search !== "" || status !== "All" || importance !== "All";
+  if (workspace.isPending || modulesQuery.isPending) {
+    return <LoadingState title="Loading modules" className="min-h-[50vh]" />;
+  }
+  if (modulesQuery.isError) {
+    return (
+      <ErrorState
+        title="Modules could not be loaded"
+        description={modulesQuery.error.message}
+        onRetry={() => void modulesQuery.refetch()}
+      />
+    );
+  }
 
   return (
     <div className="flex flex-col gap-6">
       <PageHeading
         eyebrow="Workflows"
         title="Modules"
-        description="Organize project-related or independent areas of work by status, pipeline stage, due date, and importance."
+        description="Organize project-related or independent areas of work by status, type and assignee."
         actions={<Button onClick={() => setIsNewModuleOpen(true)}>New Module</Button>}
       />
 
       <ModuleDialog
         open={isNewModuleOpen}
         onOpenChange={setIsNewModuleOpen}
-        projects={projects}
-        onSave={createModule}
+        tenantId={tenantId}
+        projects={projectsQuery.data ?? []}
+        members={workspaceMembers.data ?? []}
+        membersLoading={workspaceMembers.isPending}
+        onSave={(input) => void handleCreateModule(input)}
       />
       <ModuleDialog
         open={editingModule !== null}
         onOpenChange={(open) => {
           if (!open) setEditingModule(null);
         }}
-        projects={projects}
+        tenantId={tenantId}
+        projects={projectsQuery.data ?? []}
+        members={workspaceMembers.data ?? []}
+        membersLoading={workspaceMembers.isPending}
         module={editingModule}
-        onSave={updateModule}
+        onSave={(input) => void handleUpdateModule(input)}
       />
 
       <div className="flex flex-wrap items-center gap-3 rounded-lg border p-4">
@@ -149,19 +201,6 @@ export default function ModulesPage() {
             ))}
           </SelectContent>
         </Select>
-        <Select
-          value={importance}
-          onValueChange={(value) => setImportance(value as ImportanceFilter)}
-        >
-          <SelectTrigger className="sm:w-40"><SelectValue placeholder="Importance" /></SelectTrigger>
-          <SelectContent>
-            {IMPORTANCE_FILTERS.map((option) => (
-              <SelectItem key={option} value={option}>
-                {option === "All" ? "All importance" : option}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
         <ColumnVisibilityMenu
           columns={MODULE_COLUMNS}
           visibleColumns={columns.visibleColumns}
@@ -173,7 +212,6 @@ export default function ModulesPage() {
             onClick={() => {
               setSearch("");
               setStatus("All");
-              setImportance("All");
             }}
             className="text-sm font-medium text-muted-foreground underline-offset-4 hover:text-foreground hover:underline"
           >
@@ -183,15 +221,14 @@ export default function ModulesPage() {
       </div>
 
       <div className="overflow-x-auto rounded-lg border">
-        <Table className="min-w-[980px]">
+        <Table className="min-w-[900px]">
           <TableHeader>
             <TableRow>
               {columns.isColumnVisible("module") ? <TableHead>Module</TableHead> : null}
               {columns.isColumnVisible("project") ? <TableHead>Project</TableHead> : null}
               {columns.isColumnVisible("status") ? <TableHead>Status</TableHead> : null}
-              {columns.isColumnVisible("stage") ? <TableHead>Pipeline Stage</TableHead> : null}
-              {columns.isColumnVisible("due") ? <TableHead>Due Date</TableHead> : null}
-              {columns.isColumnVisible("importance") ? <TableHead>Importance</TableHead> : null}
+              {columns.isColumnVisible("type") ? <TableHead>Type</TableHead> : null}
+              {columns.isColumnVisible("assignee") ? <TableHead>Assigned To</TableHead> : null}
               {columns.isColumnVisible("actions") ? <TableHead className="text-right">Actions</TableHead> : null}
             </TableRow>
           </TableHeader>
@@ -208,7 +245,9 @@ export default function ModulesPage() {
                   {columns.isColumnVisible("module") ? (
                     <TableCell>
                       <div className="flex flex-col gap-0.5">
-                        <span className="font-mono text-[11px] text-muted-foreground">{module.id}</span>
+                        {module.displayId ? (
+                          <span className="font-mono text-[11px] text-muted-foreground">{module.displayId}</span>
+                        ) : null}
                         <Link
                           to={`/modules/${module.id}`}
                           className="font-semibold leading-tight text-foreground transition-colors hover:text-primary hover:underline"
@@ -228,27 +267,19 @@ export default function ModulesPage() {
                   ) : null}
                   {columns.isColumnVisible("status") ? (
                     <TableCell>
-                      <Badge variant="outline" className={moduleStatusBadgeClass(module.status)}>
-                        {module.status}
-                      </Badge>
+                      <StatusBadge status={module.status ?? "—"} />
                     </TableCell>
                   ) : null}
-                  {columns.isColumnVisible("stage") ? (
+                  {columns.isColumnVisible("type") ? (
                     <TableCell className="text-sm text-muted-foreground">
-                      {pipelineStages[module.stageIndex]?.name ?? "Unknown stage"}
+                      {module.tag ?? "—"}
                     </TableCell>
                   ) : null}
-                  {columns.isColumnVisible("due") ? (
-                    <TableCell className="tabular-nums">{formatDate(module.dueDate)}</TableCell>
-                  ) : null}
-                  {columns.isColumnVisible("importance") ? (
-                    <TableCell>
-                      <Badge
-                        variant="outline"
-                        className={moduleImportanceBadgeClass(module.importance)}
-                      >
-                        {module.importance}
-                      </Badge>
+                  {columns.isColumnVisible("assignee") ? (
+                    <TableCell className="text-sm text-muted-foreground">
+                      {module.assignedToUserId
+                        ? (memberById.get(module.assignedToUserId) ?? "Unknown member")
+                        : "Unassigned"}
                     </TableCell>
                   ) : null}
                   {columns.isColumnVisible("actions") ? (
@@ -268,10 +299,10 @@ export default function ModulesPage() {
                           variant="ghost"
                           size="icon"
                           className="text-destructive hover:bg-destructive/10 hover:text-destructive"
-                          aria-label={`Delete ${module.title}`}
-                          onClick={() => deleteModule(module)}
+                          aria-label={`Archive ${module.title}`}
+                          onClick={() => void archive(module)}
                         >
-                          <Trash2 />
+                          <Archive />
                         </Button>
                       </div>
                     </TableCell>

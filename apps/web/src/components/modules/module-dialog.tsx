@@ -1,7 +1,10 @@
-import { useEffect, useState, type FormEvent, type ReactNode } from "react";
+import { useEffect, useMemo, useState, type FormEvent, type ReactNode } from "react";
+import { Search, X } from "lucide-react";
 
+import { useEnumValues, type ApiModule, type ApiProject, type Membership } from "@/api/hooks";
+import { ModuleCollaboratorsManager } from "@/components/modules/module-collaborators";
+import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { DatePickerInput } from "@/components/ui/date-picker-input";
 import {
   Dialog,
   DialogClose,
@@ -20,34 +23,40 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
-import type { ModuleImportance, ModuleStatus, ResearchModule } from "@/data/modules";
-import { usePipelineStages } from "@/hooks/use-pipeline-stages";
 
-export type ModuleInput = Omit<ResearchModule, "id">;
+const MODULE_STATUSES = ["Active", "Review", "Stalled", "Complete"] as const;
+const UNASSIGNED = "__unassigned__";
 
-interface ProjectOption {
-  id: string;
+export interface ModuleFormInput {
   title: string;
+  description: string;
+  projectId: string | null;
+  status: string;
+  tag: string;
+  assignedToUserId: string | null;
+  /** Applied by the caller after creation, since a brand-new module has no id yet. */
+  collaboratorUserIds: string[];
 }
 
 interface ModuleDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  projects: ProjectOption[];
-  module?: ResearchModule | null;
-  onSave: (module: ModuleInput) => void;
+  tenantId: string;
+  projects: ApiProject[];
+  members: Membership[];
+  membersLoading: boolean;
+  module?: ApiModule | null;
+  onSave: (input: ModuleFormInput) => void;
 }
 
-const MODULE_STATUSES: ModuleStatus[] = ["Active", "Review", "Stalled", "Complete", "Archived"];
-const MODULE_IMPORTANCE: ModuleImportance[] = ["Critical", "High", "Medium", "Low"];
-const INITIAL_FORM: ModuleInput = {
+const INITIAL_FORM: ModuleFormInput = {
   title: "",
   description: "",
   projectId: null,
   status: "Active",
-  stageIndex: 0,
-  dueDate: "",
-  importance: "Medium",
+  tag: "",
+  assignedToUserId: null,
+  collaboratorUserIds: [],
 };
 
 function FormField({ label, htmlFor, required, children }: {
@@ -67,10 +76,22 @@ function FormField({ label, htmlFor, required, children }: {
   );
 }
 
-export function ModuleDialog({ open, onOpenChange, projects, module, onSave }: ModuleDialogProps) {
-  const { pipelineStages } = usePipelineStages();
-  const [form, setForm] = useState<ModuleInput>(INITIAL_FORM);
+export function ModuleDialog({
+  open,
+  onOpenChange,
+  tenantId,
+  projects,
+  members,
+  membersLoading,
+  module,
+  onSave,
+}: ModuleDialogProps) {
+  const tagValuesQuery = useEnumValues("module_type", open);
+  const [form, setForm] = useState<ModuleFormInput>(INITIAL_FORM);
   const [isIndependent, setIsIndependent] = useState(true);
+  const [memberSearch, setMemberSearch] = useState("");
+  const [memberPickerOpen, setMemberPickerOpen] = useState(false);
+  const [selectedMembers, setSelectedMembers] = useState<Membership[]>([]);
   const isEditing = Boolean(module);
 
   useEffect(() => {
@@ -78,19 +99,37 @@ export function ModuleDialog({ open, onOpenChange, projects, module, onSave }: M
     if (module) {
       setForm({
         title: module.title,
-        description: module.description,
+        description: module.description ?? "",
         projectId: module.projectId,
-        status: module.status,
-        stageIndex: module.stageIndex,
-        dueDate: module.dueDate,
-        importance: module.importance,
+        status: module.status ?? "Active",
+        tag: module.tag ?? "",
+        assignedToUserId: module.assignedToUserId,
+        collaboratorUserIds: [],
       });
       setIsIndependent(module.projectId === null);
     } else {
       setForm(INITIAL_FORM);
       setIsIndependent(true);
     }
+    setMemberSearch("");
+    setMemberPickerOpen(false);
+    setSelectedMembers([]);
   }, [open, module]);
+
+  const matchingMembers = useMemo(() => {
+    const query = memberSearch.trim().toLowerCase();
+    const selectedIds = new Set(selectedMembers.map((member) => member.userId));
+
+    return members
+      .filter((member) => !selectedIds.has(member.userId))
+      .filter(
+        (member) =>
+          !query ||
+          member.displayName.toLowerCase().includes(query) ||
+          member.email.toLowerCase().includes(query),
+      )
+      .slice(0, 8);
+  }, [memberSearch, members, selectedMembers]);
 
   function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -100,13 +139,14 @@ export function ModuleDialog({ open, onOpenChange, projects, module, onSave }: M
       title: form.title.trim(),
       description: form.description.trim(),
       projectId: isIndependent ? null : form.projectId,
+      collaboratorUserIds: selectedMembers.map((member) => member.userId),
     });
     onOpenChange(false);
   }
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent>
+      <DialogContent className="max-w-xl">
         <DialogHeader>
           <DialogTitle>{isEditing ? "Edit module" : "Create a new module"}</DialogTitle>
           <DialogDescription>
@@ -153,7 +193,8 @@ export function ModuleDialog({ open, onOpenChange, projects, module, onSave }: M
             <span>
               <span className="block text-sm font-medium">Independent module</span>
               <span className="block text-xs text-muted-foreground">
-                Create this module without linking it to a project.
+                Only explicitly added collaborators can see an independent module. Project-linked
+                modules are visible to anyone who can see the project.
               </span>
             </span>
           </label>
@@ -179,9 +220,7 @@ export function ModuleDialog({ open, onOpenChange, projects, module, onSave }: M
             <FormField label="Status" htmlFor="module-status">
               <Select
                 value={form.status}
-                onValueChange={(value) =>
-                  setForm((current) => ({ ...current, status: value as ModuleStatus }))
-                }
+                onValueChange={(value) => setForm((current) => ({ ...current, status: value }))}
               >
                 <SelectTrigger id="module-status"><SelectValue /></SelectTrigger>
                 <SelectContent>
@@ -192,47 +231,149 @@ export function ModuleDialog({ open, onOpenChange, projects, module, onSave }: M
               </Select>
             </FormField>
 
-            <FormField label="Importance" htmlFor="module-importance">
+            <FormField label="Type" htmlFor="module-tag">
               <Select
-                value={form.importance}
-                onValueChange={(value) =>
-                  setForm((current) => ({ ...current, importance: value as ModuleImportance }))
-                }
+                value={form.tag}
+                onValueChange={(value) => setForm((current) => ({ ...current, tag: value }))}
               >
-                <SelectTrigger id="module-importance"><SelectValue /></SelectTrigger>
+                <SelectTrigger id="module-tag"><SelectValue placeholder="Select a type" /></SelectTrigger>
                 <SelectContent>
-                  {MODULE_IMPORTANCE.map((importance) => (
-                    <SelectItem key={importance} value={importance}>{importance}</SelectItem>
+                  {(tagValuesQuery.data ?? []).map((tagValue) => (
+                    <SelectItem key={tagValue.id} value={tagValue.value}>{tagValue.value}</SelectItem>
                   ))}
                 </SelectContent>
               </Select>
             </FormField>
 
-            <FormField label="Pipeline stage" htmlFor="module-stage">
+            <FormField label="Assigned to" htmlFor="module-assignee">
               <Select
-                value={String(form.stageIndex)}
+                value={form.assignedToUserId ?? UNASSIGNED}
                 onValueChange={(value) =>
-                  setForm((current) => ({ ...current, stageIndex: Number(value) }))
+                  setForm((current) => ({
+                    ...current,
+                    assignedToUserId: value === UNASSIGNED ? null : value,
+                  }))
                 }
               >
-                <SelectTrigger id="module-stage"><SelectValue /></SelectTrigger>
+                <SelectTrigger id="module-assignee"><SelectValue /></SelectTrigger>
                 <SelectContent>
-                  {pipelineStages.map((stage, index) => (
-                    <SelectItem key={stage.name} value={String(index)}>{stage.name}</SelectItem>
+                  <SelectItem value={UNASSIGNED}>Unassigned</SelectItem>
+                  {members.map((member) => (
+                    <SelectItem key={member.userId} value={member.userId}>
+                      {member.displayName}
+                    </SelectItem>
                   ))}
                 </SelectContent>
               </Select>
-            </FormField>
-
-            <FormField label="Due date" htmlFor="module-due-date">
-              <DatePickerInput
-                id="module-due-date"
-                label="Module due date"
-                value={form.dueDate}
-                onChange={(value) => setForm((current) => ({ ...current, dueDate: value }))}
-              />
             </FormField>
           </div>
+
+          {isIndependent && isEditing && module ? (
+            <div className="flex flex-col gap-2 border-t border-border pt-4">
+              <span className="text-sm font-medium">Collaborators</span>
+              <ModuleCollaboratorsManager
+                tenantId={tenantId}
+                moduleId={module.id}
+                members={members}
+                membersLoading={membersLoading}
+              />
+            </div>
+          ) : null}
+
+          {isIndependent && !isEditing ? (
+            <FormField label="Collaborators" htmlFor="module-members">
+              <div
+                className="relative"
+                onBlur={(event) => {
+                  if (!event.currentTarget.contains(event.relatedTarget)) {
+                    setMemberPickerOpen(false);
+                  }
+                }}
+              >
+                <Search className="pointer-events-none absolute left-3 top-2.5 h-4 w-4 text-muted-foreground" />
+                <Input
+                  id="module-members"
+                  role="combobox"
+                  aria-expanded={memberPickerOpen}
+                  aria-controls="module-member-options"
+                  aria-autocomplete="list"
+                  value={memberSearch}
+                  onFocus={() => setMemberPickerOpen(true)}
+                  onChange={(event) => {
+                    setMemberSearch(event.target.value);
+                    setMemberPickerOpen(true);
+                  }}
+                  placeholder="Type a workspace member's name or email"
+                  className="pl-9"
+                  autoComplete="off"
+                />
+                {memberPickerOpen ? (
+                  <div
+                    id="module-member-options"
+                    role="listbox"
+                    className="absolute z-50 mt-1 max-h-56 w-full overflow-y-auto rounded-md border bg-popover p-1 text-popover-foreground shadow-lg"
+                  >
+                    {membersLoading ? (
+                      <p className="px-3 py-2 text-sm text-muted-foreground">
+                        Loading workspace members…
+                      </p>
+                    ) : matchingMembers.length ? (
+                      matchingMembers.map((member) => (
+                        <button
+                          key={member.id}
+                          type="button"
+                          role="option"
+                          aria-selected="false"
+                          className="flex w-full items-center justify-between gap-3 rounded-sm px-3 py-2 text-left hover:bg-accent focus:bg-accent focus:outline-none"
+                          onClick={() => {
+                            setSelectedMembers((current) => [...current, member]);
+                            setMemberSearch("");
+                          }}
+                        >
+                          <span className="min-w-0">
+                            <span className="block truncate text-sm font-medium">
+                              {member.displayName}
+                            </span>
+                            <span className="block truncate text-xs text-muted-foreground">
+                              {member.email}
+                            </span>
+                          </span>
+                        </button>
+                      ))
+                    ) : (
+                      <p className="px-3 py-2 text-sm text-muted-foreground">
+                        No matching workspace members.
+                      </p>
+                    )}
+                  </div>
+                ) : null}
+              </div>
+              {selectedMembers.length ? (
+                <div className="mt-2 flex flex-wrap gap-2" aria-label="Selected module members">
+                  {selectedMembers.map((member) => (
+                    <Badge key={member.id} variant="secondary" className="gap-1.5 py-1">
+                      {member.displayName}
+                      <button
+                        type="button"
+                        aria-label={`Remove ${member.displayName}`}
+                        onClick={() =>
+                          setSelectedMembers((current) =>
+                            current.filter((item) => item.id !== member.id),
+                          )
+                        }
+                        className="rounded-full hover:text-destructive focus:outline-none focus:ring-1 focus:ring-ring"
+                      >
+                        <X className="h-3 w-3" />
+                      </button>
+                    </Badge>
+                  ))}
+                </div>
+              ) : null}
+              <p className="mt-1 text-xs text-muted-foreground">
+                You're automatically added as a collaborator once this module is created.
+              </p>
+            </FormField>
+          ) : null}
 
           <DialogFooter className="border-t pt-4">
             <DialogClose asChild><Button type="button" variant="outline">Cancel</Button></DialogClose>

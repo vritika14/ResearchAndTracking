@@ -1,6 +1,7 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { EnumRepository } from '../../enum/repositories/enum.repository';
 import { ModuleCollaboratorsRepository } from '../../module-collaborators/repositories/module-collaborators.repository';
+import { ProjectCollaboratorsRepository } from '../../project-collaborators/repositories/project-collaborators.repository';
 import { TenantSequencesRepository } from '../../tenant-sequences/repositories/tenant-sequences.repository';
 import { ProjectModulesRepository } from '../repositories/project-modules.repository';
 
@@ -12,17 +13,51 @@ export class ProjectModulesService {
     private readonly repository: ProjectModulesRepository,
     private readonly enumRepository: EnumRepository,
     private readonly collaboratorsRepository: ModuleCollaboratorsRepository,
+    private readonly projectCollaboratorsRepository: ProjectCollaboratorsRepository,
     private readonly sequences: TenantSequencesRepository,
   ) {}
 
+  /**
+   * A module with a parent project inherits that project's visibility
+   * (owner or project_collaborators — the owner is always inserted as a
+   * collaborator at project-creation time, so a single collaborator check
+   * covers both). An independent module (no project) is only visible to its
+   * own module_collaborators.
+   */
+  private async canAccess(
+    tenantId: string,
+    module: { id: string; projectId: string | null },
+    callerUserId: string,
+  ): Promise<boolean> {
+    if (module.projectId) {
+      const projectMembership =
+        await this.projectCollaboratorsRepository.findByProjectAndUser(
+          tenantId,
+          module.projectId,
+          callerUserId,
+        );
+      return Boolean(projectMembership);
+    }
+    const moduleMembership = await this.collaboratorsRepository.findByModuleAndUser(
+      tenantId,
+      module.id,
+      callerUserId,
+    );
+    return Boolean(moduleMembership);
+  }
+
   async listActive(tenantId: string, callerUserId: string, projectId?: string) {
     const rows = await this.repository.findActiveByTenant(tenantId, projectId);
-    return this.withDisplayValues(tenantId, rows, callerUserId);
+    const accessFlags = await Promise.all(
+      rows.map((row) => this.canAccess(tenantId, row, callerUserId)),
+    );
+    const visibleRows = rows.filter((_row, index) => accessFlags[index]);
+    return this.withDisplayValues(tenantId, visibleRows, callerUserId);
   }
 
   async findOne(tenantId: string, moduleId: string, callerUserId: string) {
     const module = await this.repository.findById(tenantId, moduleId);
-    if (!module) {
+    if (!module || !(await this.canAccess(tenantId, module, callerUserId))) {
       throw new NotFoundException('Module not found');
     }
     const [shaped] = await this.withDisplayValues(
@@ -45,9 +80,10 @@ export class ProjectModulesService {
       assignedToUserId?: string;
     },
   ) {
-    const [tagId, statusId, displayId] = await Promise.all([
+    const [tagId, statusId, ownerRoleId, displayId] = await Promise.all([
       this.resolveEnum('module_type', input.tag),
       this.resolveEnum('project_status', input.status),
+      input.projectId ? undefined : this.resolveEnum('project_role', 'Owner'),
       this.sequences.nextDisplayId(tenantId, 'module'),
     ]);
 
@@ -64,6 +100,23 @@ export class ProjectModulesService {
 
     if (!module) {
       throw new NotFoundException('Failed to create module');
+    }
+
+    // An independent module (no parent project) is only visible to its own
+    // module_collaborators, so the creator must be inserted as one — mirrors
+    // how project creation always adds the owner as a project_collaborator.
+    if (!input.projectId) {
+      if (!ownerRoleId) {
+        throw new NotFoundException(
+          'Owner role is not configured in the enum table',
+        );
+      }
+      await this.collaboratorsRepository.create({
+        tenantId,
+        moduleId: module.id,
+        userId: callerUserId,
+        roleId: ownerRoleId,
+      });
     }
 
     const [shaped] = await this.withDisplayValues(

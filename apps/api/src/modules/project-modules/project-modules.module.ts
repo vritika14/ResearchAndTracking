@@ -2,6 +2,7 @@
 import { Module, forwardRef } from '@nestjs/common';
 import { EnumModule } from '../enum/enum.module';
 import { ModuleCollaboratorsModule } from '../module-collaborators/module-collaborators.module';
+import { ProjectCollaboratorsModule } from '../project-collaborators/project-collaborators.module';
 import { TenantSequencesModule } from '../tenant-sequences/tenant-sequences.module';
 import { UsersModule } from '../users/users.module';
 import { ProjectModulesController } from './controllers/project-modules.controller';
@@ -14,6 +15,7 @@ import { MembershipsModule } from '../memberships/memberships.module';
     UsersModule,
     EnumModule,
     forwardRef(() => ModuleCollaboratorsModule),
+    ProjectCollaboratorsModule,
     TenantSequencesModule,
     MembershipsModule,
   ],

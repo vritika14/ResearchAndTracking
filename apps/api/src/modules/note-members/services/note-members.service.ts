@@ -4,13 +4,33 @@ import {
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
+import { NotesRepository } from '../../notes/repositories/notes.repository';
 import { NoteMembersRepository } from '../repositories/note-members.repository';
 
 @Injectable()
 export class NoteMembersService {
-  constructor(private readonly repository: NoteMembersRepository) {}
+  constructor(
+    private readonly repository: NoteMembersRepository,
+    private readonly notesRepository: NotesRepository,
+  ) {}
 
-  async list(tenantId: string, noteId: string) {
+  /**
+   * The member list is itself only visible to someone who can already see
+   * the note: its creator, or an existing member.
+   */
+  async list(tenantId: string, noteId: string, callerUserId: string) {
+    const note = await this.notesRepository.findById(tenantId, noteId);
+    if (!note) {
+      throw new NotFoundException('Note not found');
+    }
+    const hasAccess =
+      note.createdBy === callerUserId ||
+      Boolean(
+        await this.repository.findByNoteAndUser(tenantId, noteId, callerUserId),
+      );
+    if (!hasAccess) {
+      throw new NotFoundException('Note not found');
+    }
     return this.repository.findByNote(tenantId, noteId);
   }
 

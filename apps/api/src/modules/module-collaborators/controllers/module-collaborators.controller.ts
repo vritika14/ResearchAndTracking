@@ -7,6 +7,7 @@ import {
   Param,
   Patch,
   Post,
+  Req,
   UseGuards,
 } from '@nestjs/common';
 import {
@@ -15,17 +16,27 @@ import {
   ApiResponse,
   ApiTags,
 } from '@nestjs/swagger';
+import { Request } from 'express';
+import type { AuthenticatedPrincipal } from '../../auth/jwt.strategy';
 import { JwtAuthGuard } from '../../auth/jwt-auth.guard';
+import { UsersService } from '../../users/users.service';
 import { AddCollaboratorDto } from '../dto/add-collaborator.dto';
 import { UpdateRoleDto } from '../dto/update-role.dto';
 import { ModuleCollaboratorsService } from '../services/module-collaborators.service';
 import { TenantMemberGuard } from '../../memberships/policies/tenant-member.guard';
 
+interface AuthenticatedRequest extends Request {
+  user: AuthenticatedPrincipal;
+}
+
 @ApiTags('module-collaborators')
 @ApiBearerAuth()
 @Controller('api/v1/tenant/:tenantId/modules/:moduleId/collaborators')
 export class ModuleCollaboratorsController {
-  constructor(private readonly service: ModuleCollaboratorsService) {}
+  constructor(
+    private readonly service: ModuleCollaboratorsService,
+    private readonly usersService: UsersService,
+  ) {}
 
   @ApiOperation({ summary: 'List collaborators on a module' })
   @UseGuards(JwtAuthGuard,TenantMemberGuard)
@@ -33,8 +44,10 @@ export class ModuleCollaboratorsController {
   async list(
     @Param('tenantId') tenantId: string,
     @Param('moduleId') moduleId: string,
+    @Req() req: AuthenticatedRequest,
   ) {
-    return this.service.list(tenantId, moduleId);
+    const user = await this.usersService.findByExternalAuthId(req.user.sub);
+    return this.service.list(tenantId, moduleId, user.id);
   }
 
   @ApiOperation({ summary: 'Add a collaborator to a module' })

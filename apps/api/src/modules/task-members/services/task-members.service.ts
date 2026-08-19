@@ -4,13 +4,33 @@ import {
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
+import { TasksRepository } from '../../tasks/repositories/tasks.repository';
 import { TaskMembersRepository } from '../repositories/task-members.repository';
 
 @Injectable()
 export class TaskMembersService {
-  constructor(private readonly repository: TaskMembersRepository) {}
+  constructor(
+    private readonly repository: TaskMembersRepository,
+    private readonly tasksRepository: TasksRepository,
+  ) {}
 
-  async list(tenantId: string, taskId: string) {
+  /**
+   * The member list is itself only visible to someone who can already see
+   * the task: its creator, or an existing member.
+   */
+  async list(tenantId: string, taskId: string, callerUserId: string) {
+    const task = await this.tasksRepository.findById(tenantId, taskId);
+    if (!task) {
+      throw new NotFoundException('Task not found');
+    }
+    const hasAccess =
+      task.createdBy === callerUserId ||
+      Boolean(
+        await this.repository.findByTaskAndUser(tenantId, taskId, callerUserId),
+      );
+    if (!hasAccess) {
+      throw new NotFoundException('Task not found');
+    }
     return this.repository.findByTask(tenantId, taskId);
   }
 
