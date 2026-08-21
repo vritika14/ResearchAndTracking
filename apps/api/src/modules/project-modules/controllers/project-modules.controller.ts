@@ -25,7 +25,7 @@ import { CreateModuleDto } from '../dto/create-module.dto';
 import { UpdateModuleDto } from '../dto/update-module.dto';
 import { ProjectModulesService } from '../services/project-modules.service';
 import { TenantMemberGuard } from '../../memberships/policies/tenant-member.guard';
-
+import { ModuleAccessGuard } from '../policies/module-access.guard';
 interface AuthenticatedRequest extends Request {
   user: AuthenticatedPrincipal;
 }
@@ -55,7 +55,7 @@ export class ProjectModulesController {
   }
 
   @ApiOperation({ summary: 'Get a single module' })
-  @UseGuards(JwtAuthGuard,TenantMemberGuard)
+  @UseGuards(JwtAuthGuard,TenantMemberGuard,ModuleAccessGuard)
   @Get(':moduleId')
   async findOne(
     @Param('tenantId') tenantId: string,
@@ -82,7 +82,7 @@ export class ProjectModulesController {
   }
 
   @ApiOperation({ summary: 'Update a module' })
-  @UseGuards(JwtAuthGuard,TenantMemberGuard)
+  @UseGuards(JwtAuthGuard,TenantMemberGuard,ModuleAccessGuard)
   @Patch(':moduleId')
   async update(
     @Param('tenantId') tenantId: string,
@@ -95,7 +95,7 @@ export class ProjectModulesController {
   }
 
   @ApiOperation({ summary: 'Archive a module (auto-deleted after 14 days)' })
-  @UseGuards(JwtAuthGuard,TenantMemberGuard)
+  @UseGuards(JwtAuthGuard,TenantMemberGuard,ModuleAccessGuard)
   @Delete(':moduleId')
   async archive(
     @Param('tenantId') tenantId: string,

@@ -1,4 +1,4 @@
-import { Module } from '@nestjs/common';
+import { Module, MiddlewareConsumer, NestModule } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
 import { join } from 'path';
 import { LoggerModule } from 'nestjs-pino';
@@ -19,6 +19,9 @@ import { TasksModule } from './modules/tasks/tasks.module';
 import { ProjectCollaboratorsModule } from './modules/project-collaborators/project-collaborators.module';
 import { ModuleCollaboratorsModule } from './modules/module-collaborators/module-collaborators.module';
 import { PipelineStagesModule } from './modules/pipeline-stages/pipeline-stages.module';
+import { TaskMembersModule } from './modules/task-members/task-members.module';
+import { NoteMembersModule } from './modules/note-members/note-members.module';
+import { TenantContextMiddleware } from './db/tenant-context.middleware';
 
 const invitationTokenPath = /\/api\/v1\/invitations\/[^/]+/g;
 
@@ -74,8 +77,14 @@ const invitationTokenPath = /\/api\/v1\/invitations\/[^/]+/g;
     ProjectCollaboratorsModule,
     ModuleCollaboratorsModule,
     PipelineStagesModule,
+    TaskMembersModule,
+    NoteMembersModule,
   ],
   controllers: [AppController],
   providers: [AppService],
 })
-export class AppModule {}
+export class AppModule implements NestModule {
+  configure(consumer: MiddlewareConsumer) {
+    consumer.apply(TenantContextMiddleware).forRoutes('*');
+  }
+}

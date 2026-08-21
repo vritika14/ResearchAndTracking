@@ -23,7 +23,7 @@ import { CreateProjectDto } from '../dto/create-project.dto';
 import { UpdateProjectDto } from '../dto/update-project.dto';
 import { ProjectsService } from '../services/projects.service';
 import { TenantMemberGuard } from '../../memberships/policies/tenant-member.guard';
-
+import { ProjectAccessGuard } from '../policies/project-access.guard';
 interface AuthenticatedRequest extends Request {
   user: AuthenticatedPrincipal;
 }
@@ -51,7 +51,7 @@ export class ProjectsController {
   }
 
   @ApiOperation({ summary: 'Get a single project' })
-  @UseGuards(JwtAuthGuard,TenantMemberGuard)
+  @UseGuards(JwtAuthGuard,TenantMemberGuard,ProjectAccessGuard)
   @Get(':projectId')
   async findOne(
     @Param('tenantId') tenantId: string,
@@ -76,7 +76,7 @@ export class ProjectsController {
   }
 
   @ApiOperation({ summary: 'Update a project' })
-  @UseGuards(JwtAuthGuard,TenantMemberGuard)
+  @UseGuards(JwtAuthGuard,TenantMemberGuard,ProjectAccessGuard)
   @Patch(':projectId')
   async update(
     @Param('tenantId') tenantId: string,
@@ -89,7 +89,7 @@ export class ProjectsController {
   }
 
   @ApiOperation({ summary: 'Archive a project (auto-deleted after 14 days)' })
-  @UseGuards(JwtAuthGuard,TenantMemberGuard)
+  @UseGuards(JwtAuthGuard,TenantMemberGuard,ProjectAccessGuard)
   @Delete(':projectId')
   async archive(
     @Param('tenantId') tenantId: string,

@@ -6,6 +6,7 @@ import { ProjectCollaboratorsModule } from '../project-collaborators/project-col
 import { TenantSequencesModule } from '../tenant-sequences/tenant-sequences.module';
 import { UsersModule } from '../users/users.module';
 import { ProjectModulesController } from './controllers/project-modules.controller';
+import { ModuleAccessGuard } from './policies/module-access.guard';
 import { ProjectModulesRepository } from './repositories/project-modules.repository';
 import { ProjectModulesService } from './services/project-modules.service';
 import { MembershipsModule } from '../memberships/memberships.module';
@@ -20,7 +21,7 @@ import { MembershipsModule } from '../memberships/memberships.module';
     MembershipsModule,
   ],
   controllers: [ProjectModulesController],
-  providers: [ProjectModulesService, ProjectModulesRepository],
+  providers: [ProjectModulesService, ProjectModulesRepository, ModuleAccessGuard],
   exports: [ProjectModulesRepository],
 })
 export class ProjectModulesModule {}
