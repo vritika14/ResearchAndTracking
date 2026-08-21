@@ -40,6 +40,7 @@ export class TenantContextMiddleware implements NestMiddleware {
         userId = user?.id ?? null;
       }
     }
+    console.log('DEBUG - middleware resolved userId:', userId, 'for URL:', req.url);
 
     const client = await this.drizzle.getClient();
     const tx = drizzle(client, { schema });
@@ -52,7 +53,9 @@ export class TenantContextMiddleware implements NestMiddleware {
       if (userId) {
         await client.query('SELECT set_config($1, $2, true)', ['app.current_user_id', userId]);
       }
-      console.log('DEBUG - middleware resolved userId:', userId);
+
+      const middlewareCheck = await client.query('SELECT pg_backend_pid() as backend_pid');
+      console.log('DEBUG - middleware backend_pid:', middlewareCheck.rows[0]);
 
       requestContextStorage.run({ tenantId, userId, tx }, () => {
         res.on('finish', () => {
