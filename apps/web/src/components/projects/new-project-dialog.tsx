@@ -1,7 +1,7 @@
 import { useMemo, useState, type FormEvent, type ReactNode } from "react";
-import { LockKeyhole, Search, UserRound, X } from "lucide-react";
+import { Search, X } from "lucide-react";
 
-import type { Membership } from "@/api/hooks";
+import type { ApiPipelineStage, Membership } from "@/api/hooks";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { DatePickerInput } from "@/components/ui/date-picker-input";
@@ -15,6 +15,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
 import {
   Select,
   SelectContent,
@@ -22,50 +23,46 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { usePipelineStages } from "@/hooks/use-pipeline-stages";
-import type { ProjectPriority, ProjectRole, ProjectStatus } from "@/data/projects";
 
-const PROJECT_PRIORITIES: ProjectPriority[] = ["Low", "Medium", "High", "Critical"];
-const PROJECT_STATUSES: ProjectStatus[] = ["Active", "Review", "Stalled", "Complete"];
+const PROJECT_PRIORITIES = ["Low", "Medium", "High", "Critical"] as const;
+const PROJECT_STATUSES = ["Active", "Review", "Stalled", "Complete"] as const;
 
 export interface NewProjectInput {
   title: string;
-  pi: string;
-  funder: string;
-  collaborators: string;
-  myRole: ProjectRole;
-  priority: ProjectPriority;
-  status: ProjectStatus;
-  stageIndex: number;
+  description: string;
+  researchArea: string;
+  status: string;
+  priority: string;
+  pipelineStage: string;
   scheduledFor: string;
   dueDate: string;
-  budgetTotal: number;
-  targetJournal: string;
+  totalBudget: string;
+  targetJournals: string;
+  collaboratorUserIds: string[];
 }
 
 interface NewProjectDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   onCreate: (project: NewProjectInput) => void;
-  principalInvestigator: string;
   currentUserId: string;
   members: Membership[];
   membersLoading: boolean;
+  pipelineStages: ApiPipelineStage[];
 }
 
 const INITIAL_FORM: NewProjectInput = {
   title: "",
-  pi: "",
-  funder: "",
-  collaborators: "",
-  myRole: "Owner",
-  priority: "Medium",
+  description: "",
+  researchArea: "",
   status: "Active",
-  stageIndex: 0,
+  priority: "Medium",
+  pipelineStage: "",
   scheduledFor: "",
   dueDate: "",
-  budgetTotal: 0,
-  targetJournal: "",
+  totalBudget: "",
+  targetJournals: "",
+  collaboratorUserIds: [],
 };
 
 function FormField({ label, htmlFor, required, children }: {
@@ -89,12 +86,11 @@ export function NewProjectDialog({
   open,
   onOpenChange,
   onCreate,
-  principalInvestigator,
   currentUserId,
   members,
   membersLoading,
+  pipelineStages,
 }: NewProjectDialogProps) {
-  const { pipelineStages } = usePipelineStages();
   const [form, setForm] = useState<NewProjectInput>(INITIAL_FORM);
   const [memberSearch, setMemberSearch] = useState("");
   const [memberPickerOpen, setMemberPickerOpen] = useState(false);
@@ -135,13 +131,10 @@ export function NewProjectDialog({
     onCreate({
       ...form,
       title: form.title.trim(),
-      pi: principalInvestigator,
-      funder: form.funder.trim() || "Not specified",
-      collaborators:
-        selectedMembers.map((member) => member.displayName).join(", ") ||
-        "None listed",
-      myRole: "Owner",
-      targetJournal: form.targetJournal.trim() || "Not specified",
+      description: form.description.trim(),
+      researchArea: form.researchArea.trim(),
+      targetJournals: form.targetJournals.trim(),
+      collaboratorUserIds: selectedMembers.map((member) => member.userId),
     });
     resetForm();
     onOpenChange(false);
@@ -153,60 +146,52 @@ export function NewProjectDialog({
         <DialogHeader>
           <DialogTitle>Create a new project</DialogTitle>
           <DialogDescription>
-            Add the core project details now. Progress, notes and task counts start at zero.
+            Add the core project details now. You'll automatically be the owner.
           </DialogDescription>
         </DialogHeader>
 
         <form onSubmit={handleSubmit} className="grid gap-5">
           <div className="grid gap-4 sm:grid-cols-2">
-            <FormField label="Project title" htmlFor="project-title" required>
-              <Input
-                id="project-title"
-                value={form.title}
-                onChange={(event) => setForm((prev) => ({ ...prev, title: event.target.value }))}
-                placeholder="e.g. Genome sequencing validation"
-                autoFocus
-                required
-              />
-            </FormField>
-
-            <FormField label="Principal investigator" htmlFor="project-pi" required>
-              <div className="relative">
-                <UserRound className="pointer-events-none absolute left-3 top-2.5 h-4 w-4 text-muted-foreground" />
+            <div className="sm:col-span-2">
+              <FormField label="Project title" htmlFor="project-title" required>
                 <Input
-                  id="project-pi"
-                  value={principalInvestigator}
-                  readOnly
+                  id="project-title"
+                  value={form.title}
+                  onChange={(event) => setForm((prev) => ({ ...prev, title: event.target.value }))}
+                  placeholder="e.g. Genome sequencing validation"
+                  autoFocus
                   required
-                  className="bg-muted/60 pl-9 pr-9"
                 />
-                <LockKeyhole className="pointer-events-none absolute right-3 top-2.5 h-4 w-4 text-muted-foreground" />
-              </div>
-            </FormField>
+              </FormField>
+            </div>
 
-            <FormField label="Funder" htmlFor="project-funder">
+            <div className="sm:col-span-2">
+              <FormField label="Description" htmlFor="project-description">
+                <Textarea
+                  id="project-description"
+                  value={form.description}
+                  onChange={(event) =>
+                    setForm((prev) => ({ ...prev, description: event.target.value }))
+                  }
+                  placeholder="Add a short description of the project"
+                  rows={3}
+                />
+              </FormField>
+            </div>
+
+            <FormField label="Research area" htmlFor="project-research-area">
               <Input
-                id="project-funder"
-                value={form.funder}
-                onChange={(event) => setForm((prev) => ({ ...prev, funder: event.target.value }))}
-                placeholder="e.g. NHMRC"
+                id="project-research-area"
+                value={form.researchArea}
+                onChange={(event) =>
+                  setForm((prev) => ({ ...prev, researchArea: event.target.value }))
+                }
+                placeholder="e.g. Structural biology"
               />
-            </FormField>
-
-            <FormField label="My role" htmlFor="project-role">
-              <div className="relative">
-                <Input
-                  id="project-role"
-                  value="Owner"
-                  readOnly
-                  className="bg-muted/60 pr-9"
-                />
-                <LockKeyhole className="pointer-events-none absolute right-3 top-2.5 h-4 w-4 text-muted-foreground" />
-              </div>
             </FormField>
 
             <div className="sm:col-span-2">
-              <FormField label="With whom" htmlFor="project-members">
+              <FormField label="Collaborators" htmlFor="project-members">
                 <div
                   className="relative"
                   onBlur={(event) => {
@@ -301,7 +286,7 @@ export function NewProjectDialog({
                   </div>
                 ) : null}
                 <p className="mt-1 text-xs text-muted-foreground">
-                  Search active members of the current workspace.
+                  Added as collaborators once the project is created. You're automatically the owner.
                 </p>
               </FormField>
             </div>
@@ -309,9 +294,7 @@ export function NewProjectDialog({
             <FormField label="Importance" htmlFor="project-priority">
               <Select
                 value={form.priority}
-                onValueChange={(value) =>
-                  setForm((prev) => ({ ...prev, priority: value as ProjectPriority }))
-                }
+                onValueChange={(value) => setForm((prev) => ({ ...prev, priority: value }))}
               >
                 <SelectTrigger id="project-priority"><SelectValue /></SelectTrigger>
                 <SelectContent>
@@ -325,9 +308,7 @@ export function NewProjectDialog({
             <FormField label="Status" htmlFor="project-status">
               <Select
                 value={form.status}
-                onValueChange={(value) =>
-                  setForm((prev) => ({ ...prev, status: value as ProjectStatus }))
-                }
+                onValueChange={(value) => setForm((prev) => ({ ...prev, status: value }))}
               >
                 <SelectTrigger id="project-status"><SelectValue /></SelectTrigger>
                 <SelectContent>
@@ -340,15 +321,15 @@ export function NewProjectDialog({
 
             <FormField label="Pipeline stage" htmlFor="project-stage">
               <Select
-                value={String(form.stageIndex)}
+                value={form.pipelineStage}
                 onValueChange={(value) =>
-                  setForm((prev) => ({ ...prev, stageIndex: Number(value) }))
+                  setForm((prev) => ({ ...prev, pipelineStage: value }))
                 }
               >
-                <SelectTrigger id="project-stage"><SelectValue /></SelectTrigger>
+                <SelectTrigger id="project-stage"><SelectValue placeholder="Select a stage" /></SelectTrigger>
                 <SelectContent>
-                  {pipelineStages.map((stage, index) => (
-                    <SelectItem key={stage.name} value={String(index)}>{stage.name}</SelectItem>
+                  {pipelineStages.map((stage) => (
+                    <SelectItem key={stage.id} value={stage.value}>{stage.value}</SelectItem>
                   ))}
                 </SelectContent>
               </Select>
@@ -380,20 +361,20 @@ export function NewProjectDialog({
                 type="number"
                 min="0"
                 step="100"
-                value={form.budgetTotal}
+                value={form.totalBudget}
                 onChange={(event) =>
-                  setForm((prev) => ({ ...prev, budgetTotal: Number(event.target.value) }))
+                  setForm((prev) => ({ ...prev, totalBudget: event.target.value }))
                 }
               />
             </FormField>
 
             <div className="sm:col-span-2">
-              <FormField label="Target journal or output" htmlFor="project-journal">
+              <FormField label="Target journal(s) or output" htmlFor="project-journal">
                 <Input
                   id="project-journal"
-                  value={form.targetJournal}
+                  value={form.targetJournals}
                   onChange={(event) =>
-                    setForm((prev) => ({ ...prev, targetJournal: event.target.value }))
+                    setForm((prev) => ({ ...prev, targetJournals: event.target.value }))
                   }
                   placeholder="e.g. Nature Communications"
                 />

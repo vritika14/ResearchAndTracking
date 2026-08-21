@@ -1,35 +1,172 @@
-import { fireEvent, render, screen } from "@testing-library/react";
+import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { MemoryRouter } from "react-router-dom";
-import { describe, expect, it } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import TasksPage from "@/pages/tasks";
 
+type TaskFixture = {
+  id: string;
+  displayId: string | null;
+  tenantId: string;
+  projectId: string | null;
+  moduleId: string | null;
+  createdBy: string;
+  title: string;
+  description: string | null;
+  status: string | null;
+  priority: string | null;
+  visibility: string | null;
+  workingWith: string | null;
+  estimatedHours: string | null;
+  dueDate: string | null;
+  createdAt: string;
+  updatedAt: string;
+};
+
+// Mirrors react-query's cache-subscription behaviour so hand-written mocks
+// still trigger a re-render when the underlying fixture data changes.
+const store = vi.hoisted(() => {
+  let tasks: TaskFixture[] = [];
+  const listeners = new Set<() => void>();
+  return {
+    getTasks: () => tasks,
+    setTasks: (next: TaskFixture[]) => {
+      tasks = next;
+      listeners.forEach((listener) => listener());
+    },
+    subscribe: (listener: () => void) => {
+      listeners.add(listener);
+      return () => listeners.delete(listener);
+    },
+  };
+});
+
+const fixtures = vi.hoisted(() => ({
+  tenantId: "workspace-1",
+  projects: [] as Array<{ id: string; title: string }>,
+  modules: [] as Array<{ id: string; title: string }>,
+  members: [
+    {
+      id: "membership-owner",
+      userId: "user-owner",
+      displayName: "Avi Researcher",
+      email: "owner@example.com",
+      role: "owner",
+    },
+  ],
+}));
+
+vi.mock("@/api/client", () => ({
+  apiClient: {
+    POST: vi.fn().mockResolvedValue({ data: {}, error: undefined, response: new Response() }),
+  },
+}));
+
+vi.mock("@/api/hooks", async () => {
+  const { useSyncExternalStore } = await import("react");
+  return {
+    useCurrentWorkspace: () => ({ data: { id: fixtures.tenantId }, isPending: false }),
+    useMembers: () => ({ data: fixtures.members, isPending: false }),
+    useProjects: () => ({ data: fixtures.projects, isPending: false, isError: false }),
+    useModules: () => ({ data: fixtures.modules }),
+    useTasks: () => ({
+      data: useSyncExternalStore(store.subscribe, store.getTasks),
+      isPending: false,
+      isError: false,
+      error: undefined,
+      refetch: vi.fn(),
+    }),
+    useCreateTask: () => ({
+      mutateAsync: vi.fn(async (input: Record<string, unknown>) => {
+        const tasks = store.getTasks();
+        const task: TaskFixture = {
+          id: `task-${tasks.length + 1}`,
+          displayId: `TSK-${String(tasks.length + 1).padStart(4, "0")}`,
+          tenantId: fixtures.tenantId,
+          projectId: (input.projectId as string | undefined) ?? null,
+          moduleId: (input.moduleId as string | undefined) ?? null,
+          createdBy: "user-owner",
+          title: input.title as string,
+          description: (input.description as string | undefined) ?? null,
+          status: (input.status as string | undefined) ?? "To do",
+          priority: (input.priority as string | undefined) ?? "Medium",
+          visibility: (input.visibility as string | undefined) ?? "Private",
+          workingWith: (input.workingWith as string | undefined) ?? null,
+          estimatedHours: (input.estimatedHours as string | undefined) ?? null,
+          dueDate: (input.dueDate as string | undefined) ?? null,
+          createdAt: "2026-01-01T00:00:00.000Z",
+          updatedAt: "2026-01-01T00:00:00.000Z",
+        };
+        store.setTasks([task, ...tasks]);
+        return task;
+      }),
+    }),
+    useUpdateTask: () => ({
+      mutateAsync: vi.fn(
+        async ({ taskId, input }: { taskId: string; input: Record<string, unknown> }) => {
+          const updated = store.getTasks().map((item) =>
+            item.id === taskId ? { ...item, ...input } : item,
+          );
+          store.setTasks(updated);
+          return updated.find((item) => item.id === taskId);
+        },
+      ),
+    }),
+    useDeleteTask: () => ({
+      mutateAsync: vi.fn(async (taskId: string) => {
+        store.setTasks(store.getTasks().filter((item) => item.id !== taskId));
+      }),
+    }),
+    useTaskMembers: () => ({ data: [], isPending: false }),
+    useAddTaskMember: () => ({ mutate: vi.fn() }),
+    useRemoveTaskMember: () => ({ mutate: vi.fn() }),
+  };
+});
+
 describe("TasksPage", () => {
-  it("shows scheduled dates in the table and new-task form", () => {
+  beforeEach(() => {
+    store.setTasks([
+      {
+        id: "task-1",
+        displayId: "TSK-0441",
+        tenantId: fixtures.tenantId,
+        projectId: null,
+        moduleId: null,
+        createdBy: "user-owner",
+        title: "Submit interim safety report to IRB",
+        description: "Compile interim safety findings and submit the approved report package.",
+        status: "To do",
+        priority: "Critical",
+        visibility: "Private",
+        workingWith: null,
+        estimatedHours: "3",
+        dueDate: "2026-08-01",
+        createdAt: "2026-01-01T00:00:00.000Z",
+        updatedAt: "2026-01-01T00:00:00.000Z",
+      },
+    ]);
+    fixtures.projects = [];
+    fixtures.modules = [];
+  });
+
+  it("shows the due date in the table and new-task form", () => {
     render(
       <MemoryRouter>
         <TasksPage />
       </MemoryRouter>,
     );
 
-    expect(screen.getByRole("button", { name: "Sort by Scheduled For" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Sort by Due" })).toBeInTheDocument();
 
     fireEvent.click(screen.getByRole("button", { name: "New Task" }));
 
-    const scheduledFor = screen.getByLabelText(/Scheduled for/);
     const dueDate = screen.getByLabelText(/Due date/);
-
-    expect(scheduledFor).toHaveAttribute("placeholder", "DD/MM/YYYY");
-    expect(scheduledFor).not.toBeRequired();
     expect(dueDate).toHaveAttribute("placeholder", "DD/MM/YYYY");
     expect(dueDate).not.toBeRequired();
-    expect(
-      screen.getByRole("button", { name: "Choose scheduled for date" }),
-    ).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Choose due date" })).toBeInTheDocument();
   });
 
-  it("edits an existing task from its table row", () => {
+  it("edits an existing task from its table row", async () => {
     render(
       <MemoryRouter>
         <TasksPage />
@@ -41,7 +178,6 @@ describe("TasksPage", () => {
     );
 
     expect(screen.getByRole("heading", { name: "Edit task" })).toBeInTheDocument();
-    expect(screen.getByLabelText(/Scheduled for/)).toHaveValue("30/07/2026");
     expect(screen.getByLabelText(/Due date/)).toHaveValue("01/08/2026");
 
     fireEvent.change(screen.getByRole("textbox", { name: /Task title/ }), {
@@ -49,7 +185,26 @@ describe("TasksPage", () => {
     });
     fireEvent.click(screen.getByRole("button", { name: "Save Changes" }));
 
-    expect(screen.getByText("Submit revised interim safety report")).toBeInTheDocument();
+    await waitFor(() =>
+      expect(screen.getByText("Submit revised interim safety report")).toBeInTheDocument(),
+    );
     expect(screen.queryByRole("heading", { name: "Edit task" })).not.toBeInTheDocument();
+  });
+
+  it("deletes a task after confirmation", async () => {
+    vi.spyOn(window, "confirm").mockReturnValue(true);
+    render(
+      <MemoryRouter>
+        <TasksPage />
+      </MemoryRouter>,
+    );
+
+    fireEvent.click(
+      screen.getByRole("button", { name: "Delete Submit interim safety report to IRB" }),
+    );
+
+    await waitFor(() =>
+      expect(screen.getByText("No tasks match the current filters.")).toBeInTheDocument(),
+    );
   });
 });

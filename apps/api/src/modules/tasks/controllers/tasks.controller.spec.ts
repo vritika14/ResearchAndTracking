@@ -30,25 +30,39 @@ describe('TasksController', () => {
     );
   });
 
+  const req = {
+    user: { sub: 'cognito-sub-1', accessToken: 'token-1' },
+  } as any;
+
   describe('list', () => {
-    it('delegates to the service with tenantId and projectId', async () => {
+    it('resolves the caller and delegates to the service with tenantId and projectId', async () => {
+      usersService.findByExternalAuthId.mockResolvedValue({ id: 'user-1' });
       const tasks = [{ id: 't1' }];
       tasksService.list.mockResolvedValue(tasks);
 
-      const result = await controller.list('tenant-1', 'project-1');
+      const result = await controller.list('tenant-1', req, 'project-1');
 
-      expect(tasksService.list).toHaveBeenCalledWith('tenant-1', 'project-1');
+      expect(tasksService.list).toHaveBeenCalledWith(
+        'tenant-1',
+        'user-1',
+        'project-1',
+      );
       expect(result).toBe(tasks);
     });
   });
 
   describe('findOne', () => {
-    it('delegates to the service with tenantId and taskId', async () => {
+    it('resolves the caller and delegates to the service with tenantId and taskId', async () => {
+      usersService.findByExternalAuthId.mockResolvedValue({ id: 'user-1' });
       tasksService.findOne.mockResolvedValue({ id: 't1' });
 
-      const result = await controller.findOne('tenant-1', 't1');
+      const result = await controller.findOne('tenant-1', 't1', req);
 
-      expect(tasksService.findOne).toHaveBeenCalledWith('tenant-1', 't1');
+      expect(tasksService.findOne).toHaveBeenCalledWith(
+        'tenant-1',
+        't1',
+        'user-1',
+      );
       expect(result).toEqual({ id: 't1' });
     });
   });
@@ -58,9 +72,6 @@ describe('TasksController', () => {
       usersService.findByExternalAuthId.mockResolvedValue({ id: 'user-1' });
       tasksService.create.mockResolvedValue({ id: 't1' });
 
-      const req = {
-        user: { sub: 'cognito-sub-1', accessToken: 'token-1' },
-      } as any;
       const dto = { title: 'New Task' };
 
       const result = await controller.create('tenant-1', req, dto);
@@ -78,24 +89,35 @@ describe('TasksController', () => {
   });
 
   describe('update', () => {
-    it('delegates to the service with tenantId, taskId, and dto', async () => {
+    it('resolves the caller and delegates to the service with tenantId, taskId, and dto', async () => {
+      usersService.findByExternalAuthId.mockResolvedValue({ id: 'user-1' });
       tasksService.update.mockResolvedValue({ id: 't1', title: 'Updated' });
       const dto = { title: 'Updated' };
 
-      const result = await controller.update('tenant-1', 't1', dto);
+      const result = await controller.update('tenant-1', 't1', req, dto);
 
-      expect(tasksService.update).toHaveBeenCalledWith('tenant-1', 't1', dto);
+      expect(tasksService.update).toHaveBeenCalledWith(
+        'tenant-1',
+        't1',
+        'user-1',
+        dto,
+      );
       expect(result).toEqual({ id: 't1', title: 'Updated' });
     });
   });
 
   describe('remove', () => {
-    it('delegates to the service with tenantId and taskId', async () => {
+    it('resolves the caller and delegates to the service with tenantId and taskId', async () => {
+      usersService.findByExternalAuthId.mockResolvedValue({ id: 'user-1' });
       tasksService.delete.mockResolvedValue({ id: 't1' });
 
-      const result = await controller.remove('tenant-1', 't1');
+      const result = await controller.remove('tenant-1', 't1', req);
 
-      expect(tasksService.delete).toHaveBeenCalledWith('tenant-1', 't1');
+      expect(tasksService.delete).toHaveBeenCalledWith(
+        'tenant-1',
+        't1',
+        'user-1',
+      );
       expect(result).toEqual({ id: 't1' });
     });
   });

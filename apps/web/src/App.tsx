@@ -55,8 +55,9 @@ export default function App() {
                 element={<ProjectDetailPage />}
               />
               <Route path="tasks" element={<TasksPage />} />
-              <Route path="tasks/:taskCode" element={<TaskDetailPage />} />
+              <Route path="tasks/:taskId" element={<TaskDetailPage />} />
               <Route path="daily-notes" element={<DailyNotesPage />} />
+              <Route path="daily-notes/:noteId" element={<DailyNotesPage />} />
               <Route path="pipeline" element={<PipelinePage />} />
               <Route path="settings" element={<SettingsPage />} />
               <Route path="workspaces" element={<WorkspacesPage />} />

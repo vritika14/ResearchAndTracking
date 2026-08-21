@@ -1,5 +1,6 @@
 import { useMemo, useState } from "react";
 
+import { useCurrentWorkspace, usePipelineStages, useProjects, useTasks } from "@/api/hooks";
 import {
   PipelineBar,
   PipelineStageRuler,
@@ -30,11 +31,8 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { pipelineProjects } from "@/data/pipeline-projects";
 import { cn } from "@/lib/utils";
 import { useColumnVisibility } from "@/hooks/use-column-visibility";
-import { usePipelineStages } from "@/hooks/use-pipeline-stages";
-import { useProjectStageOverrides } from "@/hooks/use-project-stage-overrides";
 
 const PRIORITY_FILTERS = ["All", "Critical", "High", "Medium", "Low"] as const;
 const PIPELINE_COLUMNS = [
@@ -47,38 +45,69 @@ const PIPELINE_COLUMNS = [
 type PriorityFilter = (typeof PRIORITY_FILTERS)[number];
 
 export function PipelineOverviewTable() {
+  const workspace = useCurrentWorkspace();
+  const tenantId = workspace.data?.id ?? "";
+  const projectsQuery = useProjects(tenantId);
+  const tasksQuery = useTasks(tenantId);
+  const pipelineStagesQuery = usePipelineStages(tenantId);
+
   const [search, setSearch] = useState("");
   const [priority, setPriority] = useState<PriorityFilter>("All");
   const [stage, setStage] = useState("All");
-  const { pipelineStages } = usePipelineStages();
-  const stageNames = pipelineStages.map((pipelineStage) => pipelineStage.name);
-  const pipelineWidth = `${Math.max(1280, stageNames.length * 128)}px`;
-  const { stageOverrides } = useProjectStageOverrides();
-  const projectRows = useMemo(
-    () =>
-      pipelineProjects.map((project) => ({
-        ...project,
-        stageIndex: stageOverrides[project.id] ?? project.stageIndex,
-      })),
-    [stageOverrides],
-  );
   const columns = useColumnVisibility(
     PIPELINE_COLUMNS.map((column) => column.id),
+  );
+
+  const stages = useMemo(
+    () => [...(pipelineStagesQuery.data ?? [])].sort((a, b) => a.sortOrder - b.sortOrder),
+    [pipelineStagesQuery.data],
+  );
+  const stageNames = stages.map((s) => s.value);
+  const stageIndexByValue = useMemo(() => {
+    const map = new Map<string, number>();
+    stages.forEach((s, index) => map.set(s.value, index));
+    return map;
+  }, [stages]);
+  const pipelineWidth = `${Math.max(1280, stageNames.length * 128)}px`;
+
+  const taskCountByProject = useMemo(() => {
+    const counts = new Map<string, { completed: number; total: number }>();
+    for (const task of tasksQuery.data ?? []) {
+      if (!task.projectId) continue;
+      const entry = counts.get(task.projectId) ?? { completed: 0, total: 0 };
+      entry.total += 1;
+      if (task.status === "Complete") entry.completed += 1;
+      counts.set(task.projectId, entry);
+    }
+    return counts;
+  }, [tasksQuery.data]);
+
+  const projectRows = useMemo(
+    () =>
+      (projectsQuery.data ?? [])
+        .map((project) => {
+          const counts = taskCountByProject.get(project.id) ?? { completed: 0, total: 0 };
+          const stageIndex = project.pipelineStage
+            ? stageIndexByValue.get(project.pipelineStage)
+            : undefined;
+          return {
+            id: project.id,
+            name: project.title,
+            priority: project.importance,
+            stageIndex,
+            completion: counts.total > 0 ? Math.round((counts.completed / counts.total) * 100) : 0,
+          };
+        })
+        .filter((row): row is typeof row & { stageIndex: number } => row.stageIndex !== undefined),
+    [projectsQuery.data, taskCountByProject, stageIndexByValue],
   );
 
   const filtered = useMemo(() => {
     const query = search.trim().toLowerCase();
     return projectRows.filter((row) => {
       if (priority !== "All" && row.priority !== priority) return false;
-      if (stage !== "All" && stageNames[row.stageIndex] !== stage)
-        return false;
-      if (
-        query &&
-        !row.id.toLowerCase().includes(query) &&
-        !row.name.toLowerCase().includes(query)
-      ) {
-        return false;
-      }
+      if (stage !== "All" && stageNames[row.stageIndex] !== stage) return false;
+      if (query && !row.name.toLowerCase().includes(query)) return false;
       return true;
     });
   }, [projectRows, search, priority, stage, stageNames]);
@@ -104,7 +133,7 @@ export function PipelineOverviewTable() {
           <Input
             value={search}
             onChange={(event) => setSearch(event.target.value)}
-            placeholder="Search project or ID…"
+            placeholder="Search project…"
             className="sm:max-w-xs"
           />
           <Select
@@ -213,7 +242,7 @@ export function PipelineOverviewTable() {
                         variant="outline"
                         className={priorityBadgeClass(row.priority)}
                       >
-                        {row.priority}
+                        {row.priority ?? "—"}
                       </Badge>
                     </TableCell>
                   ) : null}

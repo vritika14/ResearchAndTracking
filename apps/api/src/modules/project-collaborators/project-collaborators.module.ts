@@ -5,9 +5,10 @@ import { ProjectCollaboratorsController } from './controllers/project-collaborat
 import { ProjectCollaboratorsRepository } from './repositories/project-collaborators.repository';
 import { ProjectCollaboratorsService } from './services/project-collaborators.service';
 import { MembershipsModule } from '../memberships/memberships.module';
+import { UsersModule } from '../users/users.module';
 
 @Module({
-  imports: [EnumModule,MembershipsModule],
+  imports: [EnumModule,MembershipsModule,UsersModule],
   controllers: [ProjectCollaboratorsController],
   providers: [ProjectCollaboratorsService, ProjectCollaboratorsRepository],
   exports: [ProjectCollaboratorsRepository],

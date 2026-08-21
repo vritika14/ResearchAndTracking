@@ -5,6 +5,7 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import { EnumRepository } from '../../enum/repositories/enum.repository';
+import { ProjectCollaboratorsRepository } from '../../project-collaborators/repositories/project-collaborators.repository';
 import { ProjectModulesRepository } from '../../project-modules/repositories/project-modules.repository';
 import { ModuleCollaboratorsRepository } from '../repositories/module-collaborators.repository';
 
@@ -13,10 +14,40 @@ export class ModuleCollaboratorsService {
   constructor(
     private readonly repository: ModuleCollaboratorsRepository,
     private readonly modulesRepository: ProjectModulesRepository,
+    private readonly projectCollaboratorsRepository: ProjectCollaboratorsRepository,
     private readonly enumRepository: EnumRepository,
   ) {}
 
-  async list(tenantId: string, moduleId: string) {
+  /**
+   * The collaborator list is itself only visible to someone who can already
+   * see the module: for a project-scoped module, a collaborator on that
+   * project; for an independent module, an existing module collaborator.
+   */
+  async list(tenantId: string, moduleId: string, callerUserId: string) {
+    const module = await this.modulesRepository.findById(tenantId, moduleId);
+    if (!module) {
+      throw new NotFoundException('Module not found');
+    }
+
+    const hasAccess = module.projectId
+      ? Boolean(
+          await this.projectCollaboratorsRepository.findByProjectAndUser(
+            tenantId,
+            module.projectId,
+            callerUserId,
+          ),
+        )
+      : Boolean(
+          await this.repository.findByModuleAndUser(
+            tenantId,
+            moduleId,
+            callerUserId,
+          ),
+        );
+    if (!hasAccess) {
+      throw new NotFoundException('Module not found');
+    }
+
     return this.repository.findByModule(tenantId, moduleId);
   }
 

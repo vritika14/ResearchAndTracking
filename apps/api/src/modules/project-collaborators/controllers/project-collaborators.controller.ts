@@ -7,6 +7,7 @@ import {
   Param,
   Patch,
   Post,
+  Req,
   UseGuards,
 } from '@nestjs/common';
 import {
@@ -15,17 +16,27 @@ import {
   ApiResponse,
   ApiTags,
 } from '@nestjs/swagger';
+import { Request } from 'express';
+import type { AuthenticatedPrincipal } from '../../auth/jwt.strategy';
 import { JwtAuthGuard } from '../../auth/jwt-auth.guard';
+import { UsersService } from '../../users/users.service';
 import { AddCollaboratorDto } from '../dto/add-collaborator.dto';
 import { UpdateRoleDto } from '../dto/update-role.dto';
 import { ProjectCollaboratorsService } from '../services/project-collaborators.service';
 import { TenantMemberGuard } from '../../memberships/policies/tenant-member.guard';
 
+interface AuthenticatedRequest extends Request {
+  user: AuthenticatedPrincipal;
+}
+
 @ApiTags('project-collaborators')
 @ApiBearerAuth()
 @Controller('api/v1/tenant/:tenantId/projects/:projectId/collaborators')
 export class ProjectCollaboratorsController {
-  constructor(private readonly service: ProjectCollaboratorsService) {}
+  constructor(
+    private readonly service: ProjectCollaboratorsService,
+    private readonly usersService: UsersService,
+  ) {}
 
   @ApiOperation({ summary: 'List collaborators on a project' })
   @UseGuards(JwtAuthGuard,TenantMemberGuard)
@@ -33,8 +44,10 @@ export class ProjectCollaboratorsController {
   async list(
     @Param('tenantId') tenantId: string,
     @Param('projectId') projectId: string,
+    @Req() req: AuthenticatedRequest,
   ) {
-    return this.service.list(tenantId, projectId);
+    const user = await this.usersService.findByExternalAuthId(req.user.sub);
+    return this.service.list(tenantId, projectId, user.id);
   }
 
   @ApiOperation({ summary: 'Add a collaborator to a project' })

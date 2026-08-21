@@ -17,9 +17,18 @@ export class ProjectsService {
 
   async listActive(tenantId: string, callerUserId: string) {
     const rows = await this.repository.findActiveByTenant(tenantId);
-    return this.withDisplayValues(tenantId, rows, callerUserId);
+    const shaped = await this.withDisplayValues(tenantId, rows, callerUserId);
+    return shaped.filter(
+      (project, index) =>
+        project.role !== null || rows[index]!.userId === callerUserId,
+    );
   }
 
+  /**
+   * Visible only to the project's owner or a project_collaborators row for
+   * the caller — a tenant member with neither is treated as if the project
+   * doesn't exist, not merely forbidden, so its existence isn't leaked.
+   */
   async findOne(tenantId: string, projectId: string, callerUserId: string) {
     const project = await this.repository.findById(tenantId, projectId);
     if (!project) {
@@ -30,6 +39,9 @@ export class ProjectsService {
       [project],
       callerUserId,
     );
+    if (shaped!.role === null && project.userId !== callerUserId) {
+      throw new NotFoundException('Project not found');
+    }
     return shaped;
   }
 

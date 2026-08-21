@@ -6,6 +6,7 @@ import {
   Get,
   Param,
   Post,
+  Req,
   UseGuards,
 } from '@nestjs/common';
 import {
@@ -14,16 +15,26 @@ import {
   ApiResponse,
   ApiTags,
 } from '@nestjs/swagger';
+import { Request } from 'express';
+import type { AuthenticatedPrincipal } from '../../auth/jwt.strategy';
 import { JwtAuthGuard } from '../../auth/jwt-auth.guard';
+import { UsersService } from '../../users/users.service';
 import { AddMemberDto } from '../dto/add-member.dto';
 import { TaskMembersService } from '../services/task-members.service';
 import { TenantMemberGuard } from '../../memberships/policies/tenant-member.guard';
+
+interface AuthenticatedRequest extends Request {
+  user: AuthenticatedPrincipal;
+}
 
 @ApiTags('task-members')
 @ApiBearerAuth()
 @Controller('api/v1/tenant/:tenantId/tasks/:taskId/members')
 export class TaskMembersController {
-  constructor(private readonly service: TaskMembersService) {}
+  constructor(
+    private readonly service: TaskMembersService,
+    private readonly usersService: UsersService,
+  ) {}
 
   @ApiOperation({ summary: 'List members who can see this shared task' })
   @UseGuards(JwtAuthGuard,TenantMemberGuard)
@@ -31,8 +42,10 @@ export class TaskMembersController {
   async list(
     @Param('tenantId') tenantId: string,
     @Param('taskId') taskId: string,
+    @Req() req: AuthenticatedRequest,
   ) {
-    return this.service.list(tenantId, taskId);
+    const user = await this.usersService.findByExternalAuthId(req.user.sub);
+    return this.service.list(tenantId, taskId, user.id);
   }
 
   @ApiOperation({ summary: 'Grant a user access to this shared task' })

@@ -31,7 +31,11 @@ describe('ProjectsService', () => {
     };
     enumRepository = {
       findByCategoryAndValue: jest.fn(),
-      findValuesByIds: jest.fn().mockResolvedValue(new Map()),
+      findValuesByIds: jest
+        .fn()
+        .mockImplementation((ids: string[]) =>
+          Promise.resolve(new Map(ids.map((id) => [id, id]))),
+        ),
     };
     collaboratorsRepository = {
       findByProjectAndUser: jest.fn().mockResolvedValue(undefined),
@@ -56,10 +60,29 @@ describe('ProjectsService', () => {
       ).rejects.toThrow(NotFoundException);
     });
 
-    it('returns the project when found', async () => {
+    it('returns the project when the caller is a collaborator', async () => {
       repository.findById.mockResolvedValue({
         id: 'project-1',
         title: 'Test',
+        userId: 'owner-1',
+        statusId: null,
+        pipelineStageId: null,
+        importanceId: null,
+      });
+      collaboratorsRepository.findByProjectAndUser.mockResolvedValue({
+        roleId: 'role-collaborator',
+      });
+      const result = await service.findOne('tenant-1', 'project-1', 'user-1');
+      expect(result).toEqual(
+        expect.objectContaining({ id: 'project-1', title: 'Test' }),
+      );
+    });
+
+    it('returns the project when the caller is the owner, even without an explicit collaborator row', async () => {
+      repository.findById.mockResolvedValue({
+        id: 'project-1',
+        title: 'Test',
+        userId: 'user-1',
         statusId: null,
         pipelineStageId: null,
         importanceId: null,
@@ -68,6 +91,64 @@ describe('ProjectsService', () => {
       expect(result).toEqual(
         expect.objectContaining({ id: 'project-1', title: 'Test' }),
       );
+    });
+
+    it('throws NotFoundException when the caller is neither the owner nor a collaborator', async () => {
+      repository.findById.mockResolvedValue({
+        id: 'project-1',
+        title: 'Test',
+        userId: 'owner-1',
+        statusId: null,
+        pipelineStageId: null,
+        importanceId: null,
+      });
+      await expect(
+        service.findOne('tenant-1', 'project-1', 'outsider-1'),
+      ).rejects.toThrow(NotFoundException);
+    });
+  });
+
+  describe('listActive', () => {
+    it('filters out projects the caller cannot see', async () => {
+      repository.findActiveByTenant.mockResolvedValue([
+        {
+          id: 'project-1',
+          title: 'Visible via ownership',
+          userId: 'user-1',
+          statusId: null,
+          pipelineStageId: null,
+          importanceId: null,
+        },
+        {
+          id: 'project-2',
+          title: 'Visible via collaboration',
+          userId: 'owner-2',
+          statusId: null,
+          pipelineStageId: null,
+          importanceId: null,
+        },
+        {
+          id: 'project-3',
+          title: 'Not visible',
+          userId: 'owner-3',
+          statusId: null,
+          pipelineStageId: null,
+          importanceId: null,
+        },
+      ]);
+      collaboratorsRepository.findByProjectAndUser.mockImplementation(
+        (_tenantId: string, projectId: string) =>
+          Promise.resolve(
+            projectId === 'project-2' ? { roleId: 'role-collaborator' } : undefined,
+          ),
+      );
+
+      const result = await service.listActive('tenant-1', 'user-1');
+
+      expect(result.map((project) => project.id)).toEqual([
+        'project-1',
+        'project-2',
+      ]);
     });
   });
 
@@ -143,6 +224,7 @@ describe('ProjectsService', () => {
     it('only resolves enum fields that were actually provided', async () => {
       repository.findById.mockResolvedValue({
         id: 'project-1',
+        userId: 'user-1',
         statusId: null,
         pipelineStageId: null,
         importanceId: null,
@@ -174,6 +256,7 @@ describe('ProjectsService', () => {
     it('resolves the Archived status and sets archivedAt, returning a warning', async () => {
       repository.findById.mockResolvedValue({
         id: 'project-1',
+        userId: 'user-1',
         statusId: null,
         pipelineStageId: null,
         importanceId: null,
