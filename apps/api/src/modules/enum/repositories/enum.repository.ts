@@ -26,53 +26,40 @@ export class EnumRepository {
 
   async findValuesByIds(ids: string[]): Promise<Map<string, string>> {
     if (ids.length === 0) return new Map();
-
     const rows = await this.drizzle.db
       .select({ id: enumTable.id, value: enumTable.value })
       .from(enumTable)
       .where(inArray(enumTable.id, ids));
-
     return new Map(rows.map((row) => [row.id, row.value]));
   }
-  async findPipelineStagesForTenant(tenantId: string) {
+
+  // ============================================================
+  // Project-scoped pipeline stages
+  // ============================================================
+
+  async findPipelineStagesForProject(projectId: string) {
     return this.drizzle.db
       .select()
       .from(enumTable)
       .where(
         and(
-          eq(enumTable.category, 'pipeline_stage'),
-          or(isNull(enumTable.tenantId), eq(enumTable.tenantId, tenantId)),
+          eq(enumTable.category, 'project_pipeline_stage'),
+          or(isNull(enumTable.projectId), eq(enumTable.projectId, projectId)),
         ),
       )
       .orderBy(asc(enumTable.sortOrder));
   }
-  async findPipelineStageById(tenantId: string, id: string) {
-    const [row] = await this.drizzle.db
-      .select()
-      .from(enumTable)
-      .where(
-        and(
-          eq(enumTable.id, id),
-          eq(enumTable.category, 'pipeline_stage'),
-          eq(enumTable.tenantId, tenantId),
-        ),
-      );
-    return row;
-  }
-  async createTenantPipelineStage(
-    tenantId: string,
-    value: string,
-    sortOrder: number,
-  ) {
+
+  async createProjectPipelineStage(projectId: string, value: string, sortOrder: number) {
     const [row] = await this.drizzle.db
       .insert(enumTable)
-      .values({ tenantId, category: 'pipeline_stage', value, sortOrder })
+      .values({ projectId, category: 'project_pipeline_stage', value, sortOrder })
       .returning();
     return row;
   }
 
-  async updateTenantPipelineStage(
-    tenantId: string,
+  async updateProjectPipelineStage(
+    projectId: string,
     id: string,
     values: Partial<{ value: string; sortOrder: number }>,
   ) {
@@ -82,22 +69,80 @@ export class EnumRepository {
       .where(
         and(
           eq(enumTable.id, id),
-          eq(enumTable.tenantId, tenantId),
-          eq(enumTable.category, 'pipeline_stage'),
+          eq(enumTable.projectId, projectId),
+          eq(enumTable.category, 'project_pipeline_stage'),
         ),
       )
       .returning();
     return row;
   }
 
-  async deleteTenantPipelineStage(tenantId: string, id: string) {
+  async deleteProjectPipelineStage(projectId: string, id: string) {
     const [row] = await this.drizzle.db
       .delete(enumTable)
       .where(
         and(
           eq(enumTable.id, id),
-          eq(enumTable.tenantId, tenantId),
-          eq(enumTable.category, 'pipeline_stage'),
+          eq(enumTable.projectId, projectId),
+          eq(enumTable.category, 'project_pipeline_stage'),
+        ),
+      )
+      .returning();
+    return row;
+  }
+
+  // ============================================================
+  // Module-scoped pipeline stages
+  // ============================================================
+
+  async findPipelineStagesForModule(moduleId: string) {
+    return this.drizzle.db
+      .select()
+      .from(enumTable)
+      .where(
+        and(
+          eq(enumTable.category, 'module_pipeline_stage'),
+          or(isNull(enumTable.moduleId), eq(enumTable.moduleId, moduleId)),
+        ),
+      )
+      .orderBy(asc(enumTable.sortOrder));
+  }
+
+  async createModulePipelineStage(moduleId: string, value: string, sortOrder: number) {
+    const [row] = await this.drizzle.db
+      .insert(enumTable)
+      .values({ moduleId, category: 'module_pipeline_stage', value, sortOrder })
+      .returning();
+    return row;
+  }
+
+  async updateModulePipelineStage(
+    moduleId: string,
+    id: string,
+    values: Partial<{ value: string; sortOrder: number }>,
+  ) {
+    const [row] = await this.drizzle.db
+      .update(enumTable)
+      .set({ ...values, updatedAt: new Date() })
+      .where(
+        and(
+          eq(enumTable.id, id),
+          eq(enumTable.moduleId, moduleId),
+          eq(enumTable.category, 'module_pipeline_stage'),
+        ),
+      )
+      .returning();
+    return row;
+  }
+
+  async deleteModulePipelineStage(moduleId: string, id: string) {
+    const [row] = await this.drizzle.db
+      .delete(enumTable)
+      .where(
+        and(
+          eq(enumTable.id, id),
+          eq(enumTable.moduleId, moduleId),
+          eq(enumTable.category, 'module_pipeline_stage'),
         ),
       )
       .returning();

@@ -1,4 +1,4 @@
-import { pgTable, uuid, text, timestamp, uniqueIndex } from 'drizzle-orm/pg-core';
+import { pgTable, uuid, text, timestamp, uniqueIndex, AnyPgColumn } from 'drizzle-orm/pg-core';
 import { projects } from './projects';
 import { tenants } from './tenants';
 import { users } from './users';
@@ -16,8 +16,9 @@ export const modules = pgTable(
       .references(() => tenants.id, { onDelete: 'cascade' }),
     title: text('title').notNull(),
     description: text('description'),
-    tagId: uuid('tag_id').references(() => enumTable.id),
-    statusId: uuid('status_id').references(() => enumTable.id),
+    tagId: uuid('tag_id').references((): AnyPgColumn => enumTable.id),
+    statusId: uuid('status_id').references((): AnyPgColumn => enumTable.id),
+    pipelineStageId: uuid('pipeline_stage_id').references((): AnyPgColumn => enumTable.id),
     assignedToUserId: uuid('assigned_to_user_id').references(() => users.id),
     archivedAt: timestamp('archived_at', { withTimezone: true }),
     createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),

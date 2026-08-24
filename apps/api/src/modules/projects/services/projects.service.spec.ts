@@ -299,7 +299,7 @@ describe('ProjectsService', () => {
       repository.create.mockResolvedValue({
         id: 'project-1',
         statusId: 'project_status-Active-id',
-        pipelineStageId: 'pipeline_stage-Concept & Ideation-id',
+        pipelineStageId: 'project_pipeline_stage-Concept & Ideation-id',
         importanceId: 'importance-High-id',
       });
 
@@ -313,7 +313,7 @@ describe('ProjectsService', () => {
       expect(repository.create).toHaveBeenCalledWith(
         expect.objectContaining({
           statusId: 'project_status-Active-id',
-          pipelineStageId: 'pipeline_stage-Concept & Ideation-id',
+          pipelineStageId: 'project_pipeline_stage-Concept & Ideation-id',
           importanceId: 'importance-High-id',
         }),
         expect.any(String),

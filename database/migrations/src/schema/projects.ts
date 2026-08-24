@@ -1,4 +1,4 @@
-import { pgTable, uuid, text, date, numeric, timestamp, uniqueIndex } from 'drizzle-orm/pg-core';
+import { pgTable, uuid, text, date, numeric, timestamp, uniqueIndex, AnyPgColumn } from 'drizzle-orm/pg-core';
 import { users } from './users';
 import { tenants } from './tenants';
 import { enumTable } from './enum';
@@ -17,9 +17,9 @@ export const projects = pgTable(
     title: text('title').notNull(),
     description: text('description'),
     researchArea: text('research_area'),
-    statusId: uuid('status_id').references(() => enumTable.id),
-    pipelineStageId: uuid('pipeline_stage_id').references(() => enumTable.id),
-    importanceId: uuid('importance_id').references(() => enumTable.id),
+    statusId: uuid('status_id').references((): AnyPgColumn => enumTable.id),
+    pipelineStageId: uuid('pipeline_stage_id').references((): AnyPgColumn => enumTable.id),
+    importanceId: uuid('importance_id').references((): AnyPgColumn => enumTable.id),
     scheduledFor: date('scheduled_for'),
     dueDate: date('due_date'),
     totalBudget: numeric('total_budget', { precision: 12, scale: 2 }),

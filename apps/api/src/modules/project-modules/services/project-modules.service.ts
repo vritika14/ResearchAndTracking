@@ -110,14 +110,16 @@ export class ProjectModulesService {
       description?: string;
       tag?: string;
       status?: string;
+      pipelineStage?: string;
       assignedToUserId?: string;
     },
   ) {
     const tagId = await this.resolveEnum('module_type', input.tag);
     const statusId = await this.resolveEnum('project_status', input.status);
+    const pipelineStageId = await this.resolveEnum('module_pipeline_stage', input.pipelineStage);
     const ownerRoleId = input.projectId ? undefined : await this.resolveEnum('project_role', 'Owner');
     const displayId = await this.sequences.nextDisplayId(tenantId, 'module');
-
+  
     const module = await this.repository.create({
       projectId: input.projectId,
       tenantId,
@@ -125,6 +127,7 @@ export class ProjectModulesService {
       description: input.description,
       tagId,
       statusId,
+      pipelineStageId,
       assignedToUserId: input.assignedToUserId,
       displayId,
     });
@@ -158,30 +161,35 @@ export class ProjectModulesService {
       description: string;
       tag: string;
       status: string;
+      pipelineStage: string;
       assignedToUserId: string;
     }>,
   ) {
     await this.findOne(tenantId, moduleId, callerUserId);
-
-    const [tagId, statusId] = await Promise.all([
+  
+    const [tagId, statusId, pipelineStageId] = await Promise.all([
       input.tag ? this.resolveEnum('module_type', input.tag) : undefined,
       input.status
         ? this.resolveEnum('project_status', input.status)
         : undefined,
+      input.pipelineStage
+        ? this.resolveEnum('module_pipeline_stage', input.pipelineStage)
+        : undefined,
     ]);
-
+  
     const module = await this.repository.update(tenantId, moduleId, {
       title: input.title,
       description: input.description,
       tagId,
       statusId,
+      pipelineStageId,
       assignedToUserId: input.assignedToUserId,
     });
-
+  
     if (!module) {
       throw new NotFoundException('Module not found');
     }
-
+  
     const [shaped] = await this.withDisplayValues([module], callerUserId);
     return shaped;
   }
@@ -240,19 +248,20 @@ export class ProjectModulesService {
   }
 
   private async withDisplayValues<
-    T extends { id: string; tagId: string | null; statusId: string | null },
-  >(rows: T[], _callerUserId: string) {
-    const enumIds = rows
-      .flatMap((r) => [r.tagId, r.statusId])
-      .filter((id): id is string => id !== null);
-    const valuesById = await this.enumRepository.findValuesByIds(enumIds);
+  T extends { id: string; tagId: string | null; statusId: string | null; pipelineStageId: string | null },
+>(rows: T[], _callerUserId: string) {
+  const enumIds = rows
+    .flatMap((r) => [r.tagId, r.statusId, r.pipelineStageId])
+    .filter((id): id is string => id !== null);
+  const valuesById = await this.enumRepository.findValuesByIds(enumIds);
 
-    return rows.map(({ tagId, statusId, ...rest }) => ({
-      ...rest,
-      tag: tagId ? (valuesById.get(tagId) ?? null) : null,
-      status: statusId ? (valuesById.get(statusId) ?? null) : null,
-    }));
-  }
+  return rows.map(({ tagId, statusId, pipelineStageId, ...rest }) => ({
+    ...rest,
+    tag: tagId ? (valuesById.get(tagId) ?? null) : null,
+    status: statusId ? (valuesById.get(statusId) ?? null) : null,
+    pipelineStage: pipelineStageId ? (valuesById.get(pipelineStageId) ?? null) : null,
+  }));
+}
 
   private async resolveEnum(
     category: string,
