@@ -1,5 +1,5 @@
 import { useState, type ReactNode } from "react";
-import { ArrowLeft, Pencil } from "lucide-react";
+import { ArrowLeft, ListTodo, Pencil } from "lucide-react";
 import { Link, useParams } from "react-router-dom";
 
 import {
@@ -147,6 +147,7 @@ export default function TaskDetailPage() {
       </Button>
 
       <PageHeading
+        icon={ListTodo}
         eyebrow={task.displayId ?? task.id}
         title={task.title}
         description="Review and update the task's status, priority and progress."

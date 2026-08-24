@@ -16,9 +16,10 @@ interface AuthStateFrameProps {
 }
 
 const toneClasses = {
-  primary: "bg-primary/10 text-primary",
-  warning: "bg-amber-100 text-amber-700 dark:bg-amber-950 dark:text-amber-300",
-  danger: "bg-destructive/10 text-destructive",
+  primary: "bg-primary/10 text-primary ring-1 ring-primary/20",
+  warning:
+    "bg-amber-100 text-amber-700 ring-1 ring-amber-200 dark:bg-amber-950 dark:text-amber-300 dark:ring-amber-900",
+  danger: "bg-destructive/10 text-destructive ring-1 ring-destructive/20",
 };
 
 export function AuthStateFrame({

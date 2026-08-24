@@ -78,8 +78,8 @@ export function NavTree({ onNavigate }: NavTreeProps) {
                       onClick={onNavigate}
                       className={({ isActive }) =>
                         cn(
-                          "flex flex-1 items-center gap-3 rounded-md px-3 py-2 text-sm font-medium text-muted-foreground transition-colors hover:bg-accent hover:text-accent-foreground",
-                          isActive && "bg-accent text-primary",
+                          "flex flex-1 items-center gap-3 rounded-md border-l-2 border-transparent px-3 py-2 text-sm font-medium text-muted-foreground transition-colors hover:bg-accent hover:text-accent-foreground",
+                          isActive && "border-primary bg-primary/10 font-semibold text-primary hover:bg-primary/10 hover:text-primary",
                         )
                       }
                     >
@@ -116,7 +116,7 @@ export function NavTree({ onNavigate }: NavTreeProps) {
                           className={({ isActive }) =>
                             cn(
                               "rounded-md px-3 py-1.5 text-sm text-muted-foreground transition-colors hover:bg-accent hover:text-accent-foreground",
-                              isActive && "bg-accent font-medium text-primary",
+                              isActive && "bg-primary/10 font-semibold text-primary hover:bg-primary/10 hover:text-primary",
                             )
                           }
                         >

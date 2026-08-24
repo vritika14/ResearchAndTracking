@@ -45,14 +45,33 @@ vi.mock("@/components/settings/workspace-members", () => ({
   WorkspaceMembers: () => null,
 }));
 
+const mockSetTheme = vi.hoisted(() => vi.fn());
+const mockSetColorTheme = vi.hoisted(() => vi.fn());
+
+vi.mock("@/theme/design-theme", () => ({
+  DESIGN_THEMES: [
+    { value: "modern", label: "Modern", description: "The default look.", layout: "sidebar" },
+    { value: "minimal", label: "Minimal", description: "A compact icon rail.", layout: "sidebar-compact" },
+    { value: "executive", label: "Executive", description: "A top navigation bar.", layout: "topnav" },
+  ],
+  useDesignTheme: () => ({ theme: "modern", layout: "sidebar", setTheme: mockSetTheme }),
+}));
+
 vi.mock("@/theme/color-theme", () => ({
-  COLOR_THEMES: [{ value: "ocean", label: "Ocean" }],
-  useColorTheme: () => ({ theme: "ocean", setTheme: vi.fn() }),
+  COLOR_THEMES: [
+    { value: "ocean", label: "Ocean Blue" },
+    { value: "violet", label: "Violet" },
+    { value: "emerald", label: "Emerald" },
+    { value: "rose", label: "Rose" },
+  ],
+  useColorTheme: () => ({ theme: "ocean", setTheme: mockSetColorTheme }),
 }));
 
 describe("SettingsPage", () => {
   beforeEach(() => {
     mockMutate.mockClear();
+    mockSetTheme.mockClear();
+    mockSetColorTheme.mockClear();
   });
 
   it("reminds an incomplete user and saves their professional profile", () => {
@@ -87,5 +106,30 @@ describe("SettingsPage", () => {
       phone: "",
       researchInterests: "",
     });
+  });
+
+  it("selects a design theme from the preview picker", () => {
+    render(
+      <MemoryRouter>
+        <SettingsPage />
+      </MemoryRouter>,
+    );
+
+    fireEvent.click(screen.getByRole("button", { name: /Executive/ }));
+
+    expect(mockSetTheme).toHaveBeenCalledWith("executive");
+  });
+
+  it("selects a color theme independently of the design theme", () => {
+    render(
+      <MemoryRouter>
+        <SettingsPage />
+      </MemoryRouter>,
+    );
+
+    fireEvent.click(screen.getByRole("combobox", { name: "Theme" }));
+    fireEvent.click(screen.getByRole("option", { name: "Violet" }));
+
+    expect(mockSetColorTheme).toHaveBeenCalledWith("violet");
   });
 });

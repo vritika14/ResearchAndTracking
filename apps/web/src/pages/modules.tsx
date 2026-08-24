@@ -1,5 +1,5 @@
 import { useMemo, useState } from "react";
-import { Archive, Pencil } from "lucide-react";
+import { Archive, Boxes, Pencil } from "lucide-react";
 import { Link } from "react-router-dom";
 
 import { apiClient } from "@/api/client";
@@ -159,6 +159,7 @@ export default function ModulesPage() {
   return (
     <div className="flex flex-col gap-6">
       <PageHeading
+        icon={Boxes}
         eyebrow="Workflows"
         title="Modules"
         description="Organize project-related or independent areas of work by status, type and assignee."

@@ -40,12 +40,6 @@ export interface Workspace {
   createdAt: string;
   updatedAt: string;
 }
-export interface InvitationPreview {
-  workspaceName: string;
-  invitedEmail: string;
-  role: "limited_member";
-  expiresAt: string;
-}
 export interface Membership {
   id: string;
   tenantId: string;
@@ -58,22 +52,6 @@ export interface Membership {
   joinedAt?: string | null;
   createdAt: string;
   updatedAt: string;
-}
-export interface Invitation {
-  id: string;
-  tenantId: string;
-  email: string;
-  role: "limited_member";
-  invitedBy: string;
-  status: "pending";
-  expiresAt: string;
-  createdAt: string;
-  updatedAt: string;
-}
-export interface CreatedInvitation {
-  invitation: Invitation;
-  acceptanceToken: string;
-  emailSent: true;
 }
 
 // See apps/api/src/modules/{projects,project-modules,tasks,notes} for the source of truth.
@@ -167,7 +145,6 @@ export const apiKeys = {
   me: ["api", "me"] as const,
   workspaces: ["api", "workspaces"] as const,
   currentWorkspace: ["api", "workspace", "current"] as const,
-  invitation: (token: string) => ["api", "invitation", token] as const,
   members: (tenantId: string) =>
     ["api", "tenant", tenantId, "members"] as const,
   projects: (tenantId: string) =>
@@ -296,60 +273,6 @@ export function useCreateWorkspace() {
   });
 }
 
-export function useInvitationPreview(token: string | undefined) {
-  return useQuery({
-    queryKey: apiKeys.invitation(token ?? ""),
-    enabled: Boolean(token),
-    queryFn: async () => {
-      const result = await apiClient.GET("/api/v1/invitations/{token}", {
-        params: { path: { token: token! } },
-      });
-
-      if (result.response.status !== 200) {
-        await responseData(result);
-        throw new ApiError(
-          result.response.status,
-          `Invitation preview returned status ${result.response.status}`,
-        );
-      }
-
-      return responseData<InvitationPreview>(result);
-    },
-    retry: false,
-  });
-}
-
-export function useAcceptInvitation(token: string) {
-  const queryClient = useQueryClient();
-  return useMutation({
-    mutationFn: async () => {
-      const result = await apiClient.POST(
-        "/api/v1/invitations/{token}/accept",
-        {
-          params: { path: { token } },
-        },
-      );
-
-      if (result.response.status !== 201) {
-        await responseData(result);
-        throw new ApiError(
-          result.response.status,
-          `Invitation acceptance returned status ${result.response.status}`,
-        );
-      }
-
-      return responseData<CreatedInvitation>(result);
-    },
-    async onSuccess() {
-      await Promise.all([
-        queryClient.invalidateQueries({ queryKey: apiKeys.me }),
-        queryClient.invalidateQueries({ queryKey: apiKeys.currentWorkspace }),
-        queryClient.invalidateQueries({ queryKey: apiKeys.workspaces }),
-      ]);
-    },
-  });
-}
-
 export function useMembers(tenantId: string, enabled = true) {
   return useQuery({
     queryKey: apiKeys.members(tenantId),
@@ -363,38 +286,6 @@ export function useMembers(tenantId: string, enabled = true) {
       // field) — joinedAt isn't used anywhere in the UI, so trust our own
       // shape here rather than the lossy generated one.
       return responseData<Membership[]>(result as never);
-    },
-  });
-}
-
-export function useCreateInvitation(tenantId: string) {
-  return useMutation({
-    mutationFn: async (email: string) =>
-      responseData<CreatedInvitation>(
-        await apiClient.POST("/api/v1/tenant/{tenantId}/invitations", {
-          params: { path: { tenantId } },
-          body: { email },
-        }),
-      ),
-  });
-}
-
-export function useRevokeMember(tenantId: string) {
-  const queryClient = useQueryClient();
-  return useMutation({
-    mutationFn: async (membershipId: string) =>
-      responseData(
-        await apiClient.DELETE(
-          "/api/v1/tenant/{tenantId}/members/{membershipId}",
-          {
-            params: { path: { tenantId, membershipId } },
-          },
-        ),
-      ),
-    async onSuccess() {
-      await queryClient.invalidateQueries({
-        queryKey: apiKeys.members(tenantId),
-      });
     },
   });
 }

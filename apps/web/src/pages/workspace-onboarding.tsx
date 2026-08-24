@@ -1,5 +1,5 @@
 import { useForm } from "react-hook-form";
-import { Building2, Check, CheckCircle2, ShieldCheck, Users } from "lucide-react";
+import { Building2, Check, CheckCircle2, ShieldCheck } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { z } from "zod";
 
@@ -25,14 +25,8 @@ const onboardingSteps = [
   },
   {
     title: "Create your workspace",
-    description: "Name the research space your team will use.",
+    description: "Name the research space you'll use.",
     icon: Building2,
-    complete: false,
-  },
-  {
-    title: "Invite collaborators",
-    description: "Add your team after setup is complete.",
-    icon: Users,
     complete: false,
   },
 ];
@@ -71,8 +65,8 @@ export default function WorkspaceOnboardingPage() {
             Set up a focused home for your research.
           </Heading>
           <p className="mt-4 max-w-md text-base leading-7 text-muted-foreground">
-            Your workspace keeps projects, tasks, notes and collaborators together while preserving
-            clear ownership and access boundaries.
+            Your workspace keeps your projects, tasks, and notes together in one place, with clear
+            ownership boundaries.
           </p>
 
           <ol className="mt-9 grid gap-5">
@@ -111,7 +105,7 @@ export default function WorkspaceOnboardingPage() {
               </Heading>
               <p className="mt-3 max-w-md text-sm leading-6 text-muted-foreground">
                 <span className="font-semibold text-foreground">{createWorkspace.data.name}</span> has
-                been set up. You can now begin adding projects and inviting collaborators.
+                been set up. You can now begin adding projects, tasks, and notes.
               </p>
               <Button className="mt-7 min-w-44" onClick={() => navigate("/", { replace: true })}>
                 Open Workspace
@@ -157,8 +151,8 @@ export default function WorkspaceOnboardingPage() {
                     <div>
                       <p className="text-sm font-semibold">You will be the workspace owner</p>
                       <p className="mt-1 text-xs leading-5 text-muted-foreground">
-                        Owners can manage workspace settings and invitations. Project access remains
-                        separately controlled.
+                        Each workspace has a single owner. You can still share individual projects,
+                        tasks, and notes with other people separately.
                       </p>
                     </div>
                   </div>

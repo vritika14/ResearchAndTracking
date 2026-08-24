@@ -24,8 +24,10 @@ export function ErrorState({
         className,
       )}
     >
-      <AlertTriangle className="h-6 w-6 text-red-600 dark:text-red-400" />
-      <p className="mt-4 text-sm font-semibold">{title}</p>
+      <div className="flex h-14 w-14 items-center justify-center rounded-full bg-red-100 text-red-600 ring-1 ring-red-200 dark:bg-red-900/40 dark:text-red-400 dark:ring-red-800">
+        <AlertTriangle className="h-6 w-6" />
+      </div>
+      <p className="mt-4 text-base font-semibold">{title}</p>
       <p className="mt-1 max-w-md text-sm leading-6 text-muted-foreground">{description}</p>
       {onRetry ? (
         <Button type="button" variant="outline" size="sm" onClick={onRetry} className="mt-5">

@@ -1,5 +1,6 @@
 import * as React from "react";
 import { cva, type VariantProps } from "class-variance-authority";
+import type { LucideIcon } from "lucide-react";
 
 import { cn } from "@/lib/utils";
 
@@ -10,7 +11,7 @@ import { cn } from "@/lib/utils";
  * is reserved for interactive elements (links, active states), not headings.
  * `as` controls the semantic tag independently of the visual `level`.
  */
-const headingVariants = cva("font-semibold tracking-tight text-foreground", {
+const headingVariants = cva("font-heading font-semibold tracking-[var(--heading-tracking)] text-foreground", {
   variants: {
     level: {
       h1: "text-2xl sm:text-[1.75rem]",
@@ -48,12 +49,13 @@ export interface PageHeadingProps extends React.HTMLAttributes<HTMLDivElement> {
   title: string;
   description?: string;
   eyebrow?: string;
+  icon?: LucideIcon;
   actions?: React.ReactNode;
 }
 
-/** Standard top-of-page header: eyebrow, bold blue title, description, actions. */
+/** Standard top-of-page header: icon badge, eyebrow, bold title, description, actions. */
 const PageHeading = React.forwardRef<HTMLDivElement, PageHeadingProps>(
-  ({ className, title, description, eyebrow, actions, ...props }, ref) => (
+  ({ className, title, description, eyebrow, icon: Icon, actions, ...props }, ref) => (
     <div
       ref={ref}
       className={cn(
@@ -62,18 +64,25 @@ const PageHeading = React.forwardRef<HTMLDivElement, PageHeadingProps>(
       )}
       {...props}
     >
-      <div className="flex flex-col gap-1.5">
-        {eyebrow ? (
-          <span className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-            {eyebrow}
+      <div className="flex items-start gap-4">
+        {Icon ? (
+          <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-primary/10 text-primary ring-1 ring-primary/20">
+            <Icon className="h-5 w-5" />
           </span>
         ) : null}
-        <Heading level="h1">{title}</Heading>
-        {description ? (
-          <p className="max-w-2xl text-sm text-muted-foreground sm:text-base">
-            {description}
-          </p>
-        ) : null}
+        <div className="flex flex-col gap-1.5">
+          {eyebrow ? (
+            <span className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+              {eyebrow}
+            </span>
+          ) : null}
+          <Heading level="h1">{title}</Heading>
+          {description ? (
+            <p className="max-w-2xl text-sm text-muted-foreground sm:text-base">
+              {description}
+            </p>
+          ) : null}
+        </div>
       </div>
       {actions ? <div className="flex shrink-0 items-center gap-2">{actions}</div> : null}
     </div>

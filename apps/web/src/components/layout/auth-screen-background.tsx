@@ -17,6 +17,10 @@ export function AuthScreenBackground({ children, className }: AuthScreenBackgrou
     <div className="relative isolate min-h-screen overflow-hidden bg-muted/40">
       <div
         aria-hidden="true"
+        className="fixed inset-0 z-0 [background:radial-gradient(ellipse_80%_60%_at_50%_-10%,hsl(var(--primary)/0.14),transparent)]"
+      />
+      <div
+        aria-hidden="true"
         className="fixed inset-0 z-0 [background-image:radial-gradient(hsl(var(--foreground)/0.08)_1px,transparent_1px)] [background-size:20px_20px]"
       />
       <div className={cn("relative z-10 min-h-screen", className)}>{children}</div>

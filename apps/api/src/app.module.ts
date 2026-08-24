@@ -25,8 +25,6 @@ import { ProjectPipelineStagesModule } from './modules/project-pipeline-stages/p
 import { ModulePipelineStagesModule } from './modules/module-pipeline-stages/module-pipeline-stages.module';
 
 
-const invitationTokenPath = /\/api\/v1\/invitations\/[^/]+/g;
-
 @Module({
   imports: [
     ConfigModule.forRoot({
@@ -56,10 +54,7 @@ const invitationTokenPath = /\/api\/v1\/invitations\/[^/]+/g;
             return {
               id: req.id,
               method: req.method,
-              url: req.url?.replace(
-                invitationTokenPath,
-                '/api/v1/invitations/[Redacted]',
-              ),
+              url: req.url,
             };
           },
         },

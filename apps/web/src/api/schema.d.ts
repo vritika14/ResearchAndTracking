@@ -55,77 +55,6 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/v1/tenant/{tenantId}/invitations": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        /**
-         * Invite and email a limited workspace member (owner only)
-         * @description Creates a one-time invitation and delivers its acceptance link through Amazon SES. Workspace invitations never create another owner.
-         */
-        post: operations["MembershipsController_inviteMember"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/v1/tenant/{tenantId}/members/{membershipId}": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        post?: never;
-        /** Revoke a non-owner workspace member */
-        delete: operations["MembershipsController_revokeMember"];
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/v1/invitations/{token}": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /** Preview a workspace invitation before sign-in */
-        get: operations["InvitationsController_preview"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/v1/invitations/{token}/accept": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        /** Accept the invitation for the authenticated email */
-        post: operations["InvitationsController_accept"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
     "/health/live": {
         parameters: {
             query?: never;
@@ -735,10 +664,6 @@ export interface components {
             /** Format: date-time */
             updatedAt: string;
         };
-        CreateInvitationDto: {
-            /** @example colleague@example.com */
-            email: string;
-        };
         CreateWorkspaceDto: {
             /** @example Acme Research */
             name: string;
@@ -959,96 +884,6 @@ export interface operations {
                 content: {
                     "application/json": components["schemas"]["MembershipResponseDto"][];
                 };
-            };
-        };
-    };
-    MembershipsController_inviteMember: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                tenantId: string;
-            };
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["CreateInvitationDto"];
-            };
-        };
-        responses: {
-            201: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
-            /** @description Email delivery unavailable */
-            503: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
-        };
-    };
-    MembershipsController_revokeMember: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                tenantId: string;
-                membershipId: string;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["MembershipResponseDto"];
-                };
-            };
-        };
-    };
-    InvitationsController_preview: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                token: string;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
-        };
-    };
-    InvitationsController_accept: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                token: string;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            201: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
             };
         };
     };
