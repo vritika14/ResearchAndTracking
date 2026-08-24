@@ -77,6 +77,7 @@ export class ProjectModulesController {
     @Req() req: AuthenticatedRequest,
     @Body() dto: CreateModuleDto,
   ) {
+    console.log('DEBUG - controller tenantId:', tenantId);
     const user = await this.usersService.findByExternalAuthId(req.user.sub);
     return this.modulesService.create(tenantId, user.id, dto);
   }

@@ -80,12 +80,10 @@ export class ProjectModulesService {
       assignedToUserId?: string;
     },
   ) {
-    const [tagId, statusId, ownerRoleId, displayId] = await Promise.all([
-      this.resolveEnum('module_type', input.tag),
-      this.resolveEnum('project_status', input.status),
-      input.projectId ? undefined : this.resolveEnum('project_role', 'Owner'),
-      this.sequences.nextDisplayId(tenantId, 'module'),
-    ]);
+    const tagId = await this.resolveEnum('module_type', input.tag);
+    const statusId = await this.resolveEnum('project_status', input.status);
+    const ownerRoleId = input.projectId ? undefined : await this.resolveEnum('project_role', 'Owner');
+    const displayId = await this.sequences.nextDisplayId(tenantId, 'module');
 
     const module = await this.repository.create({
       projectId: input.projectId,
@@ -97,19 +95,14 @@ export class ProjectModulesService {
       assignedToUserId: input.assignedToUserId,
       displayId,
     });
-
+  
     if (!module) {
       throw new NotFoundException('Failed to create module');
     }
-
-    // An independent module (no parent project) is only visible to its own
-    // module_collaborators, so the creator must be inserted as one — mirrors
-    // how project creation always adds the owner as a project_collaborator.
+  
     if (!input.projectId) {
       if (!ownerRoleId) {
-        throw new NotFoundException(
-          'Owner role is not configured in the enum table',
-        );
+        throw new NotFoundException('Owner role is not configured in the enum table');
       }
       await this.collaboratorsRepository.create({
         tenantId,
@@ -118,14 +111,11 @@ export class ProjectModulesService {
         roleId: ownerRoleId,
       });
     }
-
-    const [shaped] = await this.withDisplayValues(
-      tenantId,
-      [module],
-      callerUserId,
-    );
+  
+    const [shaped] = await this.withDisplayValues(tenantId, [module], callerUserId);
     return shaped;
   }
+
 
   async update(
     tenantId: string,
