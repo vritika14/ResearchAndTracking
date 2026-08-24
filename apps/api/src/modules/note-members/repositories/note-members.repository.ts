@@ -17,6 +17,15 @@ export class NoteMembersRepository {
       );
   }
 
+  /** Every note id this user is an explicit member of, across every tenant. */
+  async findNoteIdsByUser(userId: string) {
+    const rows = await this.drizzle.db
+      .select({ noteId: noteMembers.noteId })
+      .from(noteMembers)
+      .where(eq(noteMembers.userId, userId));
+    return rows.map((row) => row.noteId);
+  }
+
   async findByNoteAndUser(tenantId: string, noteId: string, userId: string) {
     const [row] = await this.drizzle.db
       .select()

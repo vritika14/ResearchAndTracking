@@ -41,36 +41,24 @@ function buildSummary(counts: { activeProjects: number; openTasks: number; writi
       description: "Projects currently underway",
       value: String(counts.activeProjects),
       icon: FolderKanban,
-      accent: "bg-blue-500",
-      iconStyle: "bg-blue-100 text-blue-700",
-      valueStyle: "text-blue-700",
     },
     {
       label: "Open Tasks",
       description: "Tasks awaiting completion",
       value: String(counts.openTasks),
       icon: ListTodo,
-      accent: "bg-cyan-500",
-      iconStyle: "bg-cyan-100 text-cyan-700",
-      valueStyle: "text-cyan-700",
     },
     {
       label: "In Writing Stage",
       description: "Projects in manuscript preparation",
       value: String(counts.writingStage),
       icon: FilePenLine,
-      accent: "bg-violet-500",
-      iconStyle: "bg-violet-100 text-violet-700",
-      valueStyle: "text-violet-700",
     },
     {
       label: "Year to Date Accepted",
       description: "Submissions accepted this calendar year",
       value: "—",
       icon: Send,
-      accent: "bg-emerald-500",
-      iconStyle: "bg-emerald-100 text-emerald-700",
-      valueStyle: "text-emerald-700",
     },
   ];
 }
@@ -223,10 +211,10 @@ export default function DashboardPage() {
         }
       />
       {workspace.data ? (
-        <Card className="border-primary/20 bg-gradient-to-r from-accent/90 via-card to-secondary/80 shadow-sm">
+        <Card>
           <CardContent className="flex flex-col gap-4 p-5 sm:flex-row sm:items-center sm:justify-between">
             <div className="flex min-w-0 items-center gap-4">
-              <span className="rounded-xl bg-primary/10 p-3 text-primary">
+              <span className="rounded-md bg-muted p-2.5 text-foreground">
                 <Building2 className="h-5 w-5" />
               </span>
               <div className="min-w-0">
@@ -234,14 +222,14 @@ export default function DashboardPage() {
                   Current workspace
                 </p>
                 <div className="mt-1 flex flex-wrap items-center gap-2">
-                  <h2 className="truncate text-lg font-bold text-foreground">
+                  <h2 className="truncate text-lg font-semibold text-foreground">
                     {workspace.data.name}
                   </h2>
-                  <Badge variant="outline" className="gap-1 bg-card/80">
+                  <Badge variant="outline" className="gap-1">
                     {isOwner ? (
                       <Crown className="h-3.5 w-3.5 text-amber-500" />
                     ) : (
-                      <Users className="h-3.5 w-3.5 text-primary" />
+                      <Users className="h-3.5 w-3.5 text-muted-foreground" />
                     )}
                     {isOwner ? "Owner access" : "Limited member access"}
                   </Badge>
@@ -251,7 +239,7 @@ export default function DashboardPage() {
                 </p>
               </div>
             </div>
-            <Button asChild variant="outline" className="shrink-0 bg-card/80">
+            <Button asChild variant="outline" className="shrink-0">
               <Link to="/workspaces">Switch workspace</Link>
             </Button>
           </CardContent>
@@ -259,21 +247,17 @@ export default function DashboardPage() {
       ) : null}
       <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4">
         {summary.map((item) => (
-          <Card
-            key={item.label}
-            className="overflow-hidden border-0 bg-white/90 shadow-sm ring-1 ring-slate-200/80 transition-transform hover:-translate-y-0.5 hover:shadow-md"
-          >
-            <div className={`h-1 ${item.accent}`} />
-            <CardHeader className="p-5">
+          <Card key={item.label}>
+            <CardHeader className="gap-3 p-5">
               <div className="flex items-start justify-between gap-3">
-                <CardDescription className="font-medium text-slate-600">
+                <CardDescription className="font-medium">
                   {item.label}
                 </CardDescription>
-                <span className={`rounded-lg p-2 ${item.iconStyle}`}>
+                <span className="rounded-md bg-muted p-2 text-muted-foreground">
                   <item.icon className="h-4 w-4" />
                 </span>
               </div>
-              <CardTitle className={`text-3xl ${item.valueStyle}`}>
+              <CardTitle className="text-3xl text-foreground">
                 {item.value}
               </CardTitle>
               <p className="text-xs text-muted-foreground">

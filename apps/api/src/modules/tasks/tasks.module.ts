@@ -3,6 +3,7 @@ import { EnumModule } from '../enum/enum.module';
 import { ProjectModulesModule } from '../project-modules/project-modules.module';
 import { TaskMembersModule } from '../task-members/task-members.module';
 import { UsersModule } from '../users/users.module';
+import { MyTasksController } from './controllers/my-tasks.controller';
 import { TasksController } from './controllers/tasks.controller';
 import { TasksRepository } from './repositories/tasks.repository';
 import { TasksService } from './services/tasks.service';
@@ -18,7 +19,7 @@ import { MembershipsModule } from '../memberships/memberships.module';
     ProjectModulesModule,
     MembershipsModule,
   ],
-  controllers: [TasksController],
+  controllers: [TasksController, MyTasksController],
   providers: [TasksService, TasksRepository],
   exports: [TasksRepository],
 })

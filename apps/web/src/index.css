@@ -33,13 +33,11 @@
     --input: 214 32% 88%;
     --ring: 221.2 83.2% 53.3%;
 
-    --theme-glow-one: 199 89% 92%;
-    --theme-glow-two: 221 83% 95%;
     --pipeline-start: 213 94% 80%;
     --pipeline-middle: 217 91% 60%;
     --pipeline-end: 224 64% 33%;
 
-    --radius: 0.625rem;
+    --radius: 0.5rem;
   }
 
   :root[data-color-theme="violet"] {
@@ -59,8 +57,6 @@
     --border: 265 28% 87%;
     --input: 265 28% 87%;
     --ring: 262 83% 58%;
-    --theme-glow-one: 270 95% 94%;
-    --theme-glow-two: 250 90% 96%;
     --pipeline-start: 270 95% 82%;
     --pipeline-middle: 262 83% 58%;
     --pipeline-end: 263 70% 30%;
@@ -83,8 +79,6 @@
     --border: 153 25% 85%;
     --input: 153 25% 85%;
     --ring: 160 84% 39%;
-    --theme-glow-one: 152 81% 92%;
-    --theme-glow-two: 166 76% 95%;
     --pipeline-start: 152 81% 78%;
     --pipeline-middle: 160 84% 39%;
     --pipeline-end: 164 86% 20%;
@@ -107,8 +101,6 @@
     --border: 350 28% 86%;
     --input: 350 28% 86%;
     --ring: 347 77% 50%;
-    --theme-glow-one: 350 100% 93%;
-    --theme-glow-two: 330 90% 96%;
     --pipeline-start: 351 95% 80%;
     --pipeline-middle: 347 77% 50%;
     --pipeline-end: 343 79% 30%;
@@ -152,10 +144,6 @@
 
   body {
     @apply bg-background text-foreground antialiased;
-    background-image:
-      radial-gradient(circle at 85% 0%, hsl(var(--theme-glow-one) / 0.55), transparent 28rem),
-      radial-gradient(circle at 15% 35%, hsl(var(--theme-glow-two) / 0.65), transparent 34rem);
-    background-attachment: fixed;
     transition: background-color 180ms ease, color 180ms ease;
   }
 }

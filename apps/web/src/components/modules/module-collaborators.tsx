@@ -5,6 +5,7 @@ import {
   useAddModuleCollaborator,
   useModuleCollaborators,
   useRemoveModuleCollaborator,
+  useUserSearch,
   type Membership,
 } from "@/api/hooks";
 import { LoadingState } from "@/components/shared/loading-state";
@@ -15,14 +16,12 @@ interface ModuleCollaboratorsManagerProps {
   tenantId: string;
   moduleId: string;
   members: Membership[];
-  membersLoading: boolean;
 }
 
 export function ModuleCollaboratorsManager({
   tenantId,
   moduleId,
   members,
-  membersLoading,
 }: ModuleCollaboratorsManagerProps) {
   const collaboratorsQuery = useModuleCollaborators(tenantId, moduleId);
   const addCollaborator = useAddModuleCollaborator(tenantId, moduleId);
@@ -41,18 +40,10 @@ export function ModuleCollaboratorsManager({
     [collaboratorsQuery.data],
   );
 
+  const userSearchQuery = useUserSearch(search, pickerOpen);
   const matchingMembers = useMemo(() => {
-    const query = search.trim().toLowerCase();
-    return members
-      .filter((member) => !collaboratorUserIds.has(member.userId))
-      .filter(
-        (member) =>
-          !query ||
-          member.displayName.toLowerCase().includes(query) ||
-          member.email.toLowerCase().includes(query),
-      )
-      .slice(0, 8);
-  }, [collaboratorUserIds, members, search]);
+    return (userSearchQuery.data ?? []).filter((user) => !collaboratorUserIds.has(user.id));
+  }, [collaboratorUserIds, userSearchQuery.data]);
 
   if (collaboratorsQuery.isPending) {
     return <LoadingState title="Loading collaborators" className="min-h-32" />;
@@ -115,18 +106,18 @@ export function ModuleCollaboratorsManager({
             setSearch(event.target.value);
             setPickerOpen(true);
           }}
-          placeholder="Add a workspace member as a collaborator"
+          placeholder="Type a name or email to search all users"
           className="pl-9"
           autoComplete="off"
         />
-        {pickerOpen ? (
+        {pickerOpen && search.trim() ? (
           <div
             id="module-collaborator-options"
             role="listbox"
             className="absolute z-50 mt-1 max-h-56 w-full overflow-y-auto rounded-md border bg-popover p-1 text-popover-foreground shadow-lg"
           >
-            {membersLoading ? (
-              <p className="px-3 py-2 text-sm text-muted-foreground">Loading workspace members…</p>
+            {userSearchQuery.isPending ? (
+              <p className="px-3 py-2 text-sm text-muted-foreground">Searching…</p>
             ) : matchingMembers.length ? (
               matchingMembers.map((member) => (
                 <button
@@ -136,7 +127,7 @@ export function ModuleCollaboratorsManager({
                   aria-selected="false"
                   className="flex w-full items-center justify-between gap-3 rounded-sm px-3 py-2 text-left hover:bg-accent focus:bg-accent focus:outline-none"
                   onClick={() => {
-                    addCollaborator.mutate({ userId: member.userId, role: "Collaborator" });
+                    addCollaborator.mutate({ userId: member.id, role: "Collaborator" });
                     setSearch("");
                   }}
                 >
@@ -147,7 +138,7 @@ export function ModuleCollaboratorsManager({
                 </button>
               ))
             ) : (
-              <p className="px-3 py-2 text-sm text-muted-foreground">No matching workspace members.</p>
+              <p className="px-3 py-2 text-sm text-muted-foreground">No matching users.</p>
             )}
           </div>
         ) : null}

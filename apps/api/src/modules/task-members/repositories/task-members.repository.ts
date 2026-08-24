@@ -17,6 +17,15 @@ export class TaskMembersRepository {
       );
   }
 
+  /** Every task id this user is an explicit member of, across every tenant. */
+  async findTaskIdsByUser(userId: string) {
+    const rows = await this.drizzle.db
+      .select({ taskId: taskMembers.taskId })
+      .from(taskMembers)
+      .where(eq(taskMembers.userId, userId));
+    return rows.map((row) => row.taskId);
+  }
+
   async findByTaskAndUser(tenantId: string, taskId: string, userId: string) {
     const [row] = await this.drizzle.db
       .select()

@@ -1,7 +1,14 @@
 import { useEffect, useMemo, useState, type FormEvent, type ReactNode } from "react";
 import { Search, X } from "lucide-react";
 
-import { useEnumValues, type ApiModule, type ApiProject, type Membership } from "@/api/hooks";
+import {
+  useEnumValues,
+  useUserSearch,
+  type ApiModule,
+  type ApiProject,
+  type ApiUserSearchResult,
+  type Membership,
+} from "@/api/hooks";
 import { ModuleCollaboratorsManager } from "@/components/modules/module-collaborators";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -44,7 +51,6 @@ interface ModuleDialogProps {
   tenantId: string;
   projects: ApiProject[];
   members: Membership[];
-  membersLoading: boolean;
   module?: ApiModule | null;
   onSave: (input: ModuleFormInput) => void;
 }
@@ -82,7 +88,6 @@ export function ModuleDialog({
   tenantId,
   projects,
   members,
-  membersLoading,
   module,
   onSave,
 }: ModuleDialogProps) {
@@ -91,7 +96,7 @@ export function ModuleDialog({
   const [isIndependent, setIsIndependent] = useState(true);
   const [memberSearch, setMemberSearch] = useState("");
   const [memberPickerOpen, setMemberPickerOpen] = useState(false);
-  const [selectedMembers, setSelectedMembers] = useState<Membership[]>([]);
+  const [selectedMembers, setSelectedMembers] = useState<ApiUserSearchResult[]>([]);
   const isEditing = Boolean(module);
 
   useEffect(() => {
@@ -116,20 +121,11 @@ export function ModuleDialog({
     setSelectedMembers([]);
   }, [open, module]);
 
+  const userSearchQuery = useUserSearch(memberSearch, memberPickerOpen);
   const matchingMembers = useMemo(() => {
-    const query = memberSearch.trim().toLowerCase();
-    const selectedIds = new Set(selectedMembers.map((member) => member.userId));
-
-    return members
-      .filter((member) => !selectedIds.has(member.userId))
-      .filter(
-        (member) =>
-          !query ||
-          member.displayName.toLowerCase().includes(query) ||
-          member.email.toLowerCase().includes(query),
-      )
-      .slice(0, 8);
-  }, [memberSearch, members, selectedMembers]);
+    const selectedIds = new Set(selectedMembers.map((member) => member.id));
+    return (userSearchQuery.data ?? []).filter((member) => !selectedIds.has(member.id));
+  }, [userSearchQuery.data, selectedMembers]);
 
   function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -139,7 +135,7 @@ export function ModuleDialog({
       title: form.title.trim(),
       description: form.description.trim(),
       projectId: isIndependent ? null : form.projectId,
-      collaboratorUserIds: selectedMembers.map((member) => member.userId),
+      collaboratorUserIds: selectedMembers.map((member) => member.id),
     });
     onOpenChange(false);
   }
@@ -268,15 +264,22 @@ export function ModuleDialog({
             </FormField>
           </div>
 
-          {isIndependent && isEditing && module ? (
+          {isIndependent && isEditing && module && module.tenantId === tenantId ? (
             <div className="flex flex-col gap-2 border-t border-border pt-4">
               <span className="text-sm font-medium">Collaborators</span>
               <ModuleCollaboratorsManager
                 tenantId={tenantId}
                 moduleId={module.id}
                 members={members}
-                membersLoading={membersLoading}
               />
+            </div>
+          ) : isIndependent && isEditing && module ? (
+            <div className="flex flex-col gap-2 border-t border-border pt-4">
+              <span className="text-sm font-medium">Collaborators</span>
+              <p className="text-sm text-muted-foreground">
+                This module was shared with you from another workspace. Only members of that
+                workspace can manage who has access.
+              </p>
             </div>
           ) : null}
 
@@ -303,19 +306,19 @@ export function ModuleDialog({
                     setMemberSearch(event.target.value);
                     setMemberPickerOpen(true);
                   }}
-                  placeholder="Type a workspace member's name or email"
+                  placeholder="Type a name or email to search all users"
                   className="pl-9"
                   autoComplete="off"
                 />
-                {memberPickerOpen ? (
+                {memberPickerOpen && memberSearch.trim() ? (
                   <div
                     id="module-member-options"
                     role="listbox"
                     className="absolute z-50 mt-1 max-h-56 w-full overflow-y-auto rounded-md border bg-popover p-1 text-popover-foreground shadow-lg"
                   >
-                    {membersLoading ? (
+                    {userSearchQuery.isPending ? (
                       <p className="px-3 py-2 text-sm text-muted-foreground">
-                        Loading workspace members…
+                        Searching…
                       </p>
                     ) : matchingMembers.length ? (
                       matchingMembers.map((member) => (
@@ -342,7 +345,7 @@ export function ModuleDialog({
                       ))
                     ) : (
                       <p className="px-3 py-2 text-sm text-muted-foreground">
-                        No matching workspace members.
+                        No matching users.
                       </p>
                     )}
                   </div>

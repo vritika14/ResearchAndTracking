@@ -1,7 +1,14 @@
 import { useEffect, useMemo, useState, type FormEvent, type ReactNode } from "react";
 import { Search, X } from "lucide-react";
 
-import type { ApiModule, ApiProject, ApiTask, Membership } from "@/api/hooks";
+import {
+  useUserSearch,
+  type ApiModule,
+  type ApiProject,
+  type ApiTask,
+  type ApiUserSearchResult,
+  type Membership,
+} from "@/api/hooks";
 import { TaskMembersManager } from "@/components/tasks/task-members";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -136,7 +143,7 @@ export function TaskDialog({
   const [form, setForm] = useState<TaskFormInput>(INITIAL_FORM);
   const [memberSearch, setMemberSearch] = useState("");
   const [memberPickerOpen, setMemberPickerOpen] = useState(false);
-  const [selectedMembers, setSelectedMembers] = useState<Membership[]>([]);
+  const [selectedMembers, setSelectedMembers] = useState<ApiUserSearchResult[]>([]);
   const isEditing = Boolean(task);
 
   useEffect(() => {
@@ -147,19 +154,11 @@ export function TaskDialog({
     setSelectedMembers([]);
   }, [open, task]);
 
+  const userSearchQuery = useUserSearch(memberSearch, memberPickerOpen);
   const matchingMembers = useMemo(() => {
-    const query = memberSearch.trim().toLowerCase();
-    const selectedIds = new Set(selectedMembers.map((member) => member.userId));
-    return members
-      .filter((member) => !selectedIds.has(member.userId))
-      .filter(
-        (member) =>
-          !query ||
-          member.displayName.toLowerCase().includes(query) ||
-          member.email.toLowerCase().includes(query),
-      )
-      .slice(0, 8);
-  }, [memberSearch, members, selectedMembers]);
+    const selectedIds = new Set(selectedMembers.map((member) => member.id));
+    return (userSearchQuery.data ?? []).filter((member) => !selectedIds.has(member.id));
+  }, [userSearchQuery.data, selectedMembers]);
 
   function setLinkTarget(linkTarget: LinkTargetType) {
     setForm((prev) => ({
@@ -179,7 +178,7 @@ export function TaskDialog({
       title: form.title.trim(),
       description: form.description.trim(),
       workingWith: form.visibility === "Shared" ? form.workingWith.trim() : "",
-      collaboratorUserIds: selectedMembers.map((member) => member.userId),
+      collaboratorUserIds: selectedMembers.map((member) => member.id),
     });
     onOpenChange(false);
   }
@@ -346,7 +345,7 @@ export function TaskDialog({
             ) : null}
           </div>
 
-          {form.visibility === "Shared" && isEditing && task ? (
+          {form.visibility === "Shared" && isEditing && task && task.tenantId === tenantId ? (
             <div className="flex flex-col gap-2 border-t border-border pt-4">
               <span className="text-sm font-medium">Members</span>
               <TaskMembersManager
@@ -355,6 +354,14 @@ export function TaskDialog({
                 members={members}
                 membersLoading={membersLoading}
               />
+            </div>
+          ) : form.visibility === "Shared" && isEditing && task ? (
+            <div className="flex flex-col gap-2 border-t border-border pt-4">
+              <span className="text-sm font-medium">Members</span>
+              <p className="text-sm text-muted-foreground">
+                This task was shared with you from another workspace. Only members of that
+                workspace can manage who has access.
+              </p>
             </div>
           ) : null}
 
@@ -381,19 +388,19 @@ export function TaskDialog({
                     setMemberSearch(event.target.value);
                     setMemberPickerOpen(true);
                   }}
-                  placeholder="Type a workspace member's name or email"
+                  placeholder="Type a name or email to search all users"
                   className="pl-9"
                   autoComplete="off"
                 />
-                {memberPickerOpen ? (
+                {memberPickerOpen && memberSearch.trim() ? (
                   <div
                     id="task-new-member-options"
                     role="listbox"
                     className="absolute z-50 mt-1 max-h-56 w-full overflow-y-auto rounded-md border bg-popover p-1 text-popover-foreground shadow-lg"
                   >
-                    {membersLoading ? (
+                    {userSearchQuery.isPending ? (
                       <p className="px-3 py-2 text-sm text-muted-foreground">
-                        Loading workspace members…
+                        Searching…
                       </p>
                     ) : matchingMembers.length ? (
                       matchingMembers.map((member) => (
@@ -420,7 +427,7 @@ export function TaskDialog({
                       ))
                     ) : (
                       <p className="px-3 py-2 text-sm text-muted-foreground">
-                        No matching workspace members.
+                        No matching users.
                       </p>
                     )}
                   </div>

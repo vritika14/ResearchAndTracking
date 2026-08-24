@@ -54,6 +54,11 @@ const fixtures = vi.hoisted(() => ({
       role: "owner",
     },
   ],
+  // Distinct from `members` on purpose: proves the "Share with" search hits
+  // the platform-wide user-search endpoint, not the workspace member list.
+  allUsers: [
+    { id: "user-outside-workspace", displayName: "Jamie Outsider", email: "jamie@example.com" },
+  ],
 }));
 
 vi.mock("@/api/client", () => ({
@@ -69,7 +74,15 @@ vi.mock("@/api/hooks", async () => {
     useMembers: () => ({ data: fixtures.members, isPending: false }),
     useProjects: () => ({ data: fixtures.projects, isPending: false, isError: false }),
     useModules: () => ({ data: fixtures.modules }),
-    useTasks: () => ({
+    useUserSearch: (query: string) => ({
+      data: query.trim()
+        ? fixtures.allUsers.filter((user) =>
+            user.displayName.toLowerCase().includes(query.trim().toLowerCase()),
+          )
+        : [],
+      isPending: false,
+    }),
+    useMyTasks: () => ({
       data: useSyncExternalStore(store.subscribe, store.getTasks),
       isPending: false,
       isError: false,
@@ -101,7 +114,7 @@ vi.mock("@/api/hooks", async () => {
         return task;
       }),
     }),
-    useUpdateTask: () => ({
+    useUpdateMyTask: () => ({
       mutateAsync: vi.fn(
         async ({ taskId, input }: { taskId: string; input: Record<string, unknown> }) => {
           const updated = store.getTasks().map((item) =>
@@ -112,7 +125,7 @@ vi.mock("@/api/hooks", async () => {
         },
       ),
     }),
-    useDeleteTask: () => ({
+    useDeleteMyTask: () => ({
       mutateAsync: vi.fn(async (taskId: string) => {
         store.setTasks(store.getTasks().filter((item) => item.id !== taskId));
       }),
@@ -164,6 +177,25 @@ describe("TasksPage", () => {
     expect(dueDate).toHaveAttribute("placeholder", "DD/MM/YYYY");
     expect(dueDate).not.toBeRequired();
     expect(screen.getByRole("button", { name: "Choose due date" })).toBeInTheDocument();
+  });
+
+  it("searches all platform users, not just workspace members, when sharing a new task", () => {
+    render(
+      <MemoryRouter>
+        <TasksPage />
+      </MemoryRouter>,
+    );
+
+    fireEvent.click(screen.getByRole("button", { name: "New Task" }));
+    fireEvent.click(screen.getByRole("combobox", { name: "Visibility" }));
+    fireEvent.click(screen.getByRole("option", { name: "Shared" }));
+
+    const shareSearch = screen.getByRole("combobox", { name: /Share with/ });
+    fireEvent.change(shareSearch, { target: { value: "Jamie" } });
+
+    expect(screen.getByText("Jamie Outsider")).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("option", { name: /Jamie Outsider/ }));
+    expect(screen.getByLabelText("Selected task members")).toHaveTextContent("Jamie Outsider");
   });
 
   it("edits an existing task from its table row", async () => {

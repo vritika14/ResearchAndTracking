@@ -10,6 +10,9 @@ describe('ProjectModulesService', () => {
   let service: ProjectModulesService;
   let repository: {
     findById: jest.Mock;
+    findByIdGlobal: jest.Mock;
+    findByIds: jest.Mock;
+    findByProjectIds: jest.Mock;
     findActiveByTenant: jest.Mock;
     create: jest.Mock;
     update: jest.Mock;
@@ -21,14 +24,21 @@ describe('ProjectModulesService', () => {
   };
   let collaboratorsRepository: {
     findByModuleAndUser: jest.Mock;
+    findModuleIdsByUser: jest.Mock;
     create: jest.Mock;
   };
-  let projectCollaboratorsRepository: { findByProjectAndUser: jest.Mock };
+  let projectCollaboratorsRepository: {
+    findByProjectAndUser: jest.Mock;
+    findProjectIdsByUser: jest.Mock;
+  };
   let sequences: { nextDisplayId: jest.Mock };
 
   beforeEach(() => {
     repository = {
       findById: jest.fn(),
+      findByIdGlobal: jest.fn(),
+      findByIds: jest.fn(),
+      findByProjectIds: jest.fn(),
       findActiveByTenant: jest.fn(),
       create: jest.fn(),
       update: jest.fn(),
@@ -40,10 +50,12 @@ describe('ProjectModulesService', () => {
     };
     collaboratorsRepository = {
       findByModuleAndUser: jest.fn().mockResolvedValue(undefined),
+      findModuleIdsByUser: jest.fn().mockResolvedValue([]),
       create: jest.fn().mockResolvedValue({ id: 'collaborator-1' }),
     };
     projectCollaboratorsRepository = {
       findByProjectAndUser: jest.fn().mockResolvedValue(undefined),
+      findProjectIdsByUser: jest.fn().mockResolvedValue([]),
     };
     sequences = {
       nextDisplayId: jest.fn().mockResolvedValue('MOD-0001'),
@@ -116,6 +128,108 @@ describe('ProjectModulesService', () => {
       });
       await expect(
         service.findOne('tenant-1', 'module-1', 'user-1'),
+      ).rejects.toThrow(NotFoundException);
+    });
+  });
+
+  describe('listForCaller', () => {
+    it('combines project-linked modules with independent modules the caller collaborates on', async () => {
+      projectCollaboratorsRepository.findProjectIdsByUser.mockResolvedValue(['project-1']);
+      collaboratorsRepository.findModuleIdsByUser.mockResolvedValue(['module-2']);
+      repository.findByProjectIds.mockResolvedValue([
+        { id: 'module-1', projectId: 'project-1', tagId: null, statusId: null, archivedAt: null },
+      ]);
+      repository.findByIds.mockResolvedValue([
+        { id: 'module-2', projectId: null, tagId: null, statusId: null, archivedAt: null },
+      ]);
+
+      const result = await service.listForCaller('user-1');
+
+      expect(repository.findByProjectIds).toHaveBeenCalledWith(['project-1']);
+      expect(repository.findByIds).toHaveBeenCalledWith(['module-2']);
+      expect(result.map((module) => module.id)).toEqual(['module-1', 'module-2']);
+    });
+
+    it('excludes archived modules and de-duplicates modules reachable both ways', async () => {
+      projectCollaboratorsRepository.findProjectIdsByUser.mockResolvedValue(['project-1']);
+      collaboratorsRepository.findModuleIdsByUser.mockResolvedValue(['module-1']);
+      repository.findByProjectIds.mockResolvedValue([
+        { id: 'module-1', projectId: 'project-1', tagId: null, statusId: null, archivedAt: null },
+        { id: 'module-2', projectId: 'project-1', tagId: null, statusId: null, archivedAt: new Date() },
+      ]);
+      repository.findByIds.mockResolvedValue([
+        { id: 'module-1', projectId: 'project-1', tagId: null, statusId: null, archivedAt: null },
+      ]);
+
+      const result = await service.listForCaller('user-1');
+
+      expect(result.map((module) => module.id)).toEqual(['module-1']);
+    });
+  });
+
+  describe('findOneForCaller', () => {
+    it('resolves the module real tenant and delegates to the access-checked findOne', async () => {
+      repository.findByIdGlobal.mockResolvedValue({
+        id: 'module-1',
+        tenantId: 'tenant-1',
+        projectId: null,
+      });
+      repository.findById.mockResolvedValue({
+        id: 'module-1',
+        projectId: null,
+        tagId: null,
+        statusId: null,
+      });
+      collaboratorsRepository.findByModuleAndUser.mockResolvedValue({ roleId: 'role-1' });
+
+      const result = await service.findOneForCaller('module-1', 'user-1');
+
+      expect(repository.findById).toHaveBeenCalledWith('tenant-1', 'module-1');
+      expect(result).toEqual(expect.objectContaining({ id: 'module-1' }));
+    });
+
+    it('throws NotFoundException when the module does not exist in any tenant', async () => {
+      repository.findByIdGlobal.mockResolvedValue(undefined);
+      await expect(
+        service.findOneForCaller('module-1', 'user-1'),
+      ).rejects.toThrow(NotFoundException);
+    });
+  });
+
+  describe('archiveForCaller', () => {
+    it('resolves the module real tenant and delegates to the access-checked archive', async () => {
+      repository.findByIdGlobal.mockResolvedValue({
+        id: 'module-1',
+        tenantId: 'tenant-1',
+        projectId: null,
+      });
+      repository.findById.mockResolvedValue({
+        id: 'module-1',
+        projectId: null,
+        tagId: null,
+        statusId: null,
+      });
+      collaboratorsRepository.findByModuleAndUser.mockResolvedValue({ roleId: 'role-1' });
+      enumRepository.findByCategoryAndValue.mockResolvedValue({ id: 'archived-status-id' });
+      repository.archive.mockResolvedValue({
+        id: 'module-1',
+        tagId: null,
+        statusId: 'archived-status-id',
+      });
+
+      await service.archiveForCaller('module-1', 'user-1');
+
+      expect(repository.archive).toHaveBeenCalledWith(
+        'tenant-1',
+        'module-1',
+        'archived-status-id',
+      );
+    });
+
+    it('throws NotFoundException when the module does not exist in any tenant', async () => {
+      repository.findByIdGlobal.mockResolvedValue(undefined);
+      await expect(
+        service.archiveForCaller('module-1', 'user-1'),
       ).rejects.toThrow(NotFoundException);
     });
   });

@@ -6,10 +6,10 @@ import {
   useCurrentWorkspace,
   useMembers,
   useModules,
+  useMyTask,
   useProject,
   useProjects,
-  useTask,
-  useUpdateTask,
+  useUpdateMyTask,
 } from "@/api/hooks";
 import { TaskDialog, type TaskFormInput } from "@/components/tasks/task-dialog";
 import { TaskMembersManager } from "@/components/tasks/task-members";
@@ -75,14 +75,15 @@ export default function TaskDetailPage() {
   const workspace = useCurrentWorkspace();
   const tenantId = workspace.data?.id ?? "";
 
-  const taskQuery = useTask(tenantId, taskId);
+  const taskQuery = useMyTask(taskId);
   const projectsQuery = useProjects(tenantId);
   const modulesQuery = useModules(tenantId);
   const membersQuery = useMembers(tenantId);
-  const updateTask = useUpdateTask(tenantId);
+  const updateTask = useUpdateMyTask();
 
   const task = taskQuery.data;
   const linkedProjectQuery = useProject(tenantId, task?.projectId ?? "", Boolean(task?.projectId));
+  const sameTenant = Boolean(task && tenantId && task.tenantId === tenantId);
   const [isEditing, setIsEditing] = useState(false);
 
   if (workspace.isPending || taskQuery.isPending) {
@@ -186,7 +187,8 @@ export default function TaskDetailPage() {
             <DetailItem label="Linked to">
               {task.projectId ? (
                 <Link to={`/projects/${task.projectId}`} className="text-primary hover:underline">
-                  {linkedProjectQuery.data?.title ?? "Loading…"}
+                  {linkedProjectQuery.data?.title ??
+                    (linkedProjectQuery.isError ? "Unknown project" : "Loading…")}
                 </Link>
               ) : task.moduleId ? (
                 <Link to={`/modules/${task.moduleId}`} className="text-primary hover:underline">
@@ -217,13 +219,18 @@ export default function TaskDetailPage() {
             <CardTitle>Task members</CardTitle>
           </CardHeader>
           <CardContent>
-            {task.visibility === "Shared" && tenantId ? (
+            {task.visibility === "Shared" && sameTenant ? (
               <TaskMembersManager
                 tenantId={tenantId}
                 taskId={task.id}
                 members={membersQuery.data ?? []}
                 membersLoading={membersQuery.isPending}
               />
+            ) : task.visibility === "Shared" ? (
+              <p className="text-sm text-muted-foreground">
+                This task was shared with you from another workspace. Only members of that
+                workspace can manage who has access.
+              </p>
             ) : (
               <p className="text-sm text-muted-foreground">
                 This task is private — only you can see it. Switch its visibility to Shared to

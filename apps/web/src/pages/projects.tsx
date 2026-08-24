@@ -1,17 +1,17 @@
 import { useMemo, useState } from "react";
-import { ChevronRight, Pencil } from "lucide-react";
+import { ChevronRight, Pencil, Trash2 } from "lucide-react";
 import { Link } from "react-router-dom";
 
 import { apiClient } from "@/api/client";
 import {
   apiKeys,
+  useArchiveMyProject,
   useCurrentWorkspace,
   useMe,
-  useMembers,
   useModules,
+  useMyProjects,
   useNotes,
   usePipelineStages,
-  useProjects,
   useCreateProject,
   useTasks,
   type ApiProject,
@@ -196,7 +196,12 @@ export default function ProjectsPage() {
   const tenantId = workspace.data?.id ?? "";
   const queryClient = useQueryClient();
 
-  const projectsQuery = useProjects(tenantId);
+  // Projects are tenant-agnostic — a project shared with the caller from
+  // another workspace must still show up here (see MyProjectsController on
+  // the backend). Linked module/task/note counts below remain scoped to the
+  // caller's current workspace, so they may read incomplete for a project
+  // that lives in a different tenant.
+  const projectsQuery = useMyProjects();
   const modulesQuery = useModules(tenantId);
   const tasksQuery = useTasks(tenantId);
   const notesQuery = useNotes(tenantId);
@@ -210,6 +215,7 @@ export default function ProjectsPage() {
   }, [pipelineStagesQuery.data]);
 
   const createProject = useCreateProject(tenantId);
+  const archiveProject = useArchiveMyProject();
 
   const [isNewProjectOpen, setIsNewProjectOpen] = useState(false);
   const [search, setSearch] = useState("");
@@ -226,7 +232,6 @@ export default function ProjectsPage() {
     .map((column) => column.width)
     .join(" ");
   const me = useMe();
-  const workspaceMembers = useMembers(tenantId, isNewProjectOpen);
 
   function toggleExpanded(id: string) {
     setExpandedId((prev) => (prev === id ? null : id));
@@ -327,6 +332,18 @@ export default function ProjectsPage() {
     }
   }
 
+  async function handleDeleteProject(project: ApiProject) {
+    if (
+      !window.confirm(
+        `Delete "${project.title}"? It will be archived and permanently removed after 14 days.`,
+      )
+    ) {
+      return;
+    }
+    await archiveProject.mutateAsync(project.id);
+    setExpandedId((current) => (current === project.id ? null : current));
+  }
+
   if (workspace.isPending || projectsQuery.isPending) {
     return <LoadingState title="Loading projects" className="min-h-[50vh]" />;
   }
@@ -354,8 +371,6 @@ export default function ProjectsPage() {
         onOpenChange={setIsNewProjectOpen}
         onCreate={(input) => void handleCreateProject(input)}
         currentUserId={me.data?.id ?? ""}
-        members={workspaceMembers.data ?? []}
-        membersLoading={workspaceMembers.isPending}
         pipelineStages={pipelineStagesQuery.data ?? []}
       />
 
@@ -502,6 +517,18 @@ export default function ProjectsPage() {
                             >
                               <Pencil className="h-3.5 w-3.5" />
                             </Link>
+                            <button
+                              type="button"
+                              onClick={(event) => {
+                                event.stopPropagation();
+                                void handleDeleteProject(project);
+                              }}
+                              aria-label={`Delete ${project.title}`}
+                              title="Delete project"
+                              className="inline-flex h-6 w-6 shrink-0 items-center justify-center rounded-md text-destructive transition-colors hover:bg-destructive/10 hover:text-destructive focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                            >
+                              <Trash2 className="h-3.5 w-3.5" />
+                            </button>
                           </div>
                           {project.researchArea ? (
                             <span className="text-xs text-muted-foreground">

@@ -1,6 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { modules } from '@research-tracker/migrations';
-import { and, eq, isNull, sql } from 'drizzle-orm';
+import { and, eq, inArray, isNull } from 'drizzle-orm';
 import { DrizzleService } from '../../../db/drizzle.service';
 
 @Injectable()
@@ -13,6 +13,27 @@ export class ProjectModulesRepository {
       .from(modules)
       .where(and(eq(modules.tenantId, tenantId), eq(modules.id, moduleId)));
     return module;
+  }
+
+  /** Tenant-agnostic single-module fetch, used to resolve a module's own tenant. */
+  async findByIdGlobal(moduleId: string) {
+    const [module] = await this.drizzle.db
+      .select()
+      .from(modules)
+      .where(eq(modules.id, moduleId));
+    return module;
+  }
+
+  /** Tenant-agnostic multi-module fetch, for independent modules the caller collaborates on. */
+  async findByIds(ids: string[]) {
+    if (ids.length === 0) return [];
+    return this.drizzle.db.select().from(modules).where(inArray(modules.id, ids));
+  }
+
+  /** Tenant-agnostic multi-module fetch, for modules linked to any of the caller's accessible projects. */
+  async findByProjectIds(projectIds: string[]) {
+    if (projectIds.length === 0) return [];
+    return this.drizzle.db.select().from(modules).where(inArray(modules.projectId, projectIds));
   }
 
   async findActiveByTenant(tenantId: string, projectId?: string) {
@@ -39,12 +60,6 @@ export class ProjectModulesRepository {
     assignedToUserId?: string;
     displayId?: string;
   }) {
-    const isoCheck = await this.drizzle.db.execute(sql`SHOW transaction_isolation`);
-    console.log('DEBUG - isolation level:', isoCheck.rows[0]);
-  
-    const xactCheck = await this.drizzle.db.execute(sql`SELECT pg_current_xact_id_if_assigned() as xact_id`);
-    console.log('DEBUG - xact id before insert:', xactCheck.rows[0]);
-  
     const [module] = await this.drizzle.db
       .insert(modules)
       .values(values)

@@ -6,14 +6,15 @@ import { apiClient } from "@/api/client";
 import {
   useCreateNote,
   useCurrentWorkspace,
-  useDeleteNote,
+  useDeleteMyNote,
   useMembers,
   useModules,
-  useNotes,
+  useMyNotes,
   useProjects,
-  useUpdateNote,
+  useUpdateMyNote,
+  useUserSearch,
   type ApiNote,
-  type Membership,
+  type ApiUserSearchResult,
 } from "@/api/hooks";
 import { NoteMembersManager } from "@/components/notes/note-members";
 import { ErrorState } from "@/components/shared/error-state";
@@ -103,13 +104,15 @@ export default function DailyNotesPage() {
   const workspace = useCurrentWorkspace();
   const tenantId = workspace.data?.id ?? "";
 
-  const notesQuery = useNotes(tenantId);
+  // Notes are tenant-agnostic — a note shared with the caller from another
+  // workspace must still show up here (see MyNotesController on the backend).
+  const notesQuery = useMyNotes();
   const projectsQuery = useProjects(tenantId);
   const modulesQuery = useModules(tenantId);
 
   const createNote = useCreateNote(tenantId);
-  const updateNote = useUpdateNote(tenantId);
-  const deleteNote = useDeleteNote(tenantId);
+  const updateNote = useUpdateMyNote();
+  const deleteNote = useDeleteMyNote();
 
   const [selectedId, setSelectedId] = useState<string | null>(noteId ?? null);
   const [sortOrder, setSortOrder] = useState<"newest" | "oldest">("newest");
@@ -118,8 +121,9 @@ export default function DailyNotesPage() {
   const [draft, setDraft] = useState<NoteDraft>(EMPTY_DRAFT);
   const [memberSearch, setMemberSearch] = useState("");
   const [memberPickerOpen, setMemberPickerOpen] = useState(false);
-  const [selectedMembers, setSelectedMembers] = useState<Membership[]>([]);
+  const [selectedMembers, setSelectedMembers] = useState<ApiUserSearchResult[]>([]);
   const membersQuery = useMembers(tenantId, editingId !== null);
+  const userSearchQuery = useUserSearch(memberSearch, memberPickerOpen);
 
   const notes = notesQuery.data ?? [];
 
@@ -173,20 +177,12 @@ export default function DailyNotesPage() {
 
   const selectedNote = visibleNotes.find((note) => note.id === selectedId) ?? visibleNotes[0];
   const isEditing = editingId !== null;
+  const sameTenant = Boolean(selectedNote && tenantId && selectedNote.tenantId === tenantId);
 
   const matchingMembers = useMemo(() => {
-    const query = memberSearch.trim().toLowerCase();
-    const selectedIds = new Set(selectedMembers.map((member) => member.userId));
-    return (membersQuery.data ?? [])
-      .filter((member) => !selectedIds.has(member.userId))
-      .filter(
-        (member) =>
-          !query ||
-          member.displayName.toLowerCase().includes(query) ||
-          member.email.toLowerCase().includes(query),
-      )
-      .slice(0, 8);
-  }, [memberSearch, membersQuery.data, selectedMembers]);
+    const selectedIds = new Set(selectedMembers.map((member) => member.id));
+    return (userSearchQuery.data ?? []).filter((member) => !selectedIds.has(member.id));
+  }, [userSearchQuery.data, selectedMembers]);
 
   function resolveLink(input: { linkTarget: LinkTargetType; projectId: string; moduleId: string }) {
     if (input.linkTarget === "project") {
@@ -244,7 +240,7 @@ export default function DailyNotesPage() {
           selectedMembers.map((member) =>
             apiClient.POST("/api/v1/tenant/{tenantId}/notes/{noteId}/members", {
               params: { path: { tenantId, noteId: note.id } },
-              body: { userId: member.userId },
+              body: { userId: member.id },
             }),
           ),
         );
@@ -544,19 +540,19 @@ export default function DailyNotesPage() {
                         setMemberSearch(event.target.value);
                         setMemberPickerOpen(true);
                       }}
-                      placeholder="Type a workspace member's name or email"
+                      placeholder="Type a name or email to search all users"
                       className="pl-9"
                       autoComplete="off"
                     />
-                    {memberPickerOpen ? (
+                    {memberPickerOpen && memberSearch.trim() ? (
                       <div
                         id="note-new-member-options"
                         role="listbox"
                         className="absolute z-50 mt-1 max-h-56 w-full overflow-y-auto rounded-md border bg-popover p-1 text-popover-foreground shadow-lg"
                       >
-                        {membersQuery.isPending ? (
+                        {userSearchQuery.isPending ? (
                           <p className="px-3 py-2 text-sm text-muted-foreground">
-                            Loading workspace members…
+                            Searching…
                           </p>
                         ) : matchingMembers.length ? (
                           matchingMembers.map((member) => (
@@ -583,7 +579,7 @@ export default function DailyNotesPage() {
                           ))
                         ) : (
                           <p className="px-3 py-2 text-sm text-muted-foreground">
-                            No matching workspace members.
+                            No matching users.
                           </p>
                         )}
                       </div>
@@ -671,12 +667,18 @@ export default function DailyNotesPage() {
                     Shared with
                   </span>
                   <div className="mt-3 max-w-sm">
-                    <NoteMembersManager
-                      tenantId={tenantId}
-                      noteId={selectedNote.id}
-                      members={membersQuery.data ?? []}
-                      membersLoading={membersQuery.isPending}
-                    />
+                    {sameTenant ? (
+                      <NoteMembersManager
+                        tenantId={tenantId}
+                        noteId={selectedNote.id}
+                        members={membersQuery.data ?? []}
+                      />
+                    ) : (
+                      <p className="text-sm text-muted-foreground">
+                        This note was shared with you from another workspace. Only members of
+                        that workspace can manage who has access.
+                      </p>
+                    )}
                   </div>
                 </div>
               ) : null}

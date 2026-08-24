@@ -4,13 +4,13 @@ import { Link } from "react-router-dom";
 
 import { apiClient } from "@/api/client";
 import {
-  useArchiveModule,
+  useArchiveMyModule,
   useCreateModule,
   useCurrentWorkspace,
   useMembers,
-  useModules,
+  useMyModules,
   useProjects,
-  useUpdateModule,
+  useUpdateMyModule,
   type ApiModule,
 } from "@/api/hooks";
 import { ColumnVisibilityMenu } from "@/components/dashboard/column-visibility-menu";
@@ -47,7 +47,10 @@ export default function ModulesPage() {
   const workspace = useCurrentWorkspace();
   const tenantId = workspace.data?.id ?? "";
 
-  const modulesQuery = useModules(tenantId);
+  // Modules are tenant-agnostic — a module the caller collaborates on
+  // (directly, or via its linked project) must still show up here, even
+  // from another workspace (see MyModulesController on the backend).
+  const modulesQuery = useMyModules();
   const projectsQuery = useProjects(tenantId);
   const [isNewModuleOpen, setIsNewModuleOpen] = useState(false);
   const [editingModule, setEditingModule] = useState<ApiModule | null>(null);
@@ -57,8 +60,8 @@ export default function ModulesPage() {
   );
 
   const createModule = useCreateModule(tenantId);
-  const updateModule = useUpdateModule(tenantId);
-  const archiveModule = useArchiveModule(tenantId);
+  const updateModule = useUpdateMyModule();
+  const archiveModule = useArchiveMyModule();
 
   const [search, setSearch] = useState("");
   const [status, setStatus] = useState<StatusFilter>("All");
@@ -168,7 +171,6 @@ export default function ModulesPage() {
         tenantId={tenantId}
         projects={projectsQuery.data ?? []}
         members={workspaceMembers.data ?? []}
-        membersLoading={workspaceMembers.isPending}
         onSave={(input) => void handleCreateModule(input)}
       />
       <ModuleDialog
@@ -179,7 +181,6 @@ export default function ModulesPage() {
         tenantId={tenantId}
         projects={projectsQuery.data ?? []}
         members={workspaceMembers.data ?? []}
-        membersLoading={workspaceMembers.isPending}
         module={editingModule}
         onSave={(input) => void handleUpdateModule(input)}
       />

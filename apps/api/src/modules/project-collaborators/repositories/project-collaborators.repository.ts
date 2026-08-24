@@ -1,7 +1,7 @@
 // apps/api/src/modules/project-collaborators/repositories/project-collaborators.repository.ts
 import { Injectable } from '@nestjs/common';
 import { projectCollaborators } from '@research-tracker/migrations';
-import { and, eq, sql } from 'drizzle-orm';
+import { and, eq } from 'drizzle-orm';
 import { DrizzleService } from '../../../db/drizzle.service';
 
 @Injectable()
@@ -18,6 +18,15 @@ export class ProjectCollaboratorsRepository {
           eq(projectCollaborators.projectId, projectId),
         ),
       );
+  }
+
+  /** Every project id this user collaborates on (or owns), across every tenant. */
+  async findProjectIdsByUser(userId: string) {
+    const rows = await this.drizzle.db
+      .select({ projectId: projectCollaborators.projectId })
+      .from(projectCollaborators)
+      .where(eq(projectCollaborators.userId, userId));
+    return rows.map((row) => row.projectId);
   }
 
   async findByProjectAndUser(
@@ -44,11 +53,6 @@ export class ProjectCollaboratorsRepository {
     userId: string;
     roleId: string;
   }) {
-    const debugCheck = await this.drizzle.db.execute(
-      sql`SELECT current_setting('app.current_user_id', true) as val, pg_backend_pid() as backend_pid`,
-    );
-    console.log('DEBUG - session variable at insert time:', debugCheck.rows[0]);
-
     const [row] = await this.drizzle.db
       .insert(projectCollaborators)
       .values(values)

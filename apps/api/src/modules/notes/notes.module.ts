@@ -1,5 +1,6 @@
 import { Module, forwardRef } from '@nestjs/common';
 import { UsersModule } from '../users/users.module';
+import { MyNotesController } from './controllers/my-notes.controller';
 import { NotesController } from './controllers/notes.controller';
 import { NotesRepository } from './repositories/notes.repository';
 import { NotesService } from './services/notes.service';
@@ -17,7 +18,7 @@ import { ProjectModulesModule } from '../project-modules/project-modules.module'
     ProjectModulesModule,
     MembershipsModule,
   ],
-  controllers: [NotesController],
+  controllers: [NotesController, MyNotesController],
   providers: [NotesService, NotesRepository],
   exports: [NotesRepository],
 })
