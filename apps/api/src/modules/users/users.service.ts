@@ -7,7 +7,7 @@ import {
 } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { users } from '@research-tracker/migrations';
-import { eq } from 'drizzle-orm';
+import { and, eq, ilike, or } from 'drizzle-orm';
 import { firstValueFrom } from 'rxjs';
 import { DrizzleService } from '../../db/drizzle.service';
 import type { UpdateProfileDto } from './dto/update-profile.dto';
@@ -28,6 +28,33 @@ export class UsersService {
     private readonly http: HttpService,
     private readonly configService: ConfigService,
   ) {}
+
+  /**
+   * Search users by name or email, across the whole platform (not scoped to
+   * any one tenant) — used to find collaborators to invite onto a shared
+   * task/note/project/module regardless of which workspace they belong to.
+   */
+  async search(query: string, limit = 8) {
+    const trimmed = query.trim();
+    if (!trimmed) return [];
+
+    const pattern = `%${trimmed}%`;
+    return this.drizzle.db
+      .select({
+        id: users.id,
+        displayName: users.displayName,
+        email: users.email,
+      })
+      .from(users)
+      .where(
+        and(
+          eq(users.status, 'active'),
+          or(ilike(users.displayName, pattern), ilike(users.email, pattern)),
+        ),
+      )
+      .orderBy(users.displayName)
+      .limit(limit);
+  }
 
   async findByExternalAuthId(externalAuthId: string) {
     const [existing] = await this.drizzle.db

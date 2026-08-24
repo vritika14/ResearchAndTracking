@@ -5,12 +5,12 @@ import { Link, useParams } from "react-router-dom";
 import {
   useCurrentWorkspace,
   useMembers,
-  useModule,
+  useMyModule,
   useNotes,
   useProject,
   useProjects,
   useTasks,
-  useUpdateModule,
+  useUpdateMyModule,
   type ApiNote,
   type ApiTask,
 } from "@/api/hooks";
@@ -119,14 +119,18 @@ export default function ModuleDetailPage() {
   const workspace = useCurrentWorkspace();
   const tenantId = workspace.data?.id ?? "";
 
-  const moduleQuery = useModule(tenantId, moduleId);
+  // Modules are tenant-agnostic — a module the caller collaborates on
+  // (directly, or via its linked project) must still open here (see
+  // MyModulesController on the backend).
+  const moduleQuery = useMyModule(moduleId);
   const projectsQuery = useProjects(tenantId);
   const tasksQuery = useTasks(tenantId);
   const notesQuery = useNotes(tenantId);
   const membersQuery = useMembers(tenantId);
-  const updateModule = useUpdateModule(tenantId);
+  const updateModule = useUpdateMyModule();
 
   const module = moduleQuery.data;
+  const sameTenant = Boolean(module && tenantId && module.tenantId === tenantId);
   const linkedProjectQuery = useProject(tenantId, module?.projectId ?? "", Boolean(module?.projectId));
   const [isEditing, setIsEditing] = useState(false);
 
@@ -208,7 +212,6 @@ export default function ModuleDetailPage() {
         tenantId={tenantId}
         projects={projectsQuery.data ?? []}
         members={membersQuery.data ?? []}
-        membersLoading={membersQuery.isPending}
         module={module}
         onSave={(input) => void handleSave(input)}
       />
@@ -221,7 +224,8 @@ export default function ModuleDetailPage() {
           <CardContent className="grid gap-5 text-sm sm:grid-cols-2">
             <DetailItem label="Linked project">
               {module.projectId
-                ? (linkedProjectQuery.data?.title ?? "Loading…")
+                ? (linkedProjectQuery.data?.title ??
+                    (linkedProjectQuery.isError ? "Unknown project" : "Loading…"))
                 : "Independent module"}
             </DetailItem>
             <DetailItem label="Type">{module.tag ?? "—"}</DetailItem>
@@ -255,13 +259,17 @@ export default function ModuleDetailPage() {
                 This module is visible to anyone who can see its linked project. Manage
                 collaborators from the project page instead.
               </p>
-            ) : (
+            ) : sameTenant ? (
               <ModuleCollaboratorsManager
                 tenantId={tenantId}
                 moduleId={module.id}
                 members={membersQuery.data ?? []}
-                membersLoading={membersQuery.isPending}
               />
+            ) : (
+              <p className="text-sm text-muted-foreground">
+                This module was shared with you from another workspace. Only members of that
+                workspace can manage who has access.
+              </p>
             )}
           </CardContent>
         </Card>

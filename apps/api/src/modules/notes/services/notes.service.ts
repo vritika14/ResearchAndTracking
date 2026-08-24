@@ -68,7 +68,8 @@ export class NotesService {
     const accessFlags = await Promise.all(
       rows.map((row) => this.canAccess(tenantId, row, callerUserId)),
     );
-    return rows.filter((_row, index) => accessFlags[index]);
+    const visibleRows = rows.filter((_row, index) => accessFlags[index]);
+    return this.withDisplayValues(visibleRows);
   }
 
   async findOne(tenantId: string, noteId: string, callerUserId: string) {
@@ -76,7 +77,34 @@ export class NotesService {
     if (!note || !(await this.canAccess(tenantId, note, callerUserId))) {
       throw new NotFoundException('Note not found');
     }
-    return note;
+    const [shaped] = await this.withDisplayValues([note]);
+    return shaped;
+  }
+
+  /**
+   * Tenant-agnostic: every note the caller can see (creator or explicit
+   * note_members row), regardless of which workspace it lives in — mirrors
+   * TasksService.listForCaller.
+   */
+  async listForCaller(callerUserId: string) {
+    const [ownNotes, memberNoteIds] = await Promise.all([
+      this.repository.findByCreator(callerUserId),
+      this.noteMembers.findNoteIdsByUser(callerUserId),
+    ]);
+    const ownIds = new Set(ownNotes.map((note) => note.id));
+    const extraIds = memberNoteIds.filter((id) => !ownIds.has(id));
+    const memberNotes = await this.repository.findByIds(extraIds);
+    return this.withDisplayValues([...ownNotes, ...memberNotes]);
+  }
+
+  /** Tenant-agnostic single-note fetch — see listForCaller. */
+  async findOneForCaller(noteId: string, callerUserId: string) {
+    const note = await this.repository.findByIdGlobal(noteId);
+    if (!note || !(await this.canAccess(note.tenantId, note, callerUserId))) {
+      throw new NotFoundException('Note not found');
+    }
+    const [shaped] = await this.withDisplayValues([note]);
+    return shaped;
   }
 
   async create(
@@ -121,7 +149,8 @@ export class NotesService {
       });
     }
 
-    return note;
+    const [shaped] = await this.withDisplayValues([note]);
+    return shaped;
   }
 
   async update(
@@ -140,7 +169,7 @@ export class NotesService {
     if (!existing) {
       throw new NotFoundException('Note not found');
     }
-  
+
     const changesLinkage =
       input.projectId !== undefined || input.moduleId !== undefined;
     const [linkage, visibilityId] = await Promise.all([
@@ -149,7 +178,7 @@ export class NotesService {
         ? this.resolveEnum('visibility', input.visibility)
         : undefined,
     ]);
-  
+
     const note = await this.repository.update(tenantId, noteId, {
       title: input.title,
       content: input.content,
@@ -157,21 +186,31 @@ export class NotesService {
       projectId: linkage ? linkage.projectId : undefined,
       moduleId: linkage ? linkage.moduleId : undefined,
     });
-  
+
     if (!note) {
       throw new NotFoundException('Note not found');
     }
-  
+
     if (input.visibility === 'Private') {
       await this.noteMembers.deleteAllForNote(tenantId, noteId);
     }
-  
-    const { visibilityId: _vId, ...rest } = note;
-    const visibilityValue = note.visibilityId
-      ? (await this.enumRepository.findValuesByIds([note.visibilityId])).get(note.visibilityId) ?? null
-      : null;
-  
-    return { ...rest, visibility: visibilityValue };
+
+    const [shaped] = await this.withDisplayValues([note]);
+    return shaped;
+  }
+
+  /** Tenant-agnostic update — resolves the note's real tenant first, then
+   * delegates to the normal (still access-checked) update flow. */
+  async updateForCaller(
+    noteId: string,
+    callerUserId: string,
+    input: Parameters<NotesService['update']>[3],
+  ) {
+    const note = await this.repository.findByIdGlobal(noteId);
+    if (!note || !(await this.canAccess(note.tenantId, note, callerUserId))) {
+      throw new NotFoundException('Note not found');
+    }
+    return this.update(note.tenantId, noteId, callerUserId, input);
   }
 
   async delete(tenantId: string, noteId: string, callerUserId: string) {
@@ -186,7 +225,31 @@ export class NotesService {
     if (!note) {
       throw new NotFoundException('Note not found');
     }
-    return note;
+    const [shaped] = await this.withDisplayValues([note]);
+    return shaped;
+  }
+
+  /** Tenant-agnostic delete — see updateForCaller. */
+  async deleteForCaller(noteId: string, callerUserId: string) {
+    const note = await this.repository.findByIdGlobal(noteId);
+    if (!note || !(await this.canAccess(note.tenantId, note, callerUserId))) {
+      throw new NotFoundException('Note not found');
+    }
+    return this.delete(note.tenantId, noteId, callerUserId);
+  }
+
+  private async withDisplayValues<
+    T extends { visibilityId: string | null },
+  >(rows: T[]) {
+    const visibilityIds = rows
+      .map((r) => r.visibilityId)
+      .filter((id): id is string => id !== null);
+    const valuesById = await this.enumRepository.findValuesByIds(visibilityIds);
+
+    return rows.map(({ visibilityId, ...rest }) => ({
+      ...rest,
+      visibility: visibilityId ? (valuesById.get(visibilityId) ?? null) : null,
+    }));
   }
 
   private async resolveEnum(

@@ -55,6 +55,11 @@ const fixtures = vi.hoisted(() => ({
   tagValues: [
     { id: "tag-1", tenantId: null, category: "module_type", value: "Research Paper", sortOrder: 1, createdAt: "", updatedAt: "" },
   ],
+  // Proves the "Collaborators" search hits the platform-wide user-search
+  // endpoint, not a workspace-member list.
+  allUsers: [
+    { id: "user-outside-workspace", displayName: "Jamie Outsider", email: "jamie@example.com" },
+  ],
 }));
 
 vi.mock("@/api/client", () => ({
@@ -69,7 +74,15 @@ vi.mock("@/api/hooks", async () => {
     useCurrentWorkspace: () => ({ data: { id: fixtures.tenantId }, isPending: false }),
     useMembers: () => ({ data: fixtures.members, isPending: false }),
     useProjects: () => ({ data: fixtures.projects, isPending: false, isError: false }),
-    useModules: () => ({
+    useUserSearch: (query: string) => ({
+      data: query.trim()
+        ? fixtures.allUsers.filter((user) =>
+            user.displayName.toLowerCase().includes(query.trim().toLowerCase()),
+          )
+        : [],
+      isPending: false,
+    }),
+    useMyModules: () => ({
       data: useStore(store.subscribe, store.getModules),
       isPending: false,
       isError: false,
@@ -98,7 +111,7 @@ vi.mock("@/api/hooks", async () => {
         return module;
       }),
     }),
-    useUpdateModule: () => ({
+    useUpdateMyModule: () => ({
       mutateAsync: vi.fn(
         async ({ moduleId, input }: { moduleId: string; input: Record<string, unknown> }) => {
           const updated = store.getModules().map((item) =>
@@ -109,7 +122,7 @@ vi.mock("@/api/hooks", async () => {
         },
       ),
     }),
-    useArchiveModule: () => ({
+    useArchiveMyModule: () => ({
       mutateAsync: vi.fn(async (moduleId: string) => {
         store.setModules(store.getModules().filter((item) => item.id !== moduleId));
       }),
@@ -207,5 +220,23 @@ describe("ModulesPage", () => {
     fireEvent.click(screen.getByRole("checkbox", { name: /Independent module/ }));
 
     expect(screen.getByRole("combobox", { name: /Project/ })).toBeInTheDocument();
+  });
+
+  it("searches all platform users, not just workspace members, when sharing a new independent module", () => {
+    render(
+      <MemoryRouter>
+        <ModulesPage />
+      </MemoryRouter>,
+    );
+
+    fireEvent.click(screen.getByRole("button", { name: "New Module" }));
+    const collaboratorSearch = screen.getByRole("combobox", { name: "Collaborators" });
+    fireEvent.change(collaboratorSearch, { target: { value: "Jamie" } });
+
+    expect(screen.getByText("jamie@example.com")).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("option", { name: /Jamie Outsider/ }));
+    expect(screen.getByLabelText("Selected module members")).toHaveTextContent(
+      "Jamie Outsider",
+    );
   });
 });

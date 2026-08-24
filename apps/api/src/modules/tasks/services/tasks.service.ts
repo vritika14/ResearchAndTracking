@@ -81,6 +81,34 @@ export class TasksService {
     return shaped;
   }
 
+  /**
+   * Tenant-agnostic: every task the caller can see (creator or explicit
+   * task_members row), regardless of which workspace it lives in. Task
+   * visibility was never meant to depend on workspace membership — being a
+   * project collaborator doesn't grant task access either — so a task
+   * shared with someone outside the owning tenant must still be reachable.
+   */
+  async listForCaller(callerUserId: string) {
+    const [ownTasks, memberTaskIds] = await Promise.all([
+      this.repository.findByCreator(callerUserId),
+      this.taskMembers.findTaskIdsByUser(callerUserId),
+    ]);
+    const ownIds = new Set(ownTasks.map((task) => task.id));
+    const extraIds = memberTaskIds.filter((id) => !ownIds.has(id));
+    const memberTasks = await this.repository.findByIds(extraIds);
+    return this.withDisplayValues([...ownTasks, ...memberTasks]);
+  }
+
+  /** Tenant-agnostic single-task fetch — see listForCaller. */
+  async findOneForCaller(taskId: string, callerUserId: string) {
+    const task = await this.repository.findByIdGlobal(taskId);
+    if (!task || !(await this.canAccess(task.tenantId, task, callerUserId))) {
+      throw new NotFoundException('Task not found');
+    }
+    const [shaped] = await this.withDisplayValues([task]);
+    return shaped;
+  }
+
   async create(
     tenantId: string,
     createdBy: string,
@@ -222,6 +250,29 @@ export class TasksService {
       throw new NotFoundException('Task not found');
     }
     return task;
+  }
+
+  /** Tenant-agnostic update — resolves the task's real tenant first, then
+   * delegates to the normal (still access-checked) update flow. */
+  async updateForCaller(
+    taskId: string,
+    callerUserId: string,
+    input: Parameters<TasksService['update']>[3],
+  ) {
+    const task = await this.repository.findByIdGlobal(taskId);
+    if (!task || !(await this.canAccess(task.tenantId, task, callerUserId))) {
+      throw new NotFoundException('Task not found');
+    }
+    return this.update(task.tenantId, taskId, callerUserId, input);
+  }
+
+  /** Tenant-agnostic delete — see updateForCaller. */
+  async deleteForCaller(taskId: string, callerUserId: string) {
+    const task = await this.repository.findByIdGlobal(taskId);
+    if (!task || !(await this.canAccess(task.tenantId, task, callerUserId))) {
+      throw new NotFoundException('Task not found');
+    }
+    return this.delete(task.tenantId, taskId, callerUserId);
   }
 
   private async withDisplayValues<

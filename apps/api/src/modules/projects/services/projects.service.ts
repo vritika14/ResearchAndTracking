@@ -17,7 +17,7 @@ export class ProjectsService {
 
   async listActive(tenantId: string, callerUserId: string) {
     const rows = await this.repository.findActiveByTenant(tenantId);
-    const shaped = await this.withDisplayValues(tenantId, rows, callerUserId);
+    const shaped = await this.withDisplayValues(rows, callerUserId);
     return shaped.filter(
       (project, index) =>
         project.role !== null || rows[index]!.userId === callerUserId,
@@ -34,15 +34,36 @@ export class ProjectsService {
     if (!project) {
       throw new NotFoundException('Project not found');
     }
-    const [shaped] = await this.withDisplayValues(
-      tenantId,
-      [project],
-      callerUserId,
-    );
+    const [shaped] = await this.withDisplayValues([project], callerUserId);
     if (shaped!.role === null && project.userId !== callerUserId) {
       throw new NotFoundException('Project not found');
     }
     return shaped;
+  }
+
+  /**
+   * Tenant-agnostic: every project the caller owns or collaborates on,
+   * regardless of which workspace it lives in. The owner is always inserted
+   * as a project_collaborators row at creation time, so a single query over
+   * that table already covers both cases — mirrors TasksService.listForCaller.
+   */
+  async listForCaller(callerUserId: string) {
+    const projectIds = await this.collaboratorsRepository.findProjectIdsByUser(
+      callerUserId,
+    );
+    const rows = (await this.repository.findByIds(projectIds)).filter(
+      (project) => project.archivedAt === null,
+    );
+    return this.withDisplayValues(rows, callerUserId);
+  }
+
+  /** Tenant-agnostic single-project fetch — see listForCaller. */
+  async findOneForCaller(projectId: string, callerUserId: string) {
+    const project = await this.repository.findByIdGlobal(projectId);
+    if (!project) {
+      throw new NotFoundException('Project not found');
+    }
+    return this.findOne(project.tenantId, projectId, callerUserId);
   }
 
   async create(
@@ -99,7 +120,7 @@ export class ProjectsService {
       throw new NotFoundException('Failed to create project');
     }
 
-    const [shaped] = await this.withDisplayValues(tenantId, [project], userId);
+    const [shaped] = await this.withDisplayValues([project], userId);
     return shaped;
   }
 
@@ -151,12 +172,22 @@ export class ProjectsService {
       throw new NotFoundException('Project not found');
     }
 
-    const [shaped] = await this.withDisplayValues(
-      tenantId,
-      [project],
-      callerUserId,
-    );
+    const [shaped] = await this.withDisplayValues([project], callerUserId);
     return shaped;
+  }
+
+  /** Tenant-agnostic update — resolves the project's real tenant first, then
+   * delegates to the normal (still access-checked) update flow. */
+  async updateForCaller(
+    projectId: string,
+    callerUserId: string,
+    input: Parameters<ProjectsService['update']>[3],
+  ) {
+    const project = await this.repository.findByIdGlobal(projectId);
+    if (!project) {
+      throw new NotFoundException('Project not found');
+    }
+    return this.update(project.tenantId, projectId, callerUserId, input);
   }
 
   async archive(tenantId: string, projectId: string, callerUserId: string) {
@@ -181,11 +212,7 @@ export class ProjectsService {
       throw new NotFoundException('Project not found');
     }
 
-    const [shaped] = await this.withDisplayValues(
-      tenantId,
-      [project],
-      callerUserId,
-    );
+    const [shaped] = await this.withDisplayValues([project], callerUserId);
 
     return {
       project: shaped,
@@ -193,14 +220,24 @@ export class ProjectsService {
     };
   }
 
+  /** Tenant-agnostic archive — see updateForCaller. */
+  async archiveForCaller(projectId: string, callerUserId: string) {
+    const project = await this.repository.findByIdGlobal(projectId);
+    if (!project) {
+      throw new NotFoundException('Project not found');
+    }
+    return this.archive(project.tenantId, projectId, callerUserId);
+  }
+
   private async withDisplayValues<
     T extends {
       id: string;
+      tenantId: string;
       statusId: string | null;
       pipelineStageId: string | null;
       importanceId: string | null;
     },
-  >(tenantId: string, rows: T[], callerUserId: string) {
+  >(rows: T[], callerUserId: string) {
     const enumIds = rows
       .flatMap((r) => [r.statusId, r.pipelineStageId, r.importanceId])
       .filter((id): id is string => id !== null);
@@ -210,7 +247,7 @@ export class ProjectsService {
       Promise.all(
         rows.map((r) =>
           this.collaboratorsRepository.findByProjectAndUser(
-            tenantId,
+            r.tenantId,
             r.id,
             callerUserId,
           ),

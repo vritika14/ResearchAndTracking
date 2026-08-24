@@ -4,17 +4,19 @@ import { cva, type VariantProps } from "class-variance-authority";
 import { cn } from "@/lib/utils";
 
 /**
- * The bold blue heading standard: every page and section heading in the
- * app renders through this component so weight/color stay consistent.
+ * The heading standard: every page and section heading in the app renders
+ * through this component so weight/color stay consistent. Ink-colored and
+ * moderately weighted rather than oversized brand-color text — `text-primary`
+ * is reserved for interactive elements (links, active states), not headings.
  * `as` controls the semantic tag independently of the visual `level`.
  */
-const headingVariants = cva("font-extrabold tracking-tight text-primary", {
+const headingVariants = cva("font-semibold tracking-tight text-foreground", {
   variants: {
     level: {
-      h1: "text-3xl sm:text-4xl",
-      h2: "text-2xl sm:text-3xl",
-      h3: "text-xl sm:text-2xl",
-      h4: "text-lg sm:text-xl",
+      h1: "text-2xl sm:text-[1.75rem]",
+      h2: "text-xl sm:text-2xl",
+      h3: "text-lg sm:text-xl",
+      h4: "text-base sm:text-lg",
     },
   },
   defaultVariants: {

@@ -1,6 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { notes } from '@research-tracker/migrations';
-import { and, eq } from 'drizzle-orm';
+import { and, eq, inArray } from 'drizzle-orm';
 import { DrizzleService } from '../../../db/drizzle.service';
 
 @Injectable()
@@ -13,6 +13,26 @@ export class NotesRepository {
       .from(notes)
       .where(and(eq(notes.tenantId, tenantId), eq(notes.id, noteId)));
     return note;
+  }
+
+  /** Tenant-agnostic lookup — used for "notes shared with me" access, where the
+   * caller may not be a member of the tenant that owns the note at all. */
+  async findByIdGlobal(noteId: string) {
+    const [note] = await this.drizzle.db
+      .select()
+      .from(notes)
+      .where(eq(notes.id, noteId));
+    return note;
+  }
+
+  /** All notes the given user created, across every tenant. */
+  async findByCreator(userId: string) {
+    return this.drizzle.db.select().from(notes).where(eq(notes.createdBy, userId));
+  }
+
+  async findByIds(ids: string[]) {
+    if (ids.length === 0) return [];
+    return this.drizzle.db.select().from(notes).where(inArray(notes.id, ids));
   }
 
   async findByTenant(tenantId: string, projectId?: string) {

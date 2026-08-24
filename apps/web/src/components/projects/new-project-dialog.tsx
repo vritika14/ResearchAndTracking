@@ -1,7 +1,7 @@
 import { useMemo, useState, type FormEvent, type ReactNode } from "react";
 import { Search, X } from "lucide-react";
 
-import type { ApiPipelineStage, Membership } from "@/api/hooks";
+import { useUserSearch, type ApiPipelineStage, type ApiUserSearchResult } from "@/api/hooks";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { DatePickerInput } from "@/components/ui/date-picker-input";
@@ -46,8 +46,6 @@ interface NewProjectDialogProps {
   onOpenChange: (open: boolean) => void;
   onCreate: (project: NewProjectInput) => void;
   currentUserId: string;
-  members: Membership[];
-  membersLoading: boolean;
   pipelineStages: ApiPipelineStage[];
 }
 
@@ -87,32 +85,20 @@ export function NewProjectDialog({
   onOpenChange,
   onCreate,
   currentUserId,
-  members,
-  membersLoading,
   pipelineStages,
 }: NewProjectDialogProps) {
   const [form, setForm] = useState<NewProjectInput>(INITIAL_FORM);
   const [memberSearch, setMemberSearch] = useState("");
   const [memberPickerOpen, setMemberPickerOpen] = useState(false);
-  const [selectedMembers, setSelectedMembers] = useState<Membership[]>([]);
+  const [selectedMembers, setSelectedMembers] = useState<ApiUserSearchResult[]>([]);
 
+  const userSearchQuery = useUserSearch(memberSearch, memberPickerOpen);
   const matchingMembers = useMemo(() => {
-    const query = memberSearch.trim().toLowerCase();
-    const selectedIds = new Set(selectedMembers.map((member) => member.userId));
-
-    return members
-      .filter(
-        (member) =>
-          member.userId !== currentUserId && !selectedIds.has(member.userId),
-      )
-      .filter(
-        (member) =>
-          !query ||
-          member.displayName.toLowerCase().includes(query) ||
-          member.email.toLowerCase().includes(query),
-      )
-      .slice(0, 8);
-  }, [currentUserId, memberSearch, members, selectedMembers]);
+    const selectedIds = new Set(selectedMembers.map((member) => member.id));
+    return (userSearchQuery.data ?? []).filter(
+      (member) => member.id !== currentUserId && !selectedIds.has(member.id),
+    );
+  }, [currentUserId, userSearchQuery.data, selectedMembers]);
 
   function resetForm() {
     setForm(INITIAL_FORM);
@@ -134,7 +120,7 @@ export function NewProjectDialog({
       description: form.description.trim(),
       researchArea: form.researchArea.trim(),
       targetJournals: form.targetJournals.trim(),
-      collaboratorUserIds: selectedMembers.map((member) => member.userId),
+      collaboratorUserIds: selectedMembers.map((member) => member.id),
     });
     resetForm();
     onOpenChange(false);
@@ -213,19 +199,19 @@ export function NewProjectDialog({
                       setMemberSearch(event.target.value);
                       setMemberPickerOpen(true);
                     }}
-                    placeholder="Type a workspace member's name or email"
+                    placeholder="Type a name or email to search all users"
                     className="pl-9"
                     autoComplete="off"
                   />
-                  {memberPickerOpen ? (
+                  {memberPickerOpen && memberSearch.trim() ? (
                     <div
                       id="project-member-options"
                       role="listbox"
                       className="absolute z-50 mt-1 max-h-56 w-full overflow-y-auto rounded-md border bg-popover p-1 text-popover-foreground shadow-lg"
                     >
-                      {membersLoading ? (
+                      {userSearchQuery.isPending ? (
                         <p className="px-3 py-2 text-sm text-muted-foreground">
-                          Loading workspace members…
+                          Searching…
                         </p>
                       ) : matchingMembers.length ? (
                         matchingMembers.map((member) => (
@@ -251,14 +237,11 @@ export function NewProjectDialog({
                                 {member.email}
                               </span>
                             </span>
-                            <Badge variant="outline" className="shrink-0 capitalize">
-                              {member.role.replace("_", " ")}
-                            </Badge>
                           </button>
                         ))
                       ) : (
                         <p className="px-3 py-2 text-sm text-muted-foreground">
-                          No matching workspace members.
+                          No matching users.
                         </p>
                       )}
                     </div>

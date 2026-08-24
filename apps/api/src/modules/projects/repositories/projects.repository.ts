@@ -1,6 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { projectCollaborators, projects } from '@research-tracker/migrations';
-import { and, eq, isNull } from 'drizzle-orm';
+import { and, eq, inArray, isNull } from 'drizzle-orm';
 import { DrizzleService } from '../../../db/drizzle.service';
 
 @Injectable()
@@ -13,6 +13,21 @@ export class ProjectsRepository {
       .from(projects)
       .where(and(eq(projects.tenantId, tenantId), eq(projects.id, projectId)));
     return project;
+  }
+
+  /** Tenant-agnostic single-project fetch, used to resolve a project's own tenant. */
+  async findByIdGlobal(projectId: string) {
+    const [project] = await this.drizzle.db
+      .select()
+      .from(projects)
+      .where(eq(projects.id, projectId));
+    return project;
+  }
+
+  /** Tenant-agnostic multi-project fetch, for listing across a caller's collaborations. */
+  async findByIds(ids: string[]) {
+    if (ids.length === 0) return [];
+    return this.drizzle.db.select().from(projects).where(inArray(projects.id, ids));
   }
 
   async findActiveByTenant(tenantId: string) {

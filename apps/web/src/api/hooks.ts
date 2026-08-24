@@ -497,6 +497,74 @@ export function useArchiveProject(tenantId: string) {
   });
 }
 
+const myProjectsKey = ["api", "me", "projects"] as const;
+const myProjectKey = (projectId: string) => ["api", "me", "projects", projectId] as const;
+
+/**
+ * Tenant-agnostic: every project the caller owns or collaborates on,
+ * regardless of which workspace it lives in — see MyProjectsController on
+ * the backend.
+ */
+export function useMyProjects(enabled = true) {
+  return useQuery({
+    queryKey: myProjectsKey,
+    enabled,
+    queryFn: async () =>
+      responseData<ApiProject[]>(await apiClient.GET("/api/v1/me/projects")),
+  });
+}
+
+export function useMyProject(projectId: string, enabled = true) {
+  return useQuery({
+    queryKey: myProjectKey(projectId),
+    enabled: Boolean(projectId) && enabled,
+    queryFn: async () =>
+      responseData<ApiProject>(
+        await apiClient.GET("/api/v1/me/projects/{projectId}", {
+          params: { path: { projectId } },
+        }),
+      ),
+  });
+}
+
+export function useUpdateMyProject() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async ({
+      projectId,
+      input,
+    }: {
+      projectId: string;
+      input: UpdateProjectInput;
+    }) =>
+      responseData<ApiProject>(
+        await apiClient.PATCH("/api/v1/me/projects/{projectId}", {
+          params: { path: { projectId } },
+          body: input,
+        }),
+      ),
+    async onSuccess(project) {
+      queryClient.setQueryData(myProjectKey(project.id), project);
+      await queryClient.invalidateQueries({ queryKey: myProjectsKey });
+    },
+  });
+}
+
+export function useArchiveMyProject() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async (projectId: string) =>
+      responseData<{ project: ApiProject; warning: string }>(
+        await apiClient.DELETE("/api/v1/me/projects/{projectId}", {
+          params: { path: { projectId } },
+        }),
+      ),
+    async onSuccess() {
+      await queryClient.invalidateQueries({ queryKey: myProjectsKey });
+    },
+  });
+}
+
 export function useProjectCollaborators(
   tenantId: string,
   projectId: string,
@@ -710,6 +778,73 @@ export function useRemoveModuleCollaborator(tenantId: string, moduleId: string) 
   });
 }
 
+const myModulesKey = ["api", "me", "modules"] as const;
+const myModuleKey = (moduleId: string) => ["api", "me", "modules", moduleId] as const;
+
+/**
+ * Tenant-agnostic: every module the caller can access, regardless of which
+ * workspace it lives in — see MyModulesController on the backend.
+ */
+export function useMyModules(enabled = true) {
+  return useQuery({
+    queryKey: myModulesKey,
+    enabled,
+    queryFn: async () =>
+      responseData<ApiModule[]>(await apiClient.GET("/api/v1/me/modules")),
+  });
+}
+
+export function useMyModule(moduleId: string, enabled = true) {
+  return useQuery({
+    queryKey: myModuleKey(moduleId),
+    enabled: Boolean(moduleId) && enabled,
+    queryFn: async () =>
+      responseData<ApiModule>(
+        await apiClient.GET("/api/v1/me/modules/{moduleId}", {
+          params: { path: { moduleId } },
+        }),
+      ),
+  });
+}
+
+export function useUpdateMyModule() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async ({
+      moduleId,
+      input,
+    }: {
+      moduleId: string;
+      input: UpdateModuleInput;
+    }) =>
+      responseData<ApiModule>(
+        await apiClient.PATCH("/api/v1/me/modules/{moduleId}", {
+          params: { path: { moduleId } },
+          body: input,
+        }),
+      ),
+    async onSuccess(module) {
+      queryClient.setQueryData(myModuleKey(module.id), module);
+      await queryClient.invalidateQueries({ queryKey: myModulesKey });
+    },
+  });
+}
+
+export function useArchiveMyModule() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async (moduleId: string) =>
+      responseData<{ module: ApiModule; warning: string }>(
+        await apiClient.DELETE("/api/v1/me/modules/{moduleId}", {
+          params: { path: { moduleId } },
+        }),
+      ),
+    async onSuccess() {
+      await queryClient.invalidateQueries({ queryKey: myModulesKey });
+    },
+  });
+}
+
 // ---------------------------------------------------------------------------
 // Tasks
 // ---------------------------------------------------------------------------
@@ -815,6 +950,70 @@ export function useDeleteTask(tenantId: string) {
       await queryClient.invalidateQueries({
         queryKey: ["api", "tenant", tenantId, "tasks"],
       });
+    },
+  });
+}
+
+const myTasksKey = ["api", "me", "tasks"] as const;
+const myTaskKey = (taskId: string) => ["api", "me", "tasks", taskId] as const;
+
+/**
+ * Tenant-agnostic: every task the caller can access (creator or explicit
+ * task member), regardless of which workspace it lives in. Task visibility
+ * never depended on workspace membership, so a task shared with someone
+ * outside the owning tenant still needs to be reachable — see
+ * MyTasksController on the backend.
+ */
+export function useMyTasks(enabled = true) {
+  return useQuery({
+    queryKey: myTasksKey,
+    enabled,
+    queryFn: async () =>
+      responseData<ApiTask[]>(await apiClient.GET("/api/v1/me/tasks")),
+  });
+}
+
+export function useMyTask(taskId: string, enabled = true) {
+  return useQuery({
+    queryKey: myTaskKey(taskId),
+    enabled: Boolean(taskId) && enabled,
+    queryFn: async () =>
+      responseData<ApiTask>(
+        await apiClient.GET("/api/v1/me/tasks/{taskId}", {
+          params: { path: { taskId } },
+        }),
+      ),
+  });
+}
+
+export function useUpdateMyTask() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async ({ taskId, input }: { taskId: string; input: UpdateTaskInput }) =>
+      responseData<ApiTask>(
+        await apiClient.PATCH("/api/v1/me/tasks/{taskId}", {
+          params: { path: { taskId } },
+          body: input,
+        }),
+      ),
+    async onSuccess(task) {
+      queryClient.setQueryData(myTaskKey(task.id), task);
+      await queryClient.invalidateQueries({ queryKey: myTasksKey });
+    },
+  });
+}
+
+export function useDeleteMyTask() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async (taskId: string) =>
+      responseData<ApiTask>(
+        await apiClient.DELETE("/api/v1/me/tasks/{taskId}", {
+          params: { path: { taskId } },
+        }),
+      ),
+    async onSuccess() {
+      await queryClient.invalidateQueries({ queryKey: myTasksKey });
     },
   });
 }
@@ -1021,6 +1220,73 @@ export function useRemoveNoteMember(tenantId: string, noteId: string) {
   });
 }
 
+const myNotesKey = ["api", "me", "notes"] as const;
+const myNoteKey = (noteId: string) => ["api", "me", "notes", noteId] as const;
+
+/**
+ * Tenant-agnostic: every note the caller can access, regardless of which
+ * workspace it lives in — see MyNotesController on the backend.
+ */
+export function useMyNotes(enabled = true) {
+  return useQuery({
+    queryKey: myNotesKey,
+    enabled,
+    queryFn: async () =>
+      responseData<ApiNote[]>(await apiClient.GET("/api/v1/me/notes")),
+  });
+}
+
+export function useMyNote(noteId: string, enabled = true) {
+  return useQuery({
+    queryKey: myNoteKey(noteId),
+    enabled: Boolean(noteId) && enabled,
+    queryFn: async () =>
+      responseData<ApiNote>(
+        await apiClient.GET("/api/v1/me/notes/{noteId}", {
+          params: { path: { noteId } },
+        }),
+      ),
+  });
+}
+
+export function useUpdateMyNote() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async ({
+      noteId,
+      input,
+    }: {
+      noteId: string;
+      input: UpdateNoteInput;
+    }) =>
+      responseData<ApiNote>(
+        await apiClient.PATCH("/api/v1/me/notes/{noteId}", {
+          params: { path: { noteId } },
+          body: input,
+        }),
+      ),
+    async onSuccess(note) {
+      queryClient.setQueryData(myNoteKey(note.id), note);
+      await queryClient.invalidateQueries({ queryKey: myNotesKey });
+    },
+  });
+}
+
+export function useDeleteMyNote() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async (noteId: string) =>
+      responseData<ApiNote>(
+        await apiClient.DELETE("/api/v1/me/notes/{noteId}", {
+          params: { path: { noteId } },
+        }),
+      ),
+    async onSuccess() {
+      await queryClient.invalidateQueries({ queryKey: myNotesKey });
+    },
+  });
+}
+
 // ---------------------------------------------------------------------------
 // Generic enum values (e.g. module_type)
 // ---------------------------------------------------------------------------
@@ -1042,6 +1308,29 @@ export function useEnumValues(category: string, enabled = true) {
     queryFn: async () =>
       responseData<ApiEnumValue[]>(
         await apiClient.GET("/api/v1/enum", { params: { query: { category } } }),
+      ),
+  });
+}
+
+// ---------------------------------------------------------------------------
+// User search (platform-wide, not scoped to a tenant)
+// ---------------------------------------------------------------------------
+
+export interface ApiUserSearchResult {
+  id: string;
+  displayName: string;
+  email: string;
+}
+
+/** Searches all users on the platform by name/email — used to find collaborators to invite, regardless of workspace. */
+export function useUserSearch(query: string, enabled = true) {
+  const trimmed = query.trim();
+  return useQuery({
+    queryKey: ["api", "users", "search", trimmed] as const,
+    enabled: trimmed.length > 0 && enabled,
+    queryFn: async () =>
+      responseData<ApiUserSearchResult[]>(
+        await apiClient.GET("/api/v1/users/search", { params: { query: { q: trimmed } } }),
       ),
   });
 }

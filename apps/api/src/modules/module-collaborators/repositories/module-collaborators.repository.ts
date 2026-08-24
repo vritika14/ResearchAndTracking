@@ -38,6 +38,15 @@ export class ModuleCollaboratorsRepository {
     return row;
   }
 
+  /** Every independent-module id this user collaborates on, across every tenant. */
+  async findModuleIdsByUser(userId: string) {
+    const rows = await this.drizzle.db
+      .select({ moduleId: moduleCollaborators.moduleId })
+      .from(moduleCollaborators)
+      .where(eq(moduleCollaborators.userId, userId));
+    return rows.map((row) => row.moduleId);
+  }
+
   async create(values: {
     tenantId: string;
     projectId?: string;

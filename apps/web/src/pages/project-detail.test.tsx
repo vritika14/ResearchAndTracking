@@ -55,24 +55,26 @@ vi.mock("@/api/hooks", () => ({
     ],
     isPending: false,
   }),
-  useProject: () => ({
+  useMyProject: () => ({
     data: fixtures.project,
     isPending: false,
     isError: false,
     error: undefined,
     refetch: vi.fn(),
   }),
-  useUpdateProject: () => ({
+  useUpdateMyProject: () => ({
     mutateAsync: vi.fn(async ({ input }: { input: Record<string, unknown> }) => {
       Object.assign(fixtures.project, input);
       return fixtures.project;
     }),
     isPending: false,
   }),
+  useArchiveMyProject: () => ({ mutateAsync: vi.fn(), isPending: false }),
   useModules: () => ({ data: [] }),
   useTasks: () => ({ data: [] }),
   useNotes: () => ({ data: [] }),
   usePipelineStages: () => ({ data: fixtures.pipelineStages }),
+  useUserSearch: () => ({ data: [], isPending: false }),
   useProjectCollaborators: () => ({ data: [], isPending: false }),
   useAddProjectCollaborator: () => ({ mutate: vi.fn() }),
   useRemoveProjectCollaborator: () => ({ mutate: vi.fn() }),

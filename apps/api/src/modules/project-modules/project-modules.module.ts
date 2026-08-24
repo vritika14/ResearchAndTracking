@@ -5,6 +5,7 @@ import { ModuleCollaboratorsModule } from '../module-collaborators/module-collab
 import { ProjectCollaboratorsModule } from '../project-collaborators/project-collaborators.module';
 import { TenantSequencesModule } from '../tenant-sequences/tenant-sequences.module';
 import { UsersModule } from '../users/users.module';
+import { MyModulesController } from './controllers/my-modules.controller';
 import { ProjectModulesController } from './controllers/project-modules.controller';
 import { ModuleAccessGuard } from './policies/module-access.guard';
 import { ProjectModulesRepository } from './repositories/project-modules.repository';
@@ -20,7 +21,7 @@ import { MembershipsModule } from '../memberships/memberships.module';
     TenantSequencesModule,
     MembershipsModule,
   ],
-  controllers: [ProjectModulesController],
+  controllers: [ProjectModulesController, MyModulesController],
   providers: [ProjectModulesService, ProjectModulesRepository, ModuleAccessGuard],
   exports: [ProjectModulesRepository],
 })

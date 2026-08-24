@@ -9,6 +9,8 @@ describe('ProjectsService', () => {
   let service: ProjectsService;
   let repository: {
     findById: jest.Mock;
+    findByIdGlobal: jest.Mock;
+    findByIds: jest.Mock;
     findActiveByTenant: jest.Mock;
     create: jest.Mock;
     update: jest.Mock;
@@ -18,12 +20,17 @@ describe('ProjectsService', () => {
     findByCategoryAndValue: jest.Mock;
     findValuesByIds: jest.Mock;
   };
-  let collaboratorsRepository: { findByProjectAndUser: jest.Mock };
+  let collaboratorsRepository: {
+    findByProjectAndUser: jest.Mock;
+    findProjectIdsByUser: jest.Mock;
+  };
   let sequences: { nextDisplayId: jest.Mock };
 
   beforeEach(() => {
     repository = {
       findById: jest.fn(),
+      findByIdGlobal: jest.fn(),
+      findByIds: jest.fn(),
       findActiveByTenant: jest.fn(),
       create: jest.fn(),
       update: jest.fn(),
@@ -39,6 +46,7 @@ describe('ProjectsService', () => {
     };
     collaboratorsRepository = {
       findByProjectAndUser: jest.fn().mockResolvedValue(undefined),
+      findProjectIdsByUser: jest.fn().mockResolvedValue([]),
     };
     sequences = {
       nextDisplayId: jest.fn().mockResolvedValue('PRJ-0001'),
@@ -104,6 +112,136 @@ describe('ProjectsService', () => {
       });
       await expect(
         service.findOne('tenant-1', 'project-1', 'outsider-1'),
+      ).rejects.toThrow(NotFoundException);
+    });
+  });
+
+  describe('listForCaller', () => {
+    it('returns every project the caller owns or collaborates on, across tenants', async () => {
+      collaboratorsRepository.findProjectIdsByUser.mockResolvedValue([
+        'project-1',
+        'project-2',
+      ]);
+      repository.findByIds.mockResolvedValue([
+        {
+          id: 'project-1',
+          tenantId: 'tenant-1',
+          title: 'Owned here',
+          userId: 'user-1',
+          statusId: null,
+          pipelineStageId: null,
+          importanceId: null,
+          archivedAt: null,
+        },
+        {
+          id: 'project-2',
+          tenantId: 'tenant-2',
+          title: 'Collaborating elsewhere',
+          userId: 'owner-2',
+          statusId: null,
+          pipelineStageId: null,
+          importanceId: null,
+          archivedAt: null,
+        },
+      ]);
+
+      const result = await service.listForCaller('user-1');
+
+      expect(repository.findByIds).toHaveBeenCalledWith(['project-1', 'project-2']);
+      expect(result.map((project) => project.id)).toEqual(['project-1', 'project-2']);
+    });
+
+    it('excludes archived projects', async () => {
+      collaboratorsRepository.findProjectIdsByUser.mockResolvedValue(['project-1']);
+      repository.findByIds.mockResolvedValue([
+        {
+          id: 'project-1',
+          tenantId: 'tenant-1',
+          title: 'Archived',
+          userId: 'user-1',
+          statusId: null,
+          pipelineStageId: null,
+          importanceId: null,
+          archivedAt: new Date(),
+        },
+      ]);
+
+      const result = await service.listForCaller('user-1');
+
+      expect(result).toEqual([]);
+    });
+  });
+
+  describe('findOneForCaller', () => {
+    it('resolves the project real tenant and delegates to the access-checked findOne', async () => {
+      repository.findByIdGlobal.mockResolvedValue({
+        id: 'project-1',
+        tenantId: 'tenant-1',
+        userId: 'owner-1',
+      });
+      repository.findById.mockResolvedValue({
+        id: 'project-1',
+        title: 'Test',
+        userId: 'owner-1',
+        statusId: null,
+        pipelineStageId: null,
+        importanceId: null,
+      });
+      collaboratorsRepository.findByProjectAndUser.mockResolvedValue({
+        roleId: 'role-collaborator',
+      });
+
+      const result = await service.findOneForCaller('project-1', 'user-1');
+
+      expect(repository.findById).toHaveBeenCalledWith('tenant-1', 'project-1');
+      expect(result).toEqual(expect.objectContaining({ id: 'project-1' }));
+    });
+
+    it('throws NotFoundException when the project does not exist in any tenant', async () => {
+      repository.findByIdGlobal.mockResolvedValue(undefined);
+      await expect(
+        service.findOneForCaller('project-1', 'user-1'),
+      ).rejects.toThrow(NotFoundException);
+    });
+  });
+
+  describe('archiveForCaller', () => {
+    it('resolves the project real tenant and delegates to the access-checked archive', async () => {
+      repository.findByIdGlobal.mockResolvedValue({
+        id: 'project-1',
+        tenantId: 'tenant-1',
+        userId: 'user-1',
+      });
+      repository.findById.mockResolvedValue({
+        id: 'project-1',
+        userId: 'user-1',
+        statusId: null,
+        pipelineStageId: null,
+        importanceId: null,
+      });
+      enumRepository.findByCategoryAndValue.mockResolvedValue({
+        id: 'archived-status-id',
+      });
+      repository.archive.mockResolvedValue({
+        id: 'project-1',
+        statusId: 'archived-status-id',
+        pipelineStageId: null,
+        importanceId: null,
+      });
+
+      await service.archiveForCaller('project-1', 'user-1');
+
+      expect(repository.archive).toHaveBeenCalledWith(
+        'tenant-1',
+        'project-1',
+        'archived-status-id',
+      );
+    });
+
+    it('throws NotFoundException when the project does not exist in any tenant', async () => {
+      repository.findByIdGlobal.mockResolvedValue(undefined);
+      await expect(
+        service.archiveForCaller('project-1', 'user-1'),
       ).rejects.toThrow(NotFoundException);
     });
   });

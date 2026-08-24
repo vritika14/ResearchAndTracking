@@ -92,6 +92,11 @@ const fixtures = vi.hoisted(() => ({
       updatedAt: "2026-01-01T00:00:00.000Z",
     },
   ],
+  // Proves the "Collaborators" search hits the platform-wide user-search
+  // endpoint, not a workspace-member list.
+  allUsers: [
+    { id: "user-outside-workspace", displayName: "Jamie Outsider", email: "jamie@example.com" },
+  ],
 }));
 
 vi.mock("@/api/client", () => ({
@@ -119,27 +124,17 @@ vi.mock("@/api/hooks", () => ({
     },
   }),
   useCurrentWorkspace: () => ({ data: { id: fixtures.tenantId }, isPending: false }),
-  useMembers: () => ({
-    data: [
-      {
-        id: "membership-owner",
-        userId: "user-owner",
-        displayName: "Avi Researcher",
-        email: "owner@example.com",
-        role: "owner",
-      },
-      {
-        id: "membership-collaborator",
-        userId: "user-collaborator",
-        displayName: "Jamie Collaborator",
-        email: "jamie@example.com",
-        role: "limited_member",
-      },
-    ],
+  useUserSearch: (query: string) => ({
+    data: query.trim()
+      ? fixtures.allUsers.filter((user) =>
+          user.displayName.toLowerCase().includes(query.trim().toLowerCase()),
+        )
+      : [],
     isPending: false,
   }),
-  useProjects: () => ({ data: [fixtures.project], isPending: false, isError: false }),
+  useMyProjects: () => ({ data: [fixtures.project], isPending: false, isError: false }),
   useCreateProject: () => ({ mutateAsync: vi.fn(), isPending: false }),
+  useArchiveMyProject: () => ({ mutateAsync: vi.fn(), isPending: false }),
   useModules: () => ({ data: [fixtures.module] }),
   useTasks: () => ({ data: [fixtures.task] }),
   useNotes: () => ({ data: [fixtures.note] }),
@@ -195,7 +190,7 @@ describe("ProjectsPage", () => {
     expect(screen.getByRole("button", { name: "Choose due date" })).toBeInTheDocument();
   });
 
-  it("searches database-backed workspace members for the project", () => {
+  it("searches all platform users, not just workspace members, for the project", () => {
     renderPage();
 
     fireEvent.click(screen.getByRole("button", { name: "New Project" }));
@@ -204,10 +199,10 @@ describe("ProjectsPage", () => {
 
     expect(screen.getByText("jamie@example.com")).toBeInTheDocument();
     fireEvent.click(
-      screen.getByRole("option", { name: /Jamie Collaborator/ }),
+      screen.getByRole("option", { name: /Jamie Outsider/ }),
     );
     expect(screen.getByLabelText("Selected project members")).toHaveTextContent(
-      "Jamie Collaborator",
+      "Jamie Outsider",
     );
   });
 

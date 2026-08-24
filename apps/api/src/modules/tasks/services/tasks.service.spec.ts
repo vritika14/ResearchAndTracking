@@ -11,7 +11,10 @@ describe('TasksService', () => {
   let service: TasksService;
   let repository: {
     findById: jest.Mock;
+    findByIdGlobal: jest.Mock;
     findByTenant: jest.Mock;
+    findByCreator: jest.Mock;
+    findByIds: jest.Mock;
     create: jest.Mock;
     update: jest.Mock;
     delete: jest.Mock;
@@ -25,13 +28,17 @@ describe('TasksService', () => {
     create: jest.Mock;
     deleteAllForTask: jest.Mock;
     findByTaskAndUser: jest.Mock;
+    findTaskIdsByUser: jest.Mock;
   };
   let modulesRepository: { findById: jest.Mock };
 
   beforeEach(() => {
     repository = {
       findById: jest.fn(),
+      findByIdGlobal: jest.fn(),
       findByTenant: jest.fn(),
+      findByCreator: jest.fn(),
+      findByIds: jest.fn(),
       create: jest.fn(),
       update: jest.fn(),
       delete: jest.fn(),
@@ -47,6 +54,7 @@ describe('TasksService', () => {
       create: jest.fn(),
       deleteAllForTask: jest.fn(),
       findByTaskAndUser: jest.fn().mockResolvedValue(undefined),
+      findTaskIdsByUser: jest.fn().mockResolvedValue([]),
     };
     modulesRepository = { findById: jest.fn() };
 
@@ -217,6 +225,85 @@ describe('TasksService', () => {
       const result = await service.list('tenant-1', 'user-1');
 
       expect(result.map((task) => task.id)).toEqual(['task-1']);
+    });
+  });
+
+  describe('listForCaller', () => {
+    it('combines tasks the caller created with tasks they are a member of, across tenants', async () => {
+      repository.findByCreator.mockResolvedValue([
+        { id: 'task-own', createdBy: 'user-1', statusId: null, priorityId: null, visibilityId: null },
+      ]);
+      taskMembers.findTaskIdsByUser.mockResolvedValue(['task-own', 'task-shared']);
+      repository.findByIds.mockResolvedValue([
+        { id: 'task-shared', createdBy: 'owner-2', statusId: null, priorityId: null, visibilityId: null },
+      ]);
+
+      const result = await service.listForCaller('user-1');
+
+      expect(repository.findByIds).toHaveBeenCalledWith(['task-shared']);
+      expect(result.map((task) => task.id).sort()).toEqual(['task-own', 'task-shared']);
+    });
+  });
+
+  describe('findOneForCaller', () => {
+    it('throws NotFoundException when the caller is neither creator nor member', async () => {
+      repository.findByIdGlobal.mockResolvedValue({
+        id: 'task-1',
+        tenantId: 'tenant-2',
+        createdBy: 'owner-1',
+      });
+      await expect(
+        service.findOneForCaller('task-1', 'outsider-1'),
+      ).rejects.toThrow(NotFoundException);
+    });
+
+    it('returns the task from its own tenant even when the caller belongs to a different tenant', async () => {
+      repository.findByIdGlobal.mockResolvedValue({
+        id: 'task-1',
+        tenantId: 'tenant-2',
+        createdBy: 'owner-1',
+        statusId: null,
+        priorityId: null,
+        visibilityId: null,
+      });
+      taskMembers.findByTaskAndUser.mockResolvedValue({ id: 'member-row' });
+
+      const result = await service.findOneForCaller('task-1', 'member-1');
+
+      expect(taskMembers.findByTaskAndUser).toHaveBeenCalledWith(
+        'tenant-2',
+        'task-1',
+        'member-1',
+      );
+      expect(result).toEqual(expect.objectContaining({ id: 'task-1' }));
+    });
+  });
+
+  describe('deleteForCaller', () => {
+    it('throws NotFoundException when the task does not exist', async () => {
+      repository.findByIdGlobal.mockResolvedValue(undefined);
+      await expect(
+        service.deleteForCaller('task-1', 'user-1'),
+      ).rejects.toThrow(NotFoundException);
+    });
+
+    it('deletes using the task\'s own tenant, not any tenant supplied by the caller', async () => {
+      repository.findByIdGlobal.mockResolvedValue({
+        id: 'task-1',
+        tenantId: 'tenant-2',
+        createdBy: 'user-1',
+      });
+      repository.findById.mockResolvedValue({
+        id: 'task-1',
+        tenantId: 'tenant-2',
+        createdBy: 'user-1',
+      });
+      repository.delete.mockResolvedValue({ id: 'task-1' });
+
+      const result = await service.deleteForCaller('task-1', 'user-1');
+
+      expect(repository.delete).toHaveBeenCalledWith('tenant-2', 'task-1');
+      expect(result).toEqual({ id: 'task-1' });
     });
   });
 });

@@ -52,7 +52,7 @@ export class ProjectModulesService {
       rows.map((row) => this.canAccess(tenantId, row, callerUserId)),
     );
     const visibleRows = rows.filter((_row, index) => accessFlags[index]);
-    return this.withDisplayValues(tenantId, visibleRows, callerUserId);
+    return this.withDisplayValues(visibleRows, callerUserId);
   }
 
   async findOne(tenantId: string, moduleId: string, callerUserId: string) {
@@ -60,12 +60,45 @@ export class ProjectModulesService {
     if (!module || !(await this.canAccess(tenantId, module, callerUserId))) {
       throw new NotFoundException('Module not found');
     }
-    const [shaped] = await this.withDisplayValues(
-      tenantId,
-      [module],
-      callerUserId,
-    );
+    const [shaped] = await this.withDisplayValues([module], callerUserId);
     return shaped;
+  }
+
+  /**
+   * Tenant-agnostic: every module the caller can access, regardless of
+   * which workspace it lives in — a module linked to any project the caller
+   * can access (owner or project_collaborators row), plus every independent
+   * module the caller is a direct module_collaborators row on. Mirrors
+   * ProjectsService.listForCaller / TasksService.listForCaller.
+   */
+  async listForCaller(callerUserId: string) {
+    const [projectIds, moduleIds] = await Promise.all([
+      this.projectCollaboratorsRepository.findProjectIdsByUser(callerUserId),
+      this.collaboratorsRepository.findModuleIdsByUser(callerUserId),
+    ]);
+    const [byProject, byCollaborator] = await Promise.all([
+      this.repository.findByProjectIds(projectIds),
+      this.repository.findByIds(moduleIds),
+    ]);
+
+    const seen = new Set<string>();
+    const rows = [...byProject, ...byCollaborator].filter((module) => {
+      if (module.archivedAt !== null) return false;
+      if (seen.has(module.id)) return false;
+      seen.add(module.id);
+      return true;
+    });
+
+    return this.withDisplayValues(rows, callerUserId);
+  }
+
+  /** Tenant-agnostic single-module fetch — see listForCaller. */
+  async findOneForCaller(moduleId: string, callerUserId: string) {
+    const module = await this.repository.findByIdGlobal(moduleId);
+    if (!module) {
+      throw new NotFoundException('Module not found');
+    }
+    return this.findOne(module.tenantId, moduleId, callerUserId);
   }
 
   async create(
@@ -112,10 +145,9 @@ export class ProjectModulesService {
       });
     }
   
-    const [shaped] = await this.withDisplayValues(tenantId, [module], callerUserId);
+    const [shaped] = await this.withDisplayValues([module], callerUserId);
     return shaped;
   }
-
 
   async update(
     tenantId: string,
@@ -150,12 +182,22 @@ export class ProjectModulesService {
       throw new NotFoundException('Module not found');
     }
 
-    const [shaped] = await this.withDisplayValues(
-      tenantId,
-      [module],
-      callerUserId,
-    );
+    const [shaped] = await this.withDisplayValues([module], callerUserId);
     return shaped;
+  }
+
+  /** Tenant-agnostic update — resolves the module's real tenant first, then
+   * delegates to the normal (still access-checked) update flow. */
+  async updateForCaller(
+    moduleId: string,
+    callerUserId: string,
+    input: Parameters<ProjectModulesService['update']>[3],
+  ) {
+    const module = await this.repository.findByIdGlobal(moduleId);
+    if (!module) {
+      throw new NotFoundException('Module not found');
+    }
+    return this.update(module.tenantId, moduleId, callerUserId, input);
   }
 
   async archive(tenantId: string, moduleId: string, callerUserId: string) {
@@ -180,11 +222,7 @@ export class ProjectModulesService {
       throw new NotFoundException('Module not found');
     }
 
-    const [shaped] = await this.withDisplayValues(
-      tenantId,
-      [module],
-      callerUserId,
-    );
+    const [shaped] = await this.withDisplayValues([module], callerUserId);
 
     return {
       module: shaped,
@@ -192,9 +230,18 @@ export class ProjectModulesService {
     };
   }
 
+  /** Tenant-agnostic archive — see updateForCaller. */
+  async archiveForCaller(moduleId: string, callerUserId: string) {
+    const module = await this.repository.findByIdGlobal(moduleId);
+    if (!module) {
+      throw new NotFoundException('Module not found');
+    }
+    return this.archive(module.tenantId, moduleId, callerUserId);
+  }
+
   private async withDisplayValues<
     T extends { id: string; tagId: string | null; statusId: string | null },
-  >(tenantId: string, rows: T[], _callerUserId: string) {
+  >(rows: T[], _callerUserId: string) {
     const enumIds = rows
       .flatMap((r) => [r.tagId, r.statusId])
       .filter((id): id is string => id !== null);

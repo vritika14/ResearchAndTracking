@@ -1,20 +1,22 @@
 import { useEffect, useMemo, useState, type FormEvent, type ReactNode } from "react";
-import { ArrowLeft, Pencil, Save, Search, Users, X } from "lucide-react";
+import { ArrowLeft, Pencil, Save, Search, Trash2, Users, X } from "lucide-react";
 import { Link, useNavigate, useParams, useSearchParams } from "react-router-dom";
 
 import {
   useAddProjectCollaborator,
+  useArchiveMyProject,
   useCurrentWorkspace,
   useMe,
   useMembers,
   useModules,
+  useMyProject,
   useNotes,
   usePipelineStages,
-  useProject,
   useProjectCollaborators,
   useRemoveProjectCollaborator,
   useTasks,
-  useUpdateProject,
+  useUpdateMyProject,
+  useUserSearch,
   type ApiModule,
   type ApiNote,
   type ApiProject,
@@ -231,13 +233,11 @@ function ProjectCollaborators({
   projectId,
   ownerUserId,
   members,
-  membersLoading,
 }: {
   tenantId: string;
   projectId: string;
   ownerUserId: string | undefined;
   members: Membership[];
-  membersLoading: boolean;
 }) {
   const collaboratorsQuery = useProjectCollaborators(tenantId, projectId);
   const addCollaborator = useAddProjectCollaborator(tenantId, projectId);
@@ -256,21 +256,12 @@ function ProjectCollaborators({
     [collaboratorsQuery.data],
   );
 
+  const userSearchQuery = useUserSearch(search, pickerOpen);
   const matchingMembers = useMemo(() => {
-    const query = search.trim().toLowerCase();
-    return members
-      .filter(
-        (member) =>
-          member.userId !== ownerUserId && !collaboratorUserIds.has(member.userId),
-      )
-      .filter(
-        (member) =>
-          !query ||
-          member.displayName.toLowerCase().includes(query) ||
-          member.email.toLowerCase().includes(query),
-      )
-      .slice(0, 8);
-  }, [collaboratorUserIds, members, ownerUserId, search]);
+    return (userSearchQuery.data ?? []).filter(
+      (user) => user.id !== ownerUserId && !collaboratorUserIds.has(user.id),
+    );
+  }, [collaboratorUserIds, ownerUserId, userSearchQuery.data]);
 
   if (collaboratorsQuery.isPending) {
     return <LoadingState title="Loading collaborators" className="min-h-32" />;
@@ -346,18 +337,18 @@ function ProjectCollaborators({
             setSearch(event.target.value);
             setPickerOpen(true);
           }}
-          placeholder="Add a workspace member as a collaborator"
+          placeholder="Type a name or email to search all users"
           className="pl-9"
           autoComplete="off"
         />
-        {pickerOpen ? (
+        {pickerOpen && search.trim() ? (
           <div
             id="project-detail-collaborator-options"
             role="listbox"
             className="absolute z-50 mt-1 max-h-56 w-full overflow-y-auto rounded-md border bg-popover p-1 text-popover-foreground shadow-lg"
           >
-            {membersLoading ? (
-              <p className="px-3 py-2 text-sm text-muted-foreground">Loading workspace members…</p>
+            {userSearchQuery.isPending ? (
+              <p className="px-3 py-2 text-sm text-muted-foreground">Searching…</p>
             ) : matchingMembers.length ? (
               matchingMembers.map((member) => (
                 <button
@@ -367,7 +358,7 @@ function ProjectCollaborators({
                   aria-selected="false"
                   className="flex w-full items-center justify-between gap-3 rounded-sm px-3 py-2 text-left hover:bg-accent focus:bg-accent focus:outline-none"
                   onClick={() => {
-                    addCollaborator.mutate({ userId: member.userId, role: "Collaborator" });
+                    addCollaborator.mutate({ userId: member.id, role: "Collaborator" });
                     setSearch("");
                   }}
                 >
@@ -378,7 +369,7 @@ function ProjectCollaborators({
                 </button>
               ))
             ) : (
-              <p className="px-3 py-2 text-sm text-muted-foreground">No matching workspace members.</p>
+              <p className="px-3 py-2 text-sm text-muted-foreground">No matching users.</p>
             )}
           </div>
         ) : null}
@@ -394,16 +385,21 @@ export default function ProjectDetailPage() {
   const workspace = useCurrentWorkspace();
   const tenantId = workspace.data?.id ?? "";
 
-  const projectQuery = useProject(tenantId, projectId);
+  // Projects are tenant-agnostic — a project shared with the caller from
+  // another workspace must still open here (see MyProjectsController on the
+  // backend).
+  const projectQuery = useMyProject(projectId);
   const modulesQuery = useModules(tenantId, projectId);
   const tasksQuery = useTasks(tenantId, projectId);
   const notesQuery = useNotes(tenantId, projectId);
   const pipelineStagesQuery = usePipelineStages(tenantId);
   const membersQuery = useMembers(tenantId);
   const me = useMe();
-  const updateProject = useUpdateProject(tenantId);
+  const updateProject = useUpdateMyProject();
+  const archiveProject = useArchiveMyProject();
 
   const project = projectQuery.data;
+  const sameTenant = Boolean(project && tenantId && project.tenantId === tenantId);
   const [isEditing, setIsEditing] = useState(() => searchParams.get("edit") === "true");
   const [form, setForm] = useState<EditableProject | null>(null);
 
@@ -455,6 +451,18 @@ export default function ProjectDetailPage() {
     if (searchParams.get("edit") === "true") {
       navigate(editOrigin === "pipeline" ? "/pipeline" : projectPath, { replace: true });
     }
+  }
+
+  async function handleDeleteProject() {
+    if (
+      !window.confirm(
+        `Delete "${project!.title}"? It will be archived and permanently removed after 14 days.`,
+      )
+    ) {
+      return;
+    }
+    await archiveProject.mutateAsync(project!.id);
+    navigate("/projects");
   }
 
   async function saveProject(event: FormEvent<HTMLFormElement>) {
@@ -511,10 +519,22 @@ export default function ProjectDetailPage() {
                 Cancel Editing
               </Button>
             ) : (
-              <Button type="button" onClick={beginEditing}>
-                <Pencil />
-                Edit Project
-              </Button>
+              <>
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => void handleDeleteProject()}
+                  disabled={archiveProject.isPending}
+                  className="text-destructive hover:bg-destructive/10 hover:text-destructive"
+                >
+                  <Trash2 />
+                  Delete Project
+                </Button>
+                <Button type="button" onClick={beginEditing}>
+                  <Pencil />
+                  Edit Project
+                </Button>
+              </>
             )}
           </div>
         }
@@ -693,21 +713,25 @@ export default function ProjectDetailPage() {
               <CardTitle>Project collaborators</CardTitle>
             </CardHeader>
             <CardContent>
-              {tenantId ? (
-                <ProjectCollaborators
-                  tenantId={tenantId}
-                  projectId={project.id}
-                  ownerUserId={project.userId}
-                  members={membersQuery.data ?? []}
-                  membersLoading={membersQuery.isPending}
-                />
-              ) : (
+              {!tenantId ? (
                 <EmptyState
                   icon={Users}
                   title="No workspace selected"
                   description="Select a workspace to manage collaborators."
                   className="min-h-40 border-0 bg-muted/30"
                 />
+              ) : sameTenant ? (
+                <ProjectCollaborators
+                  tenantId={tenantId}
+                  projectId={project.id}
+                  ownerUserId={project.userId}
+                  members={membersQuery.data ?? []}
+                />
+              ) : (
+                <p className="text-sm text-muted-foreground">
+                  This project was shared with you from another workspace. Only members of
+                  that workspace can manage collaborators.
+                </p>
               )}
             </CardContent>
           </Card>

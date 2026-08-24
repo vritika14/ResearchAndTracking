@@ -55,6 +55,11 @@ const fixtures = vi.hoisted(() => ({
       role: "limited_member",
     },
   ],
+  // Proves the "Share with" search hits the platform-wide user-search
+  // endpoint, not the workspace member list.
+  allUsers: [
+    { id: "user-outside-workspace", displayName: "Jamie Outsider", email: "jamie@example.com" },
+  ],
 }));
 
 vi.mock("@/api/client", () => ({
@@ -70,7 +75,15 @@ vi.mock("@/api/hooks", async () => {
     useMembers: () => ({ data: fixtures.members, isPending: false }),
     useProjects: () => ({ data: fixtures.projects, isPending: false, isError: false }),
     useModules: () => ({ data: [] }),
-    useNotes: () => ({
+    useUserSearch: (query: string) => ({
+      data: query.trim()
+        ? fixtures.allUsers.filter((user) =>
+            user.displayName.toLowerCase().includes(query.trim().toLowerCase()),
+          )
+        : [],
+      isPending: false,
+    }),
+    useMyNotes: () => ({
       data: useSyncExternalStore(store.subscribe, store.getNotes),
       isPending: false,
       isError: false,
@@ -97,7 +110,7 @@ vi.mock("@/api/hooks", async () => {
         return note;
       }),
     }),
-    useUpdateNote: () => ({
+    useUpdateMyNote: () => ({
       mutateAsync: vi.fn(
         async ({ noteId, input }: { noteId: string; input: Record<string, unknown> }) => {
           const updated = store.getNotes().map((item) =>
@@ -117,7 +130,7 @@ vi.mock("@/api/hooks", async () => {
         },
       ),
     }),
-    useDeleteNote: () => ({
+    useDeleteMyNote: () => ({
       mutateAsync: vi.fn(async (noteId: string) => {
         store.setNotes(store.getNotes().filter((item) => item.id !== noteId));
       }),
@@ -178,6 +191,31 @@ describe("DailyNotesPage", () => {
     fireEvent.click(screen.getByRole("button", { name: "Project" }));
 
     expect(screen.getByText("Select a project")).toBeInTheDocument();
+  });
+
+  it("searches all platform users, not just workspace members, when sharing a new note", () => {
+    render(
+      <MemoryRouter>
+        <DailyNotesPage />
+      </MemoryRouter>,
+    );
+
+    fireEvent.click(screen.getByRole("button", { name: "Add note" }));
+
+    const visibilityTrigger = screen
+      .getAllByRole("combobox")
+      .find((el) => el.textContent?.includes("Private"));
+    fireEvent.click(visibilityTrigger!);
+    fireEvent.click(screen.getByRole("option", { name: "Shared" }));
+
+    const shareSearch = screen.getByPlaceholderText("Type a name or email to search all users");
+    fireEvent.change(shareSearch, { target: { value: "Jamie" } });
+
+    expect(screen.getByText("jamie@example.com")).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("option", { name: /Jamie Outsider/ }));
+    expect(screen.getByLabelText("Selected note members")).toHaveTextContent(
+      "Jamie Outsider",
+    );
   });
 
   it("edits an existing note's title and content", async () => {
