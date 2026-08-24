@@ -140,7 +140,7 @@ export class NotesService {
     if (!existing) {
       throw new NotFoundException('Note not found');
     }
-
+  
     const changesLinkage =
       input.projectId !== undefined || input.moduleId !== undefined;
     const [linkage, visibilityId] = await Promise.all([
@@ -149,7 +149,7 @@ export class NotesService {
         ? this.resolveEnum('visibility', input.visibility)
         : undefined,
     ]);
-
+  
     const note = await this.repository.update(tenantId, noteId, {
       title: input.title,
       content: input.content,
@@ -157,16 +157,21 @@ export class NotesService {
       projectId: linkage ? linkage.projectId : undefined,
       moduleId: linkage ? linkage.moduleId : undefined,
     });
-
+  
     if (!note) {
       throw new NotFoundException('Note not found');
     }
-
+  
     if (input.visibility === 'Private') {
       await this.noteMembers.deleteAllForNote(tenantId, noteId);
     }
-
-    return note;
+  
+    const { visibilityId: _vId, ...rest } = note;
+    const visibilityValue = note.visibilityId
+      ? (await this.enumRepository.findValuesByIds([note.visibilityId])).get(note.visibilityId) ?? null
+      : null;
+  
+    return { ...rest, visibility: visibilityValue };
   }
 
   async delete(tenantId: string, noteId: string, callerUserId: string) {
