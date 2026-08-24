@@ -67,15 +67,27 @@ export default {
         md: "calc(var(--radius) - 2px)",
         sm: "calc(var(--radius) - 4px)",
       },
+      boxShadow: {
+        sm: "var(--shadow-sm)",
+        DEFAULT: "var(--shadow-md)",
+        md: "var(--shadow-md)",
+      },
       fontFamily: {
         sans: [
-          "Inter",
+          "var(--font-sans)",
           "ui-sans-serif",
           "system-ui",
           "-apple-system",
           "Segoe UI",
           "Roboto",
           "sans-serif",
+        ],
+        heading: [
+          "var(--font-heading)",
+          "ui-serif",
+          "Georgia",
+          "Cambria",
+          "serif",
         ],
       },
       keyframes: {

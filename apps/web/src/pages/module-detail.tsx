@@ -1,5 +1,5 @@
 import { useState, type ReactNode } from "react";
-import { ArrowLeft, Pencil } from "lucide-react";
+import { ArrowLeft, Boxes, Pencil } from "lucide-react";
 import { Link, useParams } from "react-router-dom";
 
 import {
@@ -192,6 +192,7 @@ export default function ModuleDetailPage() {
       </Button>
 
       <PageHeading
+        icon={Boxes}
         eyebrow={module.displayId ?? module.id}
         title={module.title}
         description="Review and update the module's status, type and planning details."

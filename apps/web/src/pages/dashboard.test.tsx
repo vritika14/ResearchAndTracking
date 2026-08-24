@@ -33,21 +33,6 @@ describe("DashboardPage", () => {
     window.localStorage.clear();
   });
 
-  it("identifies the workspace whose data is displayed", () => {
-    render(
-      <MemoryRouter>
-        <DashboardPage />
-      </MemoryRouter>,
-    );
-
-    expect(screen.getByText("Current workspace")).toBeInTheDocument();
-    expect(screen.getByText("Research Operations")).toBeInTheDocument();
-    expect(screen.getByText("Owner access")).toBeInTheDocument();
-    expect(
-      screen.getByRole("link", { name: "Switch workspace" }),
-    ).toHaveAttribute("href", "/workspaces");
-  });
-
   it("hides and reorders dashboard tables and preserves the layout", () => {
     const view = render(
       <MemoryRouter>

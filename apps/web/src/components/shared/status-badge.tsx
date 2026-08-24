@@ -21,13 +21,13 @@ const inferredTones: Record<string, StatusTone> = {
 };
 
 const toneClasses: Record<StatusTone, string> = {
-  blue: "border-blue-300 text-blue-700 dark:border-blue-800 dark:text-blue-300",
+  blue: "border-blue-200 bg-blue-50 text-blue-700 dark:border-blue-800 dark:bg-blue-950/40 dark:text-blue-300",
   green:
-    "border-emerald-300 text-emerald-700 dark:border-emerald-800 dark:text-emerald-300",
+    "border-emerald-200 bg-emerald-50 text-emerald-700 dark:border-emerald-800 dark:bg-emerald-950/40 dark:text-emerald-300",
   orange:
-    "border-orange-300 text-orange-700 dark:border-orange-800 dark:text-orange-300",
-  red: "border-red-300 text-red-700 dark:border-red-800 dark:text-red-300",
-  grey: "border-slate-300 text-slate-600 dark:border-slate-700 dark:text-slate-300",
+    "border-orange-200 bg-orange-50 text-orange-700 dark:border-orange-800 dark:bg-orange-950/40 dark:text-orange-300",
+  red: "border-red-200 bg-red-50 text-red-700 dark:border-red-800 dark:bg-red-950/40 dark:text-red-300",
+  grey: "border-slate-200 bg-slate-50 text-slate-600 dark:border-slate-700 dark:bg-slate-900/40 dark:text-slate-300",
 };
 
 interface StatusBadgeProps {
@@ -42,7 +42,7 @@ export function StatusBadge({ status, tone, className }: StatusBadgeProps) {
   return (
     <Badge
       variant="outline"
-      className={cn("whitespace-nowrap bg-transparent", toneClasses[resolvedTone], className)}
+      className={cn("whitespace-nowrap font-medium", toneClasses[resolvedTone], className)}
     >
       {status}
     </Badge>

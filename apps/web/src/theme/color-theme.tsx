@@ -6,6 +6,12 @@ import {
   type ReactNode,
 } from "react";
 
+/**
+ * An accent-color override layered on top of whichever Design Theme is
+ * active (see design-theme.tsx) — independent axis: pick any color with any
+ * layout. Only overrides color tokens; radius/shadow/spacing/typography
+ * stay owned by the Design Theme.
+ */
 export const COLOR_THEMES = [
   { value: "ocean", label: "Ocean Blue" },
   { value: "violet", label: "Violet" },
@@ -16,6 +22,7 @@ export const COLOR_THEMES = [
 export type ColorTheme = (typeof COLOR_THEMES)[number]["value"];
 
 const STORAGE_KEY = "flow-color-theme";
+const DEFAULT_THEME: ColorTheme = "ocean";
 
 function isColorTheme(value: string | null): value is ColorTheme {
   return COLOR_THEMES.some((theme) => theme.value === value);
@@ -24,9 +31,9 @@ function isColorTheme(value: string | null): value is ColorTheme {
 function readStoredTheme(): ColorTheme {
   try {
     const stored = window.localStorage.getItem(STORAGE_KEY);
-    return isColorTheme(stored) ? stored : "ocean";
+    return isColorTheme(stored) ? stored : DEFAULT_THEME;
   } catch {
-    return "ocean";
+    return DEFAULT_THEME;
   }
 }
 

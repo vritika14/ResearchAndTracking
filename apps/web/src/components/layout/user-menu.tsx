@@ -14,8 +14,13 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 
+interface UserMenuProps {
+  /** Icon-only trigger for narrow rails (the compact sidebar) instead of the full name/workspace row. */
+  compact?: boolean;
+}
+
 /** Account + workspace switcher, shown at the bottom of the nav. Renders nothing when signed out. */
-export function UserMenu() {
+export function UserMenu({ compact = false }: UserMenuProps) {
   const auth = useAuth();
   const me = useMe(auth.isAuthenticated);
   const workspace = useCurrentWorkspace();
@@ -33,23 +38,34 @@ export function UserMenu() {
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
-        <button
-          type="button"
-          className="flex w-full items-center gap-2.5 rounded-md p-1.5 text-left transition-colors hover:bg-accent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-        >
-          <Avatar name={displayName} />
-          <span className="min-w-0 flex-1">
-            <span className="block truncate text-sm font-medium text-foreground" title={displayName}>
-              {displayName}
+        {compact ? (
+          <button
+            type="button"
+            aria-label={`${displayName} — account menu`}
+            title={displayName}
+            className="flex h-9 w-9 items-center justify-center rounded-full transition-colors hover:bg-accent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+          >
+            <Avatar name={displayName} />
+          </button>
+        ) : (
+          <button
+            type="button"
+            className="flex w-full items-center gap-2.5 rounded-md p-1.5 text-left transition-colors hover:bg-accent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+          >
+            <Avatar name={displayName} />
+            <span className="min-w-0 flex-1">
+              <span className="block truncate text-sm font-medium text-foreground" title={displayName}>
+                {displayName}
+              </span>
+              <span className="block truncate text-xs text-muted-foreground" title={workspaceName}>
+                {workspaceName}
+              </span>
             </span>
-            <span className="block truncate text-xs text-muted-foreground" title={workspaceName}>
-              {workspaceName}
-            </span>
-          </span>
-          <ChevronsUpDown className="h-4 w-4 shrink-0 text-muted-foreground" aria-hidden="true" />
-        </button>
+            <ChevronsUpDown className="h-4 w-4 shrink-0 text-muted-foreground" aria-hidden="true" />
+          </button>
+        )}
       </DropdownMenuTrigger>
-      <DropdownMenuContent align="start" side="top" className="w-64">
+      <DropdownMenuContent align="start" side={compact ? "right" : "top"} className="w-64">
         <DropdownMenuLabel className="text-foreground">{displayName}</DropdownMenuLabel>
         <DropdownMenuSeparator />
         <DropdownMenuLabel>Workspaces</DropdownMenuLabel>

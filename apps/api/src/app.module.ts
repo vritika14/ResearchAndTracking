@@ -23,8 +23,6 @@ import { TaskMembersModule } from './modules/task-members/task-members.module';
 import { NoteMembersModule } from './modules/note-members/note-members.module';
 import { TenantContextMiddleware } from './db/tenant-context.middleware';
 
-const invitationTokenPath = /\/api\/v1\/invitations\/[^/]+/g;
-
 @Module({
   imports: [
     ConfigModule.forRoot({
@@ -54,10 +52,7 @@ const invitationTokenPath = /\/api\/v1\/invitations\/[^/]+/g;
             return {
               id: req.id,
               method: req.method,
-              url: req.url?.replace(
-                invitationTokenPath,
-                '/api/v1/invitations/[Redacted]',
-              ),
+              url: req.url,
             };
           },
         },

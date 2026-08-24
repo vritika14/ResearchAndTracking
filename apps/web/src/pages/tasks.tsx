@@ -1,5 +1,5 @@
 import { useMemo, useState } from "react";
-import { ChevronDown, Pencil, Trash2 } from "lucide-react";
+import { ChevronDown, ListTodo, Pencil, Trash2 } from "lucide-react";
 import { Link } from "react-router-dom";
 
 import { apiClient } from "@/api/client";
@@ -303,6 +303,7 @@ export default function TasksPage() {
   return (
     <div className="flex flex-col gap-6">
       <PageHeading
+        icon={ListTodo}
         eyebrow="Workflows"
         title="Tasks and To Do"
         description="Everything outstanding across your projects — filter by status or priority, then sort any column."

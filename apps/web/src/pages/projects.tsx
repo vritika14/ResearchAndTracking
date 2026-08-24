@@ -1,5 +1,5 @@
 import { useMemo, useState } from "react";
-import { ChevronRight, Pencil, Trash2 } from "lucide-react";
+import { ChevronRight, FolderKanban, Pencil, Trash2 } from "lucide-react";
 import { Link } from "react-router-dom";
 
 import { apiClient } from "@/api/client";
@@ -360,6 +360,7 @@ export default function ProjectsPage() {
   return (
     <div className="flex flex-col gap-6">
       <PageHeading
+        icon={FolderKanban}
         eyebrow="Workflows"
         title="Projects"
         description="Track research work by stage, dates, collaborators and outstanding tasks."

@@ -9,6 +9,7 @@ import { createQueryClient } from "@/api/query-client";
 import { cognitoRedirectUri } from "@/auth/auth-config";
 import { AppAuthProvider } from "@/auth/auth-provider";
 import { ColorThemeProvider } from "@/theme/color-theme";
+import { DesignThemeProvider } from "@/theme/design-theme";
 import App from "./App";
 import "./index.css";
 
@@ -18,13 +19,15 @@ if (window.location.origin !== configuredOrigin) {
   window.location.replace(`${configuredOrigin}${window.location.pathname}${window.location.search}`);
 } else {
   createRoot(document.getElementById("root")!).render(
-    <ColorThemeProvider>
-      <BrowserRouter>
-        <AppAuthProvider>
-          <AuthenticatedQueryRoot />
-        </AppAuthProvider>
-      </BrowserRouter>
-    </ColorThemeProvider>,
+    <DesignThemeProvider>
+      <ColorThemeProvider>
+        <BrowserRouter>
+          <AppAuthProvider>
+            <AuthenticatedQueryRoot />
+          </AppAuthProvider>
+        </BrowserRouter>
+      </ColorThemeProvider>
+    </DesignThemeProvider>,
   );
 }
 

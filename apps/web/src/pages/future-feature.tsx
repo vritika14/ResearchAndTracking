@@ -28,8 +28,8 @@ export default function FutureFeaturePage({ feature: featureOverride }: FutureFe
 
   return (
     <div className="flex min-h-[60vh] items-center justify-center">
-      <section className="w-full max-w-xl rounded-xl border bg-card px-6 py-12 text-center shadow-sm sm:px-10">
-        <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-blue-50 text-primary dark:bg-blue-500/10">
+      <section className="w-full max-w-xl rounded-xl border bg-card px-6 py-12 text-center shadow-md sm:px-10">
+        <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-full bg-primary/10 text-primary ring-1 ring-primary/20">
           <Clock3 className="h-6 w-6" />
         </div>
         <Heading level="h2" className="mt-5">

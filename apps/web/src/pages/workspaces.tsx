@@ -5,7 +5,6 @@ import {
   CheckCircle2,
   Crown,
   Plus,
-  Users,
 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { z } from "zod";
@@ -18,7 +17,7 @@ import {
 } from "@/api/hooks";
 import { ErrorState } from "@/components/shared/error-state";
 import { LoadingState } from "@/components/shared/loading-state";
-import { Heading } from "@/components/typography/heading";
+import { PageHeading } from "@/components/typography/heading";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
@@ -79,19 +78,17 @@ export default function WorkspacesPage() {
 
   return (
     <div className="mx-auto w-full max-w-6xl pb-12">
-      <div className="flex flex-col gap-4 border-b pb-7 sm:flex-row sm:items-end sm:justify-between">
-        <div>
-          <Heading level="h1">Workspaces</Heading>
-          <p className="mt-2 max-w-2xl text-sm leading-6 text-muted-foreground">
-            View every research workspace you can access and choose which one is
-            active.
-          </p>
-        </div>
-        <Badge variant="outline" className="w-fit px-3 py-1">
-          {workspaces.data.length}{" "}
-          {workspaces.data.length === 1 ? "workspace" : "workspaces"}
-        </Badge>
-      </div>
+      <PageHeading
+        icon={Building2}
+        title="Workspaces"
+        description="View every research workspace you can access and choose which one is active."
+        actions={
+          <Badge variant="outline" className="w-fit px-3 py-1">
+            {workspaces.data.length}{" "}
+            {workspaces.data.length === 1 ? "workspace" : "workspaces"}
+          </Badge>
+        }
+      />
 
       <section aria-labelledby="available-workspaces" className="mt-7">
         <h2
@@ -103,7 +100,6 @@ export default function WorkspacesPage() {
         <div className="mt-4 grid gap-4 md:grid-cols-2 xl:grid-cols-3">
           {workspaces.data.map((workspace) => {
             const isCurrent = workspace.id === current.data?.id;
-            const isOwner = workspace.membershipRole === "owner";
             const isSwitching =
               switchWorkspace.isPending &&
               switchWorkspace.variables === workspace.id;
@@ -134,12 +130,8 @@ export default function WorkspacesPage() {
                 </CardHeader>
                 <CardContent>
                   <div className="mb-5 flex items-center gap-2 text-sm text-muted-foreground">
-                    {isOwner ? (
-                      <Crown className="h-4 w-4 text-amber-500" />
-                    ) : (
-                      <Users className="h-4 w-4" />
-                    )}
-                    <span>{isOwner ? "Owner" : "Limited member"}</span>
+                    <Crown className="h-4 w-4 text-amber-500" />
+                    <span>Owner</span>
                   </div>
                   <Button
                     className="w-full"

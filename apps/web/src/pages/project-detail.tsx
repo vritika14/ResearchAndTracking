@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState, type FormEvent, type ReactNode } from "react";
-import { ArrowLeft, Pencil, Save, Search, Trash2, Users, X } from "lucide-react";
+import { ArrowLeft, FolderKanban, Pencil, Save, Search, Trash2, Users, X } from "lucide-react";
 import { Link, useNavigate, useParams, useSearchParams } from "react-router-dom";
 
 import {
@@ -507,6 +507,7 @@ export default function ProjectDetailPage() {
       </Button>
 
       <PageHeading
+        icon={FolderKanban}
         eyebrow={project.displayId ?? project.id}
         title={project.title}
         description="Review and update the project’s core details, planning information and progress."

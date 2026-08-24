@@ -22,8 +22,10 @@ export function LoadingState({
         className,
       )}
     >
-      <LoaderCircle className="h-6 w-6 animate-spin text-primary" />
-      <p className="mt-4 text-sm font-semibold">{title}</p>
+      <div className="flex h-14 w-14 items-center justify-center rounded-full bg-primary/10 text-primary ring-1 ring-primary/20">
+        <LoaderCircle className="h-6 w-6 animate-spin" />
+      </div>
+      <p className="mt-4 text-base font-semibold">{title}</p>
       <p className="mt-1 max-w-sm text-sm text-muted-foreground">{description}</p>
     </div>
   );

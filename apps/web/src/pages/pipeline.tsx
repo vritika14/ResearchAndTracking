@@ -1,5 +1,5 @@
 import { useMemo, useState, type DragEvent } from "react";
-import { GripVertical, Pencil, Settings2 } from "lucide-react";
+import { GripVertical, Pencil, Settings2, Workflow } from "lucide-react";
 import { Link } from "react-router-dom";
 
 import {
@@ -59,13 +59,13 @@ interface PipelineRow {
 function priorityPillClass(priority: string | null) {
   switch (priority) {
     case "Critical":
-      return "border-red-300 text-red-700 dark:border-red-800 dark:text-red-400";
+      return "border-red-200 bg-red-50 text-red-700 dark:border-red-800 dark:bg-red-950/40 dark:text-red-400";
     case "High":
-      return "border-orange-300 text-orange-700 dark:border-orange-800 dark:text-orange-400";
+      return "border-orange-200 bg-orange-50 text-orange-700 dark:border-orange-800 dark:bg-orange-950/40 dark:text-orange-400";
     case "Medium":
-      return "border-blue-300 text-blue-700 dark:border-blue-800 dark:text-blue-400";
+      return "border-blue-200 bg-blue-50 text-blue-700 dark:border-blue-800 dark:bg-blue-950/40 dark:text-blue-400";
     default:
-      return "border-border text-muted-foreground";
+      return "border-border bg-muted/50 text-muted-foreground";
   }
 }
 
@@ -73,13 +73,13 @@ function statusPillClass(status: string | null) {
   switch (status) {
     case "Active":
     case "Complete":
-      return "border-emerald-300 text-emerald-700 dark:border-emerald-800 dark:text-emerald-400";
+      return "border-emerald-200 bg-emerald-50 text-emerald-700 dark:border-emerald-800 dark:bg-emerald-950/40 dark:text-emerald-400";
     case "Review":
-      return "border-orange-300 text-orange-700 dark:border-orange-800 dark:text-orange-400";
+      return "border-orange-200 bg-orange-50 text-orange-700 dark:border-orange-800 dark:bg-orange-950/40 dark:text-orange-400";
     case "Stalled":
-      return "border-red-300 text-red-700 dark:border-red-800 dark:text-red-400";
+      return "border-red-200 bg-red-50 text-red-700 dark:border-red-800 dark:bg-red-950/40 dark:text-red-400";
     default:
-      return "border-border text-muted-foreground";
+      return "border-border bg-muted/50 text-muted-foreground";
   }
 }
 
@@ -407,6 +407,7 @@ export default function PipelinePage() {
   return (
     <div className="flex flex-col gap-6">
       <PageHeading
+        icon={Workflow}
         eyebrow="Workflows"
         title="Pipeline"
         description="Active projects grouped by their current stage in the research workflow, from early concept through publication."

@@ -26,10 +26,10 @@ export function EmptyState({
         className,
       )}
     >
-      <div className="flex h-11 w-11 items-center justify-center rounded-full bg-muted text-muted-foreground">
-        <Icon className="h-5 w-5" />
+      <div className="flex h-14 w-14 items-center justify-center rounded-full bg-primary/10 text-primary ring-1 ring-primary/20">
+        <Icon className="h-6 w-6" />
       </div>
-      <p className="mt-4 text-sm font-semibold">{title}</p>
+      <p className="mt-4 text-base font-semibold">{title}</p>
       <p className="mt-1 max-w-md text-sm leading-6 text-muted-foreground">{description}</p>
       {action ? <div className="mt-5">{action}</div> : null}
     </div>

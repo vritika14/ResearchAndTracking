@@ -18,7 +18,6 @@ import SettingsPage from "@/pages/settings";
 import FutureFeaturePage from "@/pages/future-feature";
 import SignInPage from "@/pages/sign-in";
 import AuthCallbackPage from "@/pages/auth-callback";
-import InvitationAcceptancePage from "@/pages/invitation-acceptance";
 import WorkspaceOnboardingPage from "@/pages/workspace-onboarding";
 import WorkspacesPage from "@/pages/workspaces";
 import SessionExpiredPage from "@/pages/session-expired";
@@ -31,7 +30,6 @@ export default function App() {
     <Routes>
       <Route path="sign-in" element={<SignInPage />} />
       <Route path="auth/callback" element={<AuthCallbackPage />} />
-      <Route path="invitations/:token" element={<InvitationAcceptancePage />} />
       <Route path="session-expired" element={<SessionExpiredPage />} />
       <Route path="access-denied" element={<AccessDeniedPage />} />
 

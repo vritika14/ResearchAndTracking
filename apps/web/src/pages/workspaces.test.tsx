@@ -18,9 +18,9 @@ vi.mock("@/api/hooks", () => ({
       },
       {
         id: "workspace-2",
-        name: "Shared Study",
-        slug: "shared-study",
-        membershipRole: "limited_member",
+        name: "Second Lab",
+        slug: "second-lab",
+        membershipRole: "owner",
       },
     ],
     isPending: false,
@@ -56,8 +56,8 @@ describe("WorkspacesPage", () => {
     );
 
     expect(screen.getByText("Owned Lab")).toBeInTheDocument();
-    expect(screen.getByText("Shared Study")).toBeInTheDocument();
-    expect(screen.getByText("Limited member")).toBeInTheDocument();
+    expect(screen.getByText("Second Lab")).toBeInTheDocument();
+    expect(screen.getAllByText("Owner")).toHaveLength(2);
 
     fireEvent.click(screen.getByRole("button", { name: "Switch workspace" }));
     expect(switchWorkspace).toHaveBeenCalledWith("workspace-2");

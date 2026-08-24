@@ -12,7 +12,7 @@ const membershipStates = {
     eyebrow: "Membership pending",
     title: "Your workspace access is being prepared",
     description:
-      "You are signed in, but your workspace membership has not been activated yet. An owner may still need to approve your request or invitation.",
+      "You are signed in, but your workspace membership has not been activated yet.",
     detail: "You can try again later or contact the workspace owner if you need access urgently.",
     tone: "warning" as const,
   },
@@ -31,7 +31,7 @@ const membershipStates = {
     title: "You are no longer an active member",
     description:
       "This account no longer has an active membership in the requested workspace.",
-    detail: "A workspace owner can invite you again if you still need access.",
+    detail: "Sign in with the account that owns the workspace if you still need access.",
     tone: "danger" as const,
   },
 } satisfies Record<MembershipStatus, object>;
