@@ -18,10 +18,12 @@ import { NotesModule } from './modules/notes/notes.module';
 import { TasksModule } from './modules/tasks/tasks.module';
 import { ProjectCollaboratorsModule } from './modules/project-collaborators/project-collaborators.module';
 import { ModuleCollaboratorsModule } from './modules/module-collaborators/module-collaborators.module';
-import { PipelineStagesModule } from './modules/pipeline-stages/pipeline-stages.module';
 import { TaskMembersModule } from './modules/task-members/task-members.module';
 import { NoteMembersModule } from './modules/note-members/note-members.module';
 import { TenantContextMiddleware } from './db/tenant-context.middleware';
+import { ProjectPipelineStagesModule } from './modules/project-pipeline-stages/project-pipeline-stages.module';
+import { ModulePipelineStagesModule } from './modules/module-pipeline-stages/module-pipeline-stages.module';
+
 
 const invitationTokenPath = /\/api\/v1\/invitations\/[^/]+/g;
 
@@ -76,9 +78,10 @@ const invitationTokenPath = /\/api\/v1\/invitations\/[^/]+/g;
     TasksModule,
     ProjectCollaboratorsModule,
     ModuleCollaboratorsModule,
-    PipelineStagesModule,
     TaskMembersModule,
     NoteMembersModule,
+    ProjectPipelineStagesModule,
+    ModulePipelineStagesModule
   ],
   controllers: [AppController],
   providers: [AppService],

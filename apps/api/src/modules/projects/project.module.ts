@@ -15,5 +15,6 @@ import { ProjectsService } from './services/projects.service';
   imports: [UsersModule, EnumModule, ProjectCollaboratorsModule, TenantSequencesModule, MembershipsModule],
   controllers: [ProjectsController, MyProjectsController],
   providers: [ProjectsService, ProjectsRepository, ProjectAccessGuard],
+  exports: [ProjectsRepository],
 })
 export class ProjectsModule {}

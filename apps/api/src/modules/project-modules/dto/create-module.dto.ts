@@ -28,6 +28,11 @@ export class CreateModuleDto {
   @IsString()
   status?: string;
 
+  @ApiProperty({ required: false, example: 'Concept & Ideation' })
+  @IsOptional()
+  @IsString()
+  pipelineStage?: string;
+
   @ApiProperty({ required: false })
   @IsOptional()
   @IsUUID()

@@ -15,7 +15,6 @@ export class ProjectModulesRepository {
     return module;
   }
 
-  /** Tenant-agnostic single-module fetch, used to resolve a module's own tenant. */
   async findByIdGlobal(moduleId: string) {
     const [module] = await this.drizzle.db
       .select()
@@ -24,13 +23,11 @@ export class ProjectModulesRepository {
     return module;
   }
 
-  /** Tenant-agnostic multi-module fetch, for independent modules the caller collaborates on. */
   async findByIds(ids: string[]) {
     if (ids.length === 0) return [];
     return this.drizzle.db.select().from(modules).where(inArray(modules.id, ids));
   }
 
-  /** Tenant-agnostic multi-module fetch, for modules linked to any of the caller's accessible projects. */
   async findByProjectIds(projectIds: string[]) {
     if (projectIds.length === 0) return [];
     return this.drizzle.db.select().from(modules).where(inArray(modules.projectId, projectIds));
@@ -57,6 +54,7 @@ export class ProjectModulesRepository {
     description?: string;
     tagId?: string;
     statusId?: string;
+    pipelineStageId?: string;
     assignedToUserId?: string;
     displayId?: string;
   }) {
@@ -75,6 +73,7 @@ export class ProjectModulesRepository {
       description: string;
       tagId: string;
       statusId: string;
+      pipelineStageId: string;
       assignedToUserId: string;
     }>,
   ) {

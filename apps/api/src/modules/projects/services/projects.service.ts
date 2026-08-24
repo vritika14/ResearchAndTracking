@@ -85,7 +85,7 @@ export class ProjectsService {
     const [statusId, pipelineStageId, importanceId, ownerRoleId, displayId] =
       await Promise.all([
         this.resolveEnum('project_status', input.status),
-        this.resolveEnum('pipeline_stage', input.pipelineStage),
+        this.resolveEnum('project_pipeline_stage', input.pipelineStage),
         this.resolveEnum('importance', input.importance),
         this.resolveEnum('project_role', 'Owner'),
         this.sequences.nextDisplayId(tenantId, 'project'),
@@ -148,7 +148,7 @@ export class ProjectsService {
         ? this.resolveEnum('project_status', input.status)
         : undefined,
       input.pipelineStage
-        ? this.resolveEnum('pipeline_stage', input.pipelineStage)
+        ? this.resolveEnum('project_pipeline_stage', input.pipelineStage)
         : undefined,
       input.importance
         ? this.resolveEnum('importance', input.importance)
