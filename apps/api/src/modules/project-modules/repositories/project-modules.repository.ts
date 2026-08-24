@@ -1,6 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { modules } from '@research-tracker/migrations';
-import { and, eq, isNull } from 'drizzle-orm';
+import { and, eq, isNull, sql } from 'drizzle-orm';
 import { DrizzleService } from '../../../db/drizzle.service';
 
 @Injectable()
@@ -39,7 +39,12 @@ export class ProjectModulesRepository {
     assignedToUserId?: string;
     displayId?: string;
   }) {
-    
+    const isoCheck = await this.drizzle.db.execute(sql`SHOW transaction_isolation`);
+    console.log('DEBUG - isolation level:', isoCheck.rows[0]);
+  
+    const xactCheck = await this.drizzle.db.execute(sql`SELECT pg_current_xact_id_if_assigned() as xact_id`);
+    console.log('DEBUG - xact id before insert:', xactCheck.rows[0]);
+  
     const [module] = await this.drizzle.db
       .insert(modules)
       .values(values)
