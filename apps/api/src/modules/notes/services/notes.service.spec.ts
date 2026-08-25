@@ -95,7 +95,10 @@ describe('NotesService', () => {
         displayId: 'NTE-0001',
         visibilityId: 'visibility-private-id',
       });
-      expect(result).toEqual({ id: 'note-1', visibility: 'visibility-private-id' });
+      expect(result).toEqual({
+        id: 'note-1',
+        visibility: 'visibility-private-id',
+      });
     });
 
     it('derives projectId from an independent module rather than trusting the caller', async () => {
@@ -280,9 +283,9 @@ describe('NotesService', () => {
   describe('deleteForCaller', () => {
     it('throws NotFoundException when the note does not exist in any tenant', async () => {
       repository.findByIdGlobal.mockResolvedValue(undefined);
-      await expect(
-        service.deleteForCaller('note-1', 'user-1'),
-      ).rejects.toThrow(NotFoundException);
+      await expect(service.deleteForCaller('note-1', 'user-1')).rejects.toThrow(
+        NotFoundException,
+      );
     });
 
     it('resolves the note real tenant and delegates to the access-checked delete', async () => {

@@ -27,7 +27,10 @@ export class TasksRepository {
 
   /** All tasks the given user created, across every tenant. */
   async findByCreator(userId: string) {
-    return this.drizzle.db.select().from(tasks).where(eq(tasks.createdBy, userId));
+    return this.drizzle.db
+      .select()
+      .from(tasks)
+      .where(eq(tasks.createdBy, userId));
   }
 
   async findByIds(ids: string[]) {

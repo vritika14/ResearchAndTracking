@@ -43,7 +43,7 @@ export class TasksController {
     summary: 'List tasks for a workspace, optionally filtered by project',
   })
   @ApiQuery({ name: 'projectId', required: false, type: String })
-  @UseGuards(JwtAuthGuard,TenantMemberGuard)
+  @UseGuards(JwtAuthGuard, TenantMemberGuard)
   @Get()
   async list(
     @Param('tenantId') tenantId: string,
@@ -55,7 +55,7 @@ export class TasksController {
   }
 
   @ApiOperation({ summary: 'Get a single task' })
-  @UseGuards(JwtAuthGuard,TenantMemberGuard)
+  @UseGuards(JwtAuthGuard, TenantMemberGuard)
   @Get(':taskId')
   async findOne(
     @Param('tenantId') tenantId: string,
@@ -70,7 +70,7 @@ export class TasksController {
     summary: 'Create a task, optionally associated with a project and module',
   })
   @ApiResponse({ status: 201 })
-  @UseGuards(JwtAuthGuard,TenantMemberGuard)
+  @UseGuards(JwtAuthGuard, TenantMemberGuard)
   @Post()
   async create(
     @Param('tenantId') tenantId: string,
@@ -82,7 +82,7 @@ export class TasksController {
   }
 
   @ApiOperation({ summary: 'Update a task' })
-  @UseGuards(JwtAuthGuard,TenantMemberGuard)
+  @UseGuards(JwtAuthGuard, TenantMemberGuard)
   @Patch(':taskId')
   async update(
     @Param('tenantId') tenantId: string,
@@ -95,7 +95,7 @@ export class TasksController {
   }
 
   @ApiOperation({ summary: 'Delete a task' })
-  @UseGuards(JwtAuthGuard,TenantMemberGuard)
+  @UseGuards(JwtAuthGuard, TenantMemberGuard)
   @Delete(':taskId')
   async remove(
     @Param('tenantId') tenantId: string,

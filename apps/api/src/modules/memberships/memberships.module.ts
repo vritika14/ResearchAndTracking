@@ -15,6 +15,12 @@ import { MembershipsService } from './services/memberships.service';
     TenantOwnerGuard,
     TenantMemberGuard,
   ],
-  exports: [UsersModule, MembershipsService, MembershipsRepository, TenantOwnerGuard, TenantMemberGuard],
+  exports: [
+    UsersModule,
+    MembershipsService,
+    MembershipsRepository,
+    TenantOwnerGuard,
+    TenantMemberGuard,
+  ],
 })
 export class MembershipsModule {}

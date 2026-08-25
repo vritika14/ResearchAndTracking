@@ -13,3 +13,5 @@ export * from "./tasks";
 export * from "./tenant-sequences";
 export * from "./task-members";
 export * from "./note-members";
+export * from "./project-invitations";
+export * from "./module-invitations";

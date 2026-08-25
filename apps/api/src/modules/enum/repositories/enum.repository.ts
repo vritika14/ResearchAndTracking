@@ -50,10 +50,19 @@ export class EnumRepository {
       .orderBy(asc(enumTable.sortOrder));
   }
 
-  async createProjectPipelineStage(projectId: string, value: string, sortOrder: number) {
+  async createProjectPipelineStage(
+    projectId: string,
+    value: string,
+    sortOrder: number,
+  ) {
     const [row] = await this.drizzle.db
       .insert(enumTable)
-      .values({ projectId, category: 'project_pipeline_stage', value, sortOrder })
+      .values({
+        projectId,
+        category: 'project_pipeline_stage',
+        value,
+        sortOrder,
+      })
       .returning();
     return row;
   }
@@ -108,7 +117,11 @@ export class EnumRepository {
       .orderBy(asc(enumTable.sortOrder));
   }
 
-  async createModulePipelineStage(moduleId: string, value: string, sortOrder: number) {
+  async createModulePipelineStage(
+    moduleId: string,
+    value: string,
+    sortOrder: number,
+  ) {
     const [row] = await this.drizzle.db
       .insert(enumTable)
       .values({ moduleId, category: 'module_pipeline_stage', value, sortOrder })

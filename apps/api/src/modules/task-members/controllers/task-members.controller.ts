@@ -37,7 +37,7 @@ export class TaskMembersController {
   ) {}
 
   @ApiOperation({ summary: 'List members who can see this shared task' })
-  @UseGuards(JwtAuthGuard,TenantMemberGuard)
+  @UseGuards(JwtAuthGuard, TenantMemberGuard)
   @Get()
   async list(
     @Param('tenantId') tenantId: string,
@@ -50,7 +50,7 @@ export class TaskMembersController {
 
   @ApiOperation({ summary: 'Grant a user access to this shared task' })
   @ApiResponse({ status: 201 })
-  @UseGuards(JwtAuthGuard,TenantMemberGuard)
+  @UseGuards(JwtAuthGuard, TenantMemberGuard)
   @Post()
   async add(
     @Param('tenantId') tenantId: string,
@@ -61,7 +61,7 @@ export class TaskMembersController {
   }
 
   @ApiOperation({ summary: "Remove a user's access to this shared task" })
-  @UseGuards(JwtAuthGuard,TenantMemberGuard)
+  @UseGuards(JwtAuthGuard, TenantMemberGuard)
   @Delete(':userId')
   async remove(
     @Param('tenantId') tenantId: string,

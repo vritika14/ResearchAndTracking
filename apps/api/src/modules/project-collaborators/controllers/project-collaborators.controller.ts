@@ -39,7 +39,7 @@ export class ProjectCollaboratorsController {
   ) {}
 
   @ApiOperation({ summary: 'List collaborators on a project' })
-  @UseGuards(JwtAuthGuard,TenantMemberGuard)
+  @UseGuards(JwtAuthGuard, TenantMemberGuard)
   @Get()
   async list(
     @Param('tenantId') tenantId: string,
@@ -52,7 +52,7 @@ export class ProjectCollaboratorsController {
 
   @ApiOperation({ summary: 'Add a collaborator to a project' })
   @ApiResponse({ status: 201 })
-  @UseGuards(JwtAuthGuard,TenantMemberGuard)
+  @UseGuards(JwtAuthGuard, TenantMemberGuard)
   @Post()
   async add(
     @Param('tenantId') tenantId: string,
@@ -63,7 +63,7 @@ export class ProjectCollaboratorsController {
   }
 
   @ApiOperation({ summary: "Update a collaborator's role" })
-  @UseGuards(JwtAuthGuard,TenantMemberGuard)
+  @UseGuards(JwtAuthGuard, TenantMemberGuard)
   @Patch(':userId')
   async updateRole(
     @Param('tenantId') tenantId: string,
@@ -75,7 +75,7 @@ export class ProjectCollaboratorsController {
   }
 
   @ApiOperation({ summary: 'Remove a collaborator from a project' })
-  @UseGuards(JwtAuthGuard,TenantMemberGuard)
+  @UseGuards(JwtAuthGuard, TenantMemberGuard)
   @Delete(':userId')
   async remove(
     @Param('tenantId') tenantId: string,

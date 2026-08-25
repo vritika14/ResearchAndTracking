@@ -48,9 +48,8 @@ export class ProjectsService {
    * that table already covers both cases — mirrors TasksService.listForCaller.
    */
   async listForCaller(callerUserId: string) {
-    const projectIds = await this.collaboratorsRepository.findProjectIdsByUser(
-      callerUserId,
-    );
+    const projectIds =
+      await this.collaboratorsRepository.findProjectIdsByUser(callerUserId);
     const rows = (await this.repository.findByIds(projectIds)).filter(
       (project) => project.archivedAt === null,
     );

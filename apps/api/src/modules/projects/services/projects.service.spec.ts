@@ -147,12 +147,20 @@ describe('ProjectsService', () => {
 
       const result = await service.listForCaller('user-1');
 
-      expect(repository.findByIds).toHaveBeenCalledWith(['project-1', 'project-2']);
-      expect(result.map((project) => project.id)).toEqual(['project-1', 'project-2']);
+      expect(repository.findByIds).toHaveBeenCalledWith([
+        'project-1',
+        'project-2',
+      ]);
+      expect(result.map((project) => project.id)).toEqual([
+        'project-1',
+        'project-2',
+      ]);
     });
 
     it('excludes archived projects', async () => {
-      collaboratorsRepository.findProjectIdsByUser.mockResolvedValue(['project-1']);
+      collaboratorsRepository.findProjectIdsByUser.mockResolvedValue([
+        'project-1',
+      ]);
       repository.findByIds.mockResolvedValue([
         {
           id: 'project-1',
@@ -277,7 +285,9 @@ describe('ProjectsService', () => {
       collaboratorsRepository.findByProjectAndUser.mockImplementation(
         (_tenantId: string, projectId: string) =>
           Promise.resolve(
-            projectId === 'project-2' ? { roleId: 'role-collaborator' } : undefined,
+            projectId === 'project-2'
+              ? { roleId: 'role-collaborator' }
+              : undefined,
           ),
       );
 

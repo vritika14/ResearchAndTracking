@@ -43,7 +43,7 @@ export class ProjectModulesController {
     summary:
       'List active modules for a workspace, optionally filtered by project',
   })
-  @UseGuards(JwtAuthGuard,TenantMemberGuard)
+  @UseGuards(JwtAuthGuard, TenantMemberGuard)
   @Get()
   async list(
     @Param('tenantId') tenantId: string,
@@ -55,7 +55,7 @@ export class ProjectModulesController {
   }
 
   @ApiOperation({ summary: 'Get a single module' })
-  @UseGuards(JwtAuthGuard,TenantMemberGuard,ModuleAccessGuard)
+  @UseGuards(JwtAuthGuard, TenantMemberGuard, ModuleAccessGuard)
   @Get(':moduleId')
   async findOne(
     @Param('tenantId') tenantId: string,
@@ -70,7 +70,7 @@ export class ProjectModulesController {
     summary: 'Create a module, optionally associated with a project',
   })
   @ApiResponse({ status: 201 })
-  @UseGuards(JwtAuthGuard,TenantMemberGuard)
+  @UseGuards(JwtAuthGuard, TenantMemberGuard)
   @Post()
   async create(
     @Param('tenantId') tenantId: string,
@@ -82,7 +82,7 @@ export class ProjectModulesController {
   }
 
   @ApiOperation({ summary: 'Update a module' })
-  @UseGuards(JwtAuthGuard,TenantMemberGuard,ModuleAccessGuard)
+  @UseGuards(JwtAuthGuard, TenantMemberGuard, ModuleAccessGuard)
   @Patch(':moduleId')
   async update(
     @Param('tenantId') tenantId: string,
@@ -95,7 +95,7 @@ export class ProjectModulesController {
   }
 
   @ApiOperation({ summary: 'Archive a module (auto-deleted after 14 days)' })
-  @UseGuards(JwtAuthGuard,TenantMemberGuard,ModuleAccessGuard)
+  @UseGuards(JwtAuthGuard, TenantMemberGuard, ModuleAccessGuard)
   @Delete(':moduleId')
   async archive(
     @Param('tenantId') tenantId: string,

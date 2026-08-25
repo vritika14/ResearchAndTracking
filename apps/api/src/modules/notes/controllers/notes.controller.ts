@@ -44,7 +44,7 @@ export class NotesController {
     summary: 'List notes for a workspace, optionally filtered by project',
   })
   @ApiQuery({ name: 'projectId', required: false, type: String })
-  @UseGuards(JwtAuthGuard,TenantMemberGuard)
+  @UseGuards(JwtAuthGuard, TenantMemberGuard)
   @Get()
   async list(
     @Param('tenantId') tenantId: string,
@@ -56,7 +56,7 @@ export class NotesController {
   }
 
   @ApiOperation({ summary: 'Get a single note' })
-  @UseGuards(JwtAuthGuard,TenantMemberGuard)
+  @UseGuards(JwtAuthGuard, TenantMemberGuard)
   @Get(':noteId')
   async findOne(
     @Param('tenantId') tenantId: string,
@@ -71,7 +71,7 @@ export class NotesController {
     summary: 'Create a note, optionally associated with a project and module',
   })
   @ApiResponse({ status: 201 })
-  @UseGuards(JwtAuthGuard,TenantMemberGuard)
+  @UseGuards(JwtAuthGuard, TenantMemberGuard)
   @Post()
   async create(
     @Param('tenantId') tenantId: string,
@@ -83,7 +83,7 @@ export class NotesController {
   }
 
   @ApiOperation({ summary: 'Update a note' })
-  @UseGuards(JwtAuthGuard,TenantMemberGuard)
+  @UseGuards(JwtAuthGuard, TenantMemberGuard)
   @Patch(':noteId')
   async update(
     @Param('tenantId') tenantId: string,
@@ -96,7 +96,7 @@ export class NotesController {
   }
 
   @ApiOperation({ summary: 'Delete a note' })
-  @UseGuards(JwtAuthGuard,TenantMemberGuard)
+  @UseGuards(JwtAuthGuard, TenantMemberGuard)
   @Delete(':noteId')
   async remove(
     @Param('tenantId') tenantId: string,
