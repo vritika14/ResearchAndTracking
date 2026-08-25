@@ -28,7 +28,7 @@ export class WorkspacesService {
 
   async createWorkspace(ownerUserId: string, name: string) {
     const slug = `${slugify(name)}-${Date.now()}`;
-  
+
     const [tenant] = await this.drizzle.db
       .insert(tenants)
       .values({
@@ -38,11 +38,11 @@ export class WorkspacesService {
         status: 'active',
       })
       .returning();
-  
+
     if (!tenant) {
       throw new ConflictException('Failed to create workspace');
     }
-  
+
     await this.drizzle.db.insert(tenantMemberships).values({
       tenantId: tenant.id,
       userId: ownerUserId,
@@ -51,7 +51,7 @@ export class WorkspacesService {
       invitedAt: new Date(),
       joinedAt: new Date(),
     });
-  
+
     await this.drizzle.db
       .insert(workspaceContexts)
       .values({
@@ -63,7 +63,7 @@ export class WorkspacesService {
         target: workspaceContexts.userId,
         set: { tenantId: tenant.id, updatedAt: new Date() },
       });
-  
+
     return { ...tenant, membershipRole: 'owner' as const };
   }
 

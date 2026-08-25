@@ -1,7 +1,7 @@
 // apps/api/src/modules/module-collaborators/repositories/module-collaborators.repository.ts
 import { Injectable } from '@nestjs/common';
 import { moduleCollaborators } from '@research-tracker/migrations';
-import { and, eq, sql } from 'drizzle-orm';
+import { and, eq } from 'drizzle-orm';
 import { DrizzleService } from '../../../db/drizzle.service';
 
 @Injectable()
@@ -54,7 +54,6 @@ export class ModuleCollaboratorsRepository {
     userId: string;
     roleId: string;
   }) {
-
     const [row] = await this.drizzle.db
       .insert(moduleCollaborators)
       .values(values)

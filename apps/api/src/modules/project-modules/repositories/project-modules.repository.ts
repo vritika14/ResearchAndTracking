@@ -68,9 +68,12 @@ export class ProjectModulesRepository {
     pipelineStages?: string[],
     initialPipelineStage?: string,
   ) {
-    let [module] = await this.drizzle.db.insert(modules).values(values).returning();
+    let [module] = await this.drizzle.db
+      .insert(modules)
+      .values(values)
+      .returning();
     if (!module || !pipelineStages?.length) return module;
-  
+
     const stageRows = await this.drizzle.db
       .insert(enumTable)
       .values(
@@ -82,10 +85,11 @@ export class ProjectModulesRepository {
         })),
       )
       .returning();
-  
+
     const initialStage =
-      stageRows.find((stage) => stage.value === initialPipelineStage) ?? stageRows[0];
-  
+      stageRows.find((stage) => stage.value === initialPipelineStage) ??
+      stageRows[0];
+
     if (initialStage) {
       [module] = await this.drizzle.db
         .update(modules)
@@ -93,7 +97,7 @@ export class ProjectModulesRepository {
         .where(eq(modules.id, module.id))
         .returning();
     }
-  
+
     return module;
   }
 

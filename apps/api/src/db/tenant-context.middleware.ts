@@ -63,7 +63,7 @@ export class TenantContextMiddleware implements NestMiddleware {
           userId,
         ]);
       }
-      
+
       requestContextStorage.run({ tenantId, userId, tx }, () => {
         res.on('finish', () => {
           const isError = res.statusCode >= 400;
