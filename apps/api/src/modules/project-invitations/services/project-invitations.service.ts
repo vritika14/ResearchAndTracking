@@ -13,6 +13,7 @@ import { EnumRepository } from '../../enum/repositories/enum.repository';
 import { ProjectsRepository } from '../../projects/repositories/projects.repository';
 import { DrizzleService } from '../../../db/drizzle.service';
 import { sql } from 'drizzle-orm';
+import { InvitationEmailService } from '../../invitation-email/invitation-email.service';
 
 function normaliseEmail(value: string) {
   return value.trim().toLowerCase();
@@ -31,6 +32,7 @@ export class ProjectInvitationsService {
     private readonly enumRepository: EnumRepository,
     private readonly projectsRepository: ProjectsRepository,
     private readonly drizzle: DrizzleService,
+    private readonly invitationEmailService: InvitationEmailService,
   ) {}
 
   async list(projectId: string) {
@@ -39,6 +41,10 @@ export class ProjectInvitationsService {
 
   async invite(projectId: string, invitedBy: string, email: string) {
     const normalisedEmail = normaliseEmail(email);
+    const project = await this.projectsRepository.findByIdGlobal(projectId);
+    if (!project) {
+      throw new NotFoundException('Project not found');
+    }
 
     const tokenBytes = Number(
       this.configService.getOrThrow<string>('INVITATION_TOKEN_BYTES'),
@@ -64,11 +70,25 @@ export class ProjectInvitationsService {
       throw new ConflictException('Failed to create invitation');
     }
 
+    try {
+      await this.invitationEmailService.sendInvitation({
+        email: normalisedEmail,
+        targetType: 'project',
+        targetTitle: project.title,
+        acceptanceToken: rawToken,
+        expiresAt,
+      });
+    } catch (error) {
+      await this.repository.delete(invitation.id);
+      throw error;
+    }
+
     // The raw token is only ever returned here, once. Only its hash is stored.
     const { token: _storedHash, ...safeInvitation } = invitation;
     return {
       invitation: safeInvitation,
       acceptanceToken: rawToken,
+      emailSent: true,
     };
   }
 

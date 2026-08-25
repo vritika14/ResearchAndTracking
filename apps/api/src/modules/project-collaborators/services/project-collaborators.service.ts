@@ -5,6 +5,7 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import { EnumRepository } from '../../enum/repositories/enum.repository';
+import { UsersService } from '../../users/users.service';
 import { ProjectCollaboratorsRepository } from '../repositories/project-collaborators.repository';
 
 @Injectable()
@@ -12,6 +13,7 @@ export class ProjectCollaboratorsService {
   constructor(
     private readonly repository: ProjectCollaboratorsRepository,
     private readonly enumRepository: EnumRepository,
+    private readonly usersService: UsersService,
   ) {}
 
   /**
@@ -88,13 +90,21 @@ export class ProjectCollaboratorsService {
     return row;
   }
 
-  private async withDisplayValues<T extends { roleId: string }>(rows: T[]) {
+  private async withDisplayValues<
+    T extends { roleId: string; userId: string },
+  >(rows: T[]) {
     const roleIds = rows.map((r) => r.roleId);
-    const valuesById = await this.enumRepository.findValuesByIds(roleIds);
+    const [valuesById, users] = await Promise.all([
+      this.enumRepository.findValuesByIds(roleIds),
+      this.usersService.findSummariesByIds(rows.map((row) => row.userId)),
+    ]);
+    const usersById = new Map(users.map((user) => [user.id, user]));
 
     return rows.map(({ roleId, ...rest }) => ({
       ...rest,
       role: valuesById.get(roleId) ?? null,
+      displayName: usersById.get(rest.userId)?.displayName ?? null,
+      email: usersById.get(rest.userId)?.email ?? null,
     }));
   }
 

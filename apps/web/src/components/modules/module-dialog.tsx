@@ -1,18 +1,14 @@
-import { useEffect, useMemo, useState, type FormEvent, type ReactNode } from "react";
-import { Search, X } from "lucide-react";
+import { useEffect, useState, type FormEvent, type ReactNode } from "react";
 
 import {
   useEnumValues,
   useModulePipelineStages,
-  useUserSearch,
   type ApiModule,
   type ApiProject,
-  type ApiUserSearchResult,
   type Membership,
 } from "@/api/hooks";
 import { ModuleCollaboratorsManager } from "@/components/modules/module-collaborators";
 import { StageListBuilder } from "@/components/pipeline/stage-list-builder";
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -45,8 +41,6 @@ export interface ModuleFormInput {
   pipelineStages: string[];
   tag: string;
   assignedToUserId: string | null;
-  /** Applied by the caller after creation, since a brand-new module has no id yet. */
-  collaboratorUserIds: string[];
 }
 
 interface ModuleDialogProps {
@@ -68,7 +62,6 @@ const INITIAL_FORM: ModuleFormInput = {
   pipelineStages: [],
   tag: "",
   assignedToUserId: null,
-  collaboratorUserIds: [],
 };
 
 function FormField({ label, htmlFor, required, children }: {
@@ -101,9 +94,6 @@ export function ModuleDialog({
   const stageValuesQuery = useEnumValues("module_pipeline_stage", open);
   const [form, setForm] = useState<ModuleFormInput>(INITIAL_FORM);
   const [isIndependent, setIsIndependent] = useState(true);
-  const [memberSearch, setMemberSearch] = useState("");
-  const [memberPickerOpen, setMemberPickerOpen] = useState(false);
-  const [selectedMembers, setSelectedMembers] = useState<ApiUserSearchResult[]>([]);
   const [stagesInitialized, setStagesInitialized] = useState(false);
   const isEditing = Boolean(module);
   const moduleStageValuesQuery = useModulePipelineStages(
@@ -124,7 +114,6 @@ export function ModuleDialog({
         pipelineStages: [],
         tag: module.tag ?? "",
         assignedToUserId: module.assignedToUserId,
-        collaboratorUserIds: [],
       });
       setIsIndependent(module.projectId === null);
     } else {
@@ -132,9 +121,6 @@ export function ModuleDialog({
       setIsIndependent(true);
       setStagesInitialized(false);
     }
-    setMemberSearch("");
-    setMemberPickerOpen(false);
-    setSelectedMembers([]);
   }, [open, module]);
 
   useEffect(() => {
@@ -150,12 +136,6 @@ export function ModuleDialog({
     setStagesInitialized(true);
   }, [open, module, stageValuesQuery.data, stagesInitialized]);
 
-  const userSearchQuery = useUserSearch(memberSearch, memberPickerOpen);
-  const matchingMembers = useMemo(() => {
-    const selectedIds = new Set(selectedMembers.map((member) => member.id));
-    return (userSearchQuery.data ?? []).filter((member) => !selectedIds.has(member.id));
-  }, [userSearchQuery.data, selectedMembers]);
-
   function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     if (!isIndependent && !form.projectId) return;
@@ -165,7 +145,6 @@ export function ModuleDialog({
       description: form.description.trim(),
       projectId: isIndependent ? null : form.projectId,
       pipelineStage: form.pipelineStage || form.pipelineStages[0] || "",
-      collaboratorUserIds: selectedMembers.map((member) => member.id),
     });
     onOpenChange(false);
   }
@@ -354,16 +333,17 @@ export function ModuleDialog({
             </>
           ) : null}
 
-          {isIndependent && isEditing && module && module.tenantId === tenantId ? (
+          {isEditing && module && module.tenantId === tenantId ? (
             <div className="flex flex-col gap-2 border-t border-border pt-4">
               <span className="text-sm font-medium">Collaborators</span>
               <ModuleCollaboratorsManager
                 tenantId={tenantId}
                 moduleId={module.id}
+                moduleTitle={module.title}
                 members={members}
               />
             </div>
-          ) : isIndependent && isEditing && module ? (
+          ) : isEditing && module ? (
             <div className="flex flex-col gap-2 border-t border-border pt-4">
               <span className="text-sm font-medium">Collaborators</span>
               <p className="text-sm text-muted-foreground">
@@ -373,99 +353,10 @@ export function ModuleDialog({
             </div>
           ) : null}
 
-          {isIndependent && !isEditing ? (
-            <FormField label="Collaborators" htmlFor="module-members">
-              <div
-                className="relative"
-                onBlur={(event) => {
-                  if (!event.currentTarget.contains(event.relatedTarget)) {
-                    setMemberPickerOpen(false);
-                  }
-                }}
-              >
-                <Search className="pointer-events-none absolute left-3 top-2.5 h-4 w-4 text-muted-foreground" />
-                <Input
-                  id="module-members"
-                  role="combobox"
-                  aria-expanded={memberPickerOpen}
-                  aria-controls="module-member-options"
-                  aria-autocomplete="list"
-                  value={memberSearch}
-                  onFocus={() => setMemberPickerOpen(true)}
-                  onChange={(event) => {
-                    setMemberSearch(event.target.value);
-                    setMemberPickerOpen(true);
-                  }}
-                  placeholder="Type a name or email to search all users"
-                  className="pl-9"
-                  autoComplete="off"
-                />
-                {memberPickerOpen && memberSearch.trim() ? (
-                  <div
-                    id="module-member-options"
-                    role="listbox"
-                    className="absolute z-50 mt-1 max-h-56 w-full overflow-y-auto rounded-md border bg-popover p-1 text-popover-foreground shadow-lg"
-                  >
-                    {userSearchQuery.isPending ? (
-                      <p className="px-3 py-2 text-sm text-muted-foreground">
-                        Searching…
-                      </p>
-                    ) : matchingMembers.length ? (
-                      matchingMembers.map((member) => (
-                        <button
-                          key={member.id}
-                          type="button"
-                          role="option"
-                          aria-selected="false"
-                          className="flex w-full items-center justify-between gap-3 rounded-sm px-3 py-2 text-left hover:bg-accent focus:bg-accent focus:outline-none"
-                          onClick={() => {
-                            setSelectedMembers((current) => [...current, member]);
-                            setMemberSearch("");
-                          }}
-                        >
-                          <span className="min-w-0">
-                            <span className="block truncate text-sm font-medium">
-                              {member.displayName}
-                            </span>
-                            <span className="block truncate text-xs text-muted-foreground">
-                              {member.email}
-                            </span>
-                          </span>
-                        </button>
-                      ))
-                    ) : (
-                      <p className="px-3 py-2 text-sm text-muted-foreground">
-                        No matching users.
-                      </p>
-                    )}
-                  </div>
-                ) : null}
-              </div>
-              {selectedMembers.length ? (
-                <div className="mt-2 flex flex-wrap gap-2" aria-label="Selected module members">
-                  {selectedMembers.map((member) => (
-                    <Badge key={member.id} variant="secondary" className="gap-1.5 py-1">
-                      {member.displayName}
-                      <button
-                        type="button"
-                        aria-label={`Remove ${member.displayName}`}
-                        onClick={() =>
-                          setSelectedMembers((current) =>
-                            current.filter((item) => item.id !== member.id),
-                          )
-                        }
-                        className="rounded-full hover:text-destructive focus:outline-none focus:ring-1 focus:ring-ring"
-                      >
-                        <X className="h-3 w-3" />
-                      </button>
-                    </Badge>
-                  ))}
-                </div>
-              ) : null}
-              <p className="mt-1 text-xs text-muted-foreground">
-                You're automatically added as a collaborator once this module is created.
-              </p>
-            </FormField>
+          {!isEditing ? (
+            <p className="rounded-lg border border-dashed bg-muted/30 p-3 text-xs text-muted-foreground">
+              After creating the module, open it to invite collaborators by email using a secure acceptance link.
+            </p>
           ) : null}
 
           <DialogFooter className="border-t pt-4">

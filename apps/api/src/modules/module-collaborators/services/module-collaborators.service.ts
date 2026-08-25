@@ -8,6 +8,8 @@ import { EnumRepository } from '../../enum/repositories/enum.repository';
 import { ProjectCollaboratorsRepository } from '../../project-collaborators/repositories/project-collaborators.repository';
 import { ProjectModulesRepository } from '../../project-modules/repositories/project-modules.repository';
 import { ModuleCollaboratorsRepository } from '../repositories/module-collaborators.repository';
+import { UsersService } from '../../users/users.service';
+import { MembershipsRepository } from '../../memberships/repositories/memberships.repository';
 
 @Injectable()
 export class ModuleCollaboratorsService {
@@ -16,7 +18,58 @@ export class ModuleCollaboratorsService {
     private readonly modulesRepository: ProjectModulesRepository,
     private readonly projectCollaboratorsRepository: ProjectCollaboratorsRepository,
     private readonly enumRepository: EnumRepository,
+    private readonly usersService: UsersService,
+    private readonly membershipsRepository: MembershipsRepository,
   ) {}
+
+  async ensureOwnerMembership(
+    tenantId: string,
+    moduleId: string,
+    callerUserId: string,
+  ) {
+    const existing = await this.repository.findByModuleAndUser(
+      tenantId,
+      moduleId,
+      callerUserId,
+    );
+    if (existing) return existing;
+
+    const module = await this.modulesRepository.findById(tenantId, moduleId);
+    if (!module) return undefined;
+
+    const ownerRole = await this.enumRepository.findByCategoryAndValue(
+      'project_role',
+      'Owner',
+    );
+    if (!ownerRole) return undefined;
+
+    const callerOwnsModule = module.projectId
+      ? (await this.projectCollaboratorsRepository.findByProjectAndUser(
+          tenantId,
+          module.projectId,
+          callerUserId,
+        ))?.roleId === ownerRole.id
+      : false;
+
+    const tenantMembership = module.projectId
+      ? undefined
+      : await this.membershipsRepository.findMembershipByTenantAndUser(
+          tenantId,
+          callerUserId,
+        );
+    const callerOwnsTenant =
+      tenantMembership?.status === 'active' && tenantMembership.role === 'owner';
+
+    if (!callerOwnsModule && !callerOwnsTenant) return undefined;
+
+    return this.repository.create({
+      tenantId,
+      projectId: module.projectId ?? undefined,
+      moduleId,
+      userId: callerUserId,
+      roleId: ownerRole.id,
+    });
+  }
 
   /**
    * The collaborator list is itself only visible to someone who can already
@@ -28,6 +81,8 @@ export class ModuleCollaboratorsService {
     if (!module) {
       throw new NotFoundException('Module not found');
     }
+
+    await this.ensureOwnerMembership(tenantId, moduleId, callerUserId);
 
     const hasAccess = module.projectId
       ? Boolean(
@@ -48,7 +103,8 @@ export class ModuleCollaboratorsService {
       throw new NotFoundException('Module not found');
     }
 
-    return this.repository.findByModule(tenantId, moduleId);
+    const rows = await this.repository.findByModule(tenantId, moduleId);
+    return this.withDisplayValues(rows);
   }
 
   async add(tenantId: string, moduleId: string, userId: string, role: string) {
@@ -70,13 +126,18 @@ export class ModuleCollaboratorsService {
 
     const roleId = await this.resolveRole(role);
 
-    return this.repository.create({
+    const row = await this.repository.create({
       tenantId,
       projectId: module.projectId ?? undefined,
       moduleId,
       userId,
       roleId,
     });
+    if (!row) {
+      throw new NotFoundException('Failed to add collaborator');
+    }
+    const [shaped] = await this.withDisplayValues([row]);
+    return shaped;
   }
 
   async updateRole(
@@ -96,7 +157,8 @@ export class ModuleCollaboratorsService {
     if (!row) {
       throw new NotFoundException('Collaborator not found on this module');
     }
-    return row;
+    const [shaped] = await this.withDisplayValues([row]);
+    return shaped;
   }
 
   async remove(tenantId: string, moduleId: string, userId: string) {
@@ -116,5 +178,22 @@ export class ModuleCollaboratorsService {
       throw new NotFoundException(`Unknown project role: "${role}"`);
     }
     return match.id;
+  }
+
+  private async withDisplayValues<
+    T extends { roleId: string; userId: string },
+  >(rows: T[]) {
+    const [valuesById, users] = await Promise.all([
+      this.enumRepository.findValuesByIds(rows.map((row) => row.roleId)),
+      this.usersService.findSummariesByIds(rows.map((row) => row.userId)),
+    ]);
+    const usersById = new Map(users.map((user) => [user.id, user]));
+
+    return rows.map(({ roleId, ...rest }) => ({
+      ...rest,
+      role: valuesById.get(roleId) ?? null,
+      displayName: usersById.get(rest.userId)?.displayName ?? null,
+      email: usersById.get(rest.userId)?.email ?? null,
+    }));
   }
 }

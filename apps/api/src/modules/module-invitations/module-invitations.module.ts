@@ -8,6 +8,7 @@ import { UsersModule } from '../users/users.module';
 import { ModuleInvitationsController } from './controllers/module-invitations.controller';
 import { ModuleInvitationsRepository } from './repositories/module-invitations.repository';
 import { ModuleInvitationsService } from './services/module-invitations.service';
+import { InvitationEmailModule } from '../invitation-email/invitation-email.module';
 
 @Module({
   imports: [
@@ -16,6 +17,7 @@ import { ModuleInvitationsService } from './services/module-invitations.service'
     UsersModule,
     ProjectModulesModule,
     ModuleCollaboratorsModule,
+    InvitationEmailModule,
   ],
   controllers: [ModuleInvitationsController],
   providers: [ModuleInvitationsService, ModuleInvitationsRepository],

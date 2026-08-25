@@ -92,11 +92,6 @@ const fixtures = vi.hoisted(() => ({
       updatedAt: "2026-01-01T00:00:00.000Z",
     },
   ],
-  // Proves the "Collaborators" search hits the platform-wide user-search
-  // endpoint, not a workspace-member list.
-  allUsers: [
-    { id: "user-outside-workspace", displayName: "Jamie Outsider", email: "jamie@example.com" },
-  ],
 }));
 
 vi.mock("@/api/client", () => ({
@@ -124,14 +119,6 @@ vi.mock("@/api/hooks", () => ({
     },
   }),
   useCurrentWorkspace: () => ({ data: { id: fixtures.tenantId }, isPending: false }),
-  useUserSearch: (query: string) => ({
-    data: query.trim()
-      ? fixtures.allUsers.filter((user) =>
-          user.displayName.toLowerCase().includes(query.trim().toLowerCase()),
-        )
-      : [],
-    isPending: false,
-  }),
   useMyProjects: () => ({ data: [fixtures.project], isPending: false, isError: false }),
   useCreateProject: () => ({ mutateAsync: vi.fn(), isPending: false }),
   useArchiveMyProject: () => ({ mutateAsync: vi.fn(), isPending: false }),
@@ -190,20 +177,12 @@ describe("ProjectsPage", () => {
     expect(screen.getByRole("button", { name: "Choose due date" })).toBeInTheDocument();
   });
 
-  it("searches all platform users, not just workspace members, for the project", () => {
+  it("directs project sharing to the post-creation invitation flow", () => {
     renderPage();
 
     fireEvent.click(screen.getByRole("button", { name: "New Project" }));
-    const memberSearch = screen.getByRole("combobox", { name: "Collaborators" });
-    fireEvent.change(memberSearch, { target: { value: "Jamie" } });
-
-    expect(screen.getByText("jamie@example.com")).toBeInTheDocument();
-    fireEvent.click(
-      screen.getByRole("option", { name: /Jamie Outsider/ }),
-    );
-    expect(screen.getByLabelText("Selected project members")).toHaveTextContent(
-      "Jamie Outsider",
-    );
+    expect(screen.queryByRole("combobox", { name: "Collaborators" })).not.toBeInTheDocument();
+    expect(screen.getByText(/After creating the project, open it to invite collaborators by email/i)).toBeInTheDocument();
   });
 
   it("shows linked module/task/note counts and a link to the full project page when expanded", () => {

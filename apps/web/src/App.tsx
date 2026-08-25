@@ -24,6 +24,7 @@ import SessionExpiredPage from "@/pages/session-expired";
 import AccessDeniedPage from "@/pages/access-denied";
 import MembershipStatusPage from "@/pages/membership-status";
 import NotFoundPage from "@/pages/not-found";
+import InvitationPage from "@/pages/invitation";
 
 export default function App() {
   return (
@@ -32,6 +33,7 @@ export default function App() {
       <Route path="auth/callback" element={<AuthCallbackPage />} />
       <Route path="session-expired" element={<SessionExpiredPage />} />
       <Route path="access-denied" element={<AccessDeniedPage />} />
+      <Route path="invitations/:token" element={<InvitationPage />} />
 
       <Route element={<RequireAuth />}>
         <Route element={<RequireApiSession />}>

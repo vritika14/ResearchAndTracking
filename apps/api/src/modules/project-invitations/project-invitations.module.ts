@@ -11,6 +11,7 @@ import { ProjectInvitationsController } from './controllers/project-invitations.
 import { ProjectInvitationsRepository } from './repositories/project-invitations.repository';
 import { ProjectInvitationsService } from './services/project-invitations.service';
 import { MyInvitationsController } from './controllers/my-invitations.controller';
+import { InvitationEmailModule } from '../invitation-email/invitation-email.module';
 
 @Module({
   imports: [
@@ -20,6 +21,7 @@ import { MyInvitationsController } from './controllers/my-invitations.controller
     ProjectsModule,
     ProjectCollaboratorsModule,
     ModuleInvitationsModule,
+    InvitationEmailModule,
   ],
   controllers: [
     ProjectInvitationsController,

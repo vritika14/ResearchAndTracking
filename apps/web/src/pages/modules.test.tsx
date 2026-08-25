@@ -29,6 +29,9 @@ const store = vi.hoisted(() => {
   let modules: ModuleFixture[] = [];
   const listeners = new Set<() => void>();
   return {
+    useMe: () => ({
+      data: { id: "user-owner", displayName: "Avi Researcher", email: "owner@example.com" },
+    }),
     getModules: () => modules,
     setModules: (next: ModuleFixture[]) => {
       modules = next;
@@ -60,11 +63,6 @@ const fixtures = vi.hoisted(() => ({
     { id: "stage-1", tenantId: null, category: "module_pipeline_stage", value: "Concept & Ideation", sortOrder: 1, createdAt: "", updatedAt: "" },
     { id: "stage-2", tenantId: null, category: "module_pipeline_stage", value: "Literature Review", sortOrder: 2, createdAt: "", updatedAt: "" },
   ],
-  // Proves the "Collaborators" search hits the platform-wide user-search
-  // endpoint, not a workspace-member list.
-  allUsers: [
-    { id: "user-outside-workspace", displayName: "Jamie Outsider", email: "jamie@example.com" },
-  ],
 }));
 
 vi.mock("@/api/client", () => ({
@@ -79,14 +77,6 @@ vi.mock("@/api/hooks", async () => {
     useCurrentWorkspace: () => ({ data: { id: fixtures.tenantId }, isPending: false }),
     useMembers: () => ({ data: fixtures.members, isPending: false }),
     useProjects: () => ({ data: fixtures.projects, isPending: false, isError: false }),
-    useUserSearch: (query: string) => ({
-      data: query.trim()
-        ? fixtures.allUsers.filter((user) =>
-            user.displayName.toLowerCase().includes(query.trim().toLowerCase()),
-          )
-        : [],
-      isPending: false,
-    }),
     useMyModules: () => ({
       data: useStore(store.subscribe, store.getModules),
       isPending: false,
@@ -95,7 +85,11 @@ vi.mock("@/api/hooks", async () => {
       refetch: vi.fn(),
     }),
     useEnumValues: (category: string) => ({
-      data: category === "module_pipeline_stage" ? fixtures.stageValues : fixtures.tagValues,
+      data: category === "module_pipeline_stage"
+        ? fixtures.stageValues
+        : category === "project_role"
+          ? [{ id: "role-owner", value: "Owner" }]
+          : fixtures.tagValues,
     }),
     useModulePipelineStages: () => ({ data: fixtures.stageValues }),
     useCreateModule: () => ({
@@ -136,9 +130,25 @@ vi.mock("@/api/hooks", async () => {
         store.setModules(store.getModules().filter((item) => item.id !== moduleId));
       }),
     }),
-    useModuleCollaborators: () => ({ data: [], isPending: false }),
-    useAddModuleCollaborator: () => ({ mutate: vi.fn() }),
+    useModuleCollaborators: () => ({
+      data: [{
+        id: "collaborator-owner",
+        tenantId: fixtures.tenantId,
+        userId: "user-owner",
+        roleId: "role-owner",
+        role: "Owner",
+        displayName: "Avi Researcher",
+        email: "owner@example.com",
+        createdAt: "",
+        updatedAt: "",
+      }],
+      isPending: false,
+    }),
     useRemoveModuleCollaborator: () => ({ mutate: vi.fn() }),
+    useCollaboratorInvitations: () => ({ data: [], isPending: false, isError: false }),
+    useInviteCollaborator: () => ({ mutateAsync: vi.fn(), isPending: false, isError: false }),
+    useRevokeCollaboratorInvitation: () => ({ mutate: vi.fn(), isPending: false, isError: false }),
+    useUserSearch: () => ({ data: [], isPending: false, isError: false }),
   };
 });
 
@@ -238,7 +248,22 @@ describe("ModulesPage", () => {
     expect(screen.getByRole("combobox", { name: /Project/ })).toBeInTheDocument();
   });
 
-  it("searches all platform users, not just workspace members, when sharing a new independent module", () => {
+  it("opens collaborator management directly from the modules table", () => {
+    render(
+      <MemoryRouter>
+        <ModulesPage />
+      </MemoryRouter>,
+    );
+
+    fireEvent.click(
+      screen.getByRole("button", { name: "Manage collaborators for Literature synthesis" }),
+    );
+
+    expect(screen.getByRole("heading", { name: "Module collaborators" })).toBeInTheDocument();
+    expect(screen.getByRole("combobox", { name: "Collaborator email" })).toBeInTheDocument();
+  });
+
+  it("directs module sharing to the post-creation invitation flow", () => {
     render(
       <MemoryRouter>
         <ModulesPage />
@@ -246,13 +271,7 @@ describe("ModulesPage", () => {
     );
 
     fireEvent.click(screen.getByRole("button", { name: "New Module" }));
-    const collaboratorSearch = screen.getByRole("combobox", { name: "Collaborators" });
-    fireEvent.change(collaboratorSearch, { target: { value: "Jamie" } });
-
-    expect(screen.getByText("jamie@example.com")).toBeInTheDocument();
-    fireEvent.click(screen.getByRole("option", { name: /Jamie Outsider/ }));
-    expect(screen.getByLabelText("Selected module members")).toHaveTextContent(
-      "Jamie Outsider",
-    );
+    expect(screen.queryByRole("combobox", { name: "Collaborators" })).not.toBeInTheDocument();
+    expect(screen.getByText(/After creating the module, open it to invite collaborators by email/i)).toBeInTheDocument();
   });
 });

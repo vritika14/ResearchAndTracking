@@ -7,7 +7,7 @@ import {
 } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { users } from '@research-tracker/migrations';
-import { and, eq, ilike, or } from 'drizzle-orm';
+import { and, eq, ilike, inArray, or } from 'drizzle-orm';
 import { firstValueFrom } from 'rxjs';
 import { DrizzleService } from '../../db/drizzle.service';
 import type { UpdateProfileDto } from './dto/update-profile.dto';
@@ -54,6 +54,20 @@ export class UsersService {
       )
       .orderBy(users.displayName)
       .limit(limit);
+  }
+
+  async findSummariesByIds(userIds: string[]) {
+    const uniqueIds = [...new Set(userIds)];
+    if (uniqueIds.length === 0) return [];
+
+    return this.drizzle.db
+      .select({
+        id: users.id,
+        displayName: users.displayName,
+        email: users.email,
+      })
+      .from(users)
+      .where(inArray(users.id, uniqueIds));
   }
 
   async findByExternalAuthId(externalAuthId: string) {

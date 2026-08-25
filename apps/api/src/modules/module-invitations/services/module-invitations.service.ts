@@ -13,6 +13,7 @@ import { ModuleCollaboratorsRepository } from '../../module-collaborators/reposi
 import { EnumRepository } from '../../enum/repositories/enum.repository';
 import { ProjectModulesRepository } from '../../project-modules/repositories/project-modules.repository';
 import { DrizzleService } from '../../../db/drizzle.service';
+import { InvitationEmailService } from '../../invitation-email/invitation-email.service';
 
 function normaliseEmail(value: string) {
   return value.trim().toLowerCase();
@@ -31,6 +32,7 @@ export class ModuleInvitationsService {
     private readonly enumRepository: EnumRepository,
     private readonly modulesRepository: ProjectModulesRepository,
     private readonly drizzle: DrizzleService,
+    private readonly invitationEmailService: InvitationEmailService,
   ) {}
 
   async list(moduleId: string) {
@@ -39,6 +41,10 @@ export class ModuleInvitationsService {
 
   async invite(moduleId: string, invitedBy: string, email: string) {
     const normalisedEmail = normaliseEmail(email);
+    const module = await this.modulesRepository.findByIdGlobal(moduleId);
+    if (!module) {
+      throw new NotFoundException('Module not found');
+    }
 
     const tokenBytes = Number(
       this.configService.getOrThrow<string>('INVITATION_TOKEN_BYTES'),
@@ -64,10 +70,24 @@ export class ModuleInvitationsService {
       throw new ConflictException('Failed to create invitation');
     }
 
+    try {
+      await this.invitationEmailService.sendInvitation({
+        email: normalisedEmail,
+        targetType: 'module',
+        targetTitle: module.title,
+        acceptanceToken: rawToken,
+        expiresAt,
+      });
+    } catch (error) {
+      await this.repository.delete(invitation.id);
+      throw error;
+    }
+
     const { token: _storedHash, ...safeInvitation } = invitation;
     return {
       invitation: safeInvitation,
       acceptanceToken: rawToken,
+      emailSent: true,
     };
   }
 
