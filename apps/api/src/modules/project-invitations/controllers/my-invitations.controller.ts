@@ -21,7 +21,9 @@ export class MyInvitationsController {
     private readonly usersService: UsersService,
   ) {}
 
-  @ApiOperation({ summary: 'List every pending invitation addressed to my email' })
+  @ApiOperation({
+    summary: 'List every pending invitation addressed to my email',
+  })
   @UseGuards(JwtAuthGuard)
   @Get()
   async list(@Req() req: AuthenticatedRequest) {

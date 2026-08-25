@@ -1,5 +1,14 @@
 // apps/api/src/modules/projects/controllers/my-projects.controller.ts
-import { Body, Controller, Delete, Get, Param, Patch, Req, UseGuards } from '@nestjs/common';
+import {
+  Body,
+  Controller,
+  Delete,
+  Get,
+  Param,
+  Patch,
+  Req,
+  UseGuards,
+} from '@nestjs/common';
 import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
 import { Request } from 'express';
 import type { AuthenticatedPrincipal } from '../../auth/jwt.strategy';

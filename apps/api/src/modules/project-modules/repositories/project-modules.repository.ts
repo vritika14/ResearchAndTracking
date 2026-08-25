@@ -25,12 +25,18 @@ export class ProjectModulesRepository {
 
   async findByIds(ids: string[]) {
     if (ids.length === 0) return [];
-    return this.drizzle.db.select().from(modules).where(inArray(modules.id, ids));
+    return this.drizzle.db
+      .select()
+      .from(modules)
+      .where(inArray(modules.id, ids));
   }
 
   async findByProjectIds(projectIds: string[]) {
     if (projectIds.length === 0) return [];
-    return this.drizzle.db.select().from(modules).where(inArray(modules.projectId, projectIds));
+    return this.drizzle.db
+      .select()
+      .from(modules)
+      .where(inArray(modules.projectId, projectIds));
   }
 
   async findActiveByTenant(tenantId: string, projectId?: string) {

@@ -27,7 +27,10 @@ export class ProjectsRepository {
   /** Tenant-agnostic multi-project fetch, for listing across a caller's collaborations. */
   async findByIds(ids: string[]) {
     if (ids.length === 0) return [];
-    return this.drizzle.db.select().from(projects).where(inArray(projects.id, ids));
+    return this.drizzle.db
+      .select()
+      .from(projects)
+      .where(inArray(projects.id, ids));
   }
 
   async findActiveByTenant(tenantId: string) {

@@ -32,9 +32,9 @@ export class ModuleInvitationsRepository {
           updated_at: string;
         }
       | undefined;
-  
+
     if (!row?.id) return undefined;
-  
+
     return {
       id: row.id,
       moduleId: row.module_id,
@@ -53,7 +53,12 @@ export class ModuleInvitationsRepository {
     return this.drizzle.db
       .select()
       .from(moduleInvitations)
-      .where(and(eq(moduleInvitations.email, email), eq(moduleInvitations.status, 'pending')));
+      .where(
+        and(
+          eq(moduleInvitations.email, email),
+          eq(moduleInvitations.status, 'pending'),
+        ),
+      );
   }
 
   async create(values: {
@@ -64,7 +69,10 @@ export class ModuleInvitationsRepository {
     token: string;
     expiresAt: Date;
   }) {
-    const [row] = await this.drizzle.db.insert(moduleInvitations).values(values).returning();
+    const [row] = await this.drizzle.db
+      .insert(moduleInvitations)
+      .values(values)
+      .returning();
     return row;
   }
 

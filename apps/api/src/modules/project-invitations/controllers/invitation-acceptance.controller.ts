@@ -1,5 +1,13 @@
 // apps/api/src/modules/project-invitations/controllers/invitation-acceptance.controller.ts
-import { Controller, Get, NotFoundException, Param, Post, Req, UseGuards } from '@nestjs/common';
+import {
+  Controller,
+  Get,
+  NotFoundException,
+  Param,
+  Post,
+  Req,
+  UseGuards,
+} from '@nestjs/common';
 import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
 import { Request } from 'express';
 import type { AuthenticatedPrincipal } from '../../auth/jwt.strategy';
@@ -21,14 +29,20 @@ export class InvitationAcceptanceController {
     private readonly usersService: UsersService,
   ) {}
 
-  @ApiOperation({ summary: 'Preview an invitation without needing to be logged in' })
+  @ApiOperation({
+    summary: 'Preview an invitation without needing to be logged in',
+  })
   @Get(':token')
   async preview(@Param('token') token: string) {
-    const project = await this.projectInvitations.preview(token).catch(() => null);
-    
+    const project = await this.projectInvitations
+      .preview(token)
+      .catch(() => null);
+
     if (project) return { type: 'project', ...project };
 
-    const module = await this.moduleInvitations.preview(token).catch(() => null);
+    const module = await this.moduleInvitations
+      .preview(token)
+      .catch(() => null);
     if (module) return { type: 'module', ...module };
 
     throw new NotFoundException('Invitation not found');
@@ -38,13 +52,16 @@ export class InvitationAcceptanceController {
   @ApiBearerAuth()
   @UseGuards(JwtAuthGuard)
   @Post(':token/accept')
-  async accept(@Param('token') token: string, @Req() req: AuthenticatedRequest) {
+  async accept(
+    @Param('token') token: string,
+    @Req() req: AuthenticatedRequest,
+  ) {
     const user = await this.usersService.findByExternalAuthId(req.user.sub);
 
     const project = await this.projectInvitations
-        .accept(token, user.id, user.email)
-        .then((row) => ({ type: 'project', row }))
-        .catch(() => null);
+      .accept(token, user.id, user.email)
+      .then((row) => ({ type: 'project', row }))
+      .catch(() => null);
     if (project) return project;
 
     const module = await this.moduleInvitations

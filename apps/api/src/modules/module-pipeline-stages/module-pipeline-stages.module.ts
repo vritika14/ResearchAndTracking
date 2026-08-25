@@ -8,7 +8,12 @@ import { ModulePipelineStagesController } from './controllers/module-pipeline-st
 import { ModulePipelineStagesService } from './services/module-pipeline-stage.service';
 
 @Module({
-  imports: [EnumModule, MembershipsModule, UsersModule, ModuleCollaboratorsModule],
+  imports: [
+    EnumModule,
+    MembershipsModule,
+    UsersModule,
+    ModuleCollaboratorsModule,
+  ],
   controllers: [ModulePipelineStagesController],
   providers: [ModulePipelineStagesService],
 })

@@ -10,7 +10,13 @@ import { ModuleInvitationsRepository } from './repositories/module-invitations.r
 import { ModuleInvitationsService } from './services/module-invitations.service';
 
 @Module({
-  imports: [EnumModule, MembershipsModule, UsersModule, ProjectModulesModule, ModuleCollaboratorsModule],
+  imports: [
+    EnumModule,
+    MembershipsModule,
+    UsersModule,
+    ProjectModulesModule,
+    ModuleCollaboratorsModule,
+  ],
   controllers: [ModuleInvitationsController],
   providers: [ModuleInvitationsService, ModuleInvitationsRepository],
   exports: [ModuleInvitationsService],

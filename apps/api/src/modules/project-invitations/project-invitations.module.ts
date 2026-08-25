@@ -21,7 +21,11 @@ import { MyInvitationsController } from './controllers/my-invitations.controller
     ProjectCollaboratorsModule,
     ModuleInvitationsModule,
   ],
-  controllers: [ProjectInvitationsController, InvitationAcceptanceController, MyInvitationsController],
+  controllers: [
+    ProjectInvitationsController,
+    InvitationAcceptanceController,
+    MyInvitationsController,
+  ],
   providers: [ProjectInvitationsService, ProjectInvitationsRepository],
   exports: [ProjectInvitationsService],
 })

@@ -120,11 +120,12 @@ export class NotesService {
   ) {
     const visibilityValue = input.visibility ?? 'Private';
 
-    const [{ projectId, moduleId }, visibilityId, displayId] = await Promise.all([
-      this.resolveLinkage(tenantId, input),
-      this.resolveEnum('visibility', visibilityValue),
-      this.sequences.nextDisplayId(tenantId, 'note'),
-    ]);
+    const [{ projectId, moduleId }, visibilityId, displayId] =
+      await Promise.all([
+        this.resolveLinkage(tenantId, input),
+        this.resolveEnum('visibility', visibilityValue),
+        this.sequences.nextDisplayId(tenantId, 'note'),
+      ]);
 
     const note = await this.repository.create({
       tenantId,
@@ -238,9 +239,9 @@ export class NotesService {
     return this.delete(note.tenantId, noteId, callerUserId);
   }
 
-  private async withDisplayValues<
-    T extends { visibilityId: string | null },
-  >(rows: T[]) {
+  private async withDisplayValues<T extends { visibilityId: string | null }>(
+    rows: T[],
+  ) {
     const visibilityIds = rows
       .map((r) => r.visibilityId)
       .filter((id): id is string => id !== null);

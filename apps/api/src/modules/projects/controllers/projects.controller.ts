@@ -40,7 +40,7 @@ export class ProjectsController {
   @ApiOperation({
     summary: 'List active (non-archived) projects for a workspace',
   })
-  @UseGuards(JwtAuthGuard,TenantMemberGuard)
+  @UseGuards(JwtAuthGuard, TenantMemberGuard)
   @Get()
   async list(
     @Param('tenantId') tenantId: string,
@@ -51,7 +51,7 @@ export class ProjectsController {
   }
 
   @ApiOperation({ summary: 'Get a single project' })
-  @UseGuards(JwtAuthGuard,TenantMemberGuard,ProjectAccessGuard)
+  @UseGuards(JwtAuthGuard, TenantMemberGuard, ProjectAccessGuard)
   @Get(':projectId')
   async findOne(
     @Param('tenantId') tenantId: string,
@@ -64,7 +64,7 @@ export class ProjectsController {
 
   @ApiOperation({ summary: 'Create a project' })
   @ApiResponse({ status: 201 })
-  @UseGuards(JwtAuthGuard,TenantMemberGuard)
+  @UseGuards(JwtAuthGuard, TenantMemberGuard)
   @Post()
   async create(
     @Param('tenantId') tenantId: string,
@@ -76,7 +76,7 @@ export class ProjectsController {
   }
 
   @ApiOperation({ summary: 'Update a project' })
-  @UseGuards(JwtAuthGuard,TenantMemberGuard,ProjectAccessGuard)
+  @UseGuards(JwtAuthGuard, TenantMemberGuard, ProjectAccessGuard)
   @Patch(':projectId')
   async update(
     @Param('tenantId') tenantId: string,
@@ -89,7 +89,7 @@ export class ProjectsController {
   }
 
   @ApiOperation({ summary: 'Archive a project (auto-deleted after 14 days)' })
-  @UseGuards(JwtAuthGuard,TenantMemberGuard,ProjectAccessGuard)
+  @UseGuards(JwtAuthGuard, TenantMemberGuard, ProjectAccessGuard)
   @Delete(':projectId')
   async archive(
     @Param('tenantId') tenantId: string,

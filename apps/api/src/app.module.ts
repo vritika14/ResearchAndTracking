@@ -77,7 +77,7 @@ import { ProjectInvitationsModule } from './modules/project-invitations/project-
     NoteMembersModule,
     ProjectPipelineStagesModule,
     ModulePipelineStagesModule,
-    ProjectInvitationsModule
+    ProjectInvitationsModule,
   ],
   controllers: [AppController],
   providers: [AppService],

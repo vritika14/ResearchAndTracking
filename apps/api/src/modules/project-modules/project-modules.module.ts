@@ -22,7 +22,11 @@ import { MembershipsModule } from '../memberships/memberships.module';
     MembershipsModule,
   ],
   controllers: [ProjectModulesController, MyModulesController],
-  providers: [ProjectModulesService, ProjectModulesRepository, ModuleAccessGuard],
+  providers: [
+    ProjectModulesService,
+    ProjectModulesRepository,
+    ModuleAccessGuard,
+  ],
   exports: [ProjectModulesRepository],
 })
 export class ProjectModulesModule {}

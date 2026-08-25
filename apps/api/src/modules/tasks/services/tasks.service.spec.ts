@@ -90,7 +90,9 @@ describe('TasksService', () => {
     });
 
     it('derives projectId from an independent module rather than trusting the caller', async () => {
-      enumRepository.findByCategoryAndValue.mockResolvedValue({ id: 'enum-id' });
+      enumRepository.findByCategoryAndValue.mockResolvedValue({
+        id: 'enum-id',
+      });
       modulesRepository.findById.mockResolvedValue({
         id: 'module-1',
         projectId: null,
@@ -109,7 +111,9 @@ describe('TasksService', () => {
     });
 
     it('derives projectId from a project-scoped module', async () => {
-      enumRepository.findByCategoryAndValue.mockResolvedValue({ id: 'enum-id' });
+      enumRepository.findByCategoryAndValue.mockResolvedValue({
+        id: 'enum-id',
+      });
       modulesRepository.findById.mockResolvedValue({
         id: 'module-1',
         projectId: 'project-1',
@@ -122,7 +126,10 @@ describe('TasksService', () => {
       });
 
       expect(repository.create).toHaveBeenCalledWith(
-        expect.objectContaining({ projectId: 'project-1', moduleId: 'module-1' }),
+        expect.objectContaining({
+          projectId: 'project-1',
+          moduleId: 'module-1',
+        }),
       );
     });
   });
@@ -231,17 +238,35 @@ describe('TasksService', () => {
   describe('listForCaller', () => {
     it('combines tasks the caller created with tasks they are a member of, across tenants', async () => {
       repository.findByCreator.mockResolvedValue([
-        { id: 'task-own', createdBy: 'user-1', statusId: null, priorityId: null, visibilityId: null },
+        {
+          id: 'task-own',
+          createdBy: 'user-1',
+          statusId: null,
+          priorityId: null,
+          visibilityId: null,
+        },
       ]);
-      taskMembers.findTaskIdsByUser.mockResolvedValue(['task-own', 'task-shared']);
+      taskMembers.findTaskIdsByUser.mockResolvedValue([
+        'task-own',
+        'task-shared',
+      ]);
       repository.findByIds.mockResolvedValue([
-        { id: 'task-shared', createdBy: 'owner-2', statusId: null, priorityId: null, visibilityId: null },
+        {
+          id: 'task-shared',
+          createdBy: 'owner-2',
+          statusId: null,
+          priorityId: null,
+          visibilityId: null,
+        },
       ]);
 
       const result = await service.listForCaller('user-1');
 
       expect(repository.findByIds).toHaveBeenCalledWith(['task-shared']);
-      expect(result.map((task) => task.id).sort()).toEqual(['task-own', 'task-shared']);
+      expect(result.map((task) => task.id).sort()).toEqual([
+        'task-own',
+        'task-shared',
+      ]);
     });
   });
 
@@ -282,12 +307,12 @@ describe('TasksService', () => {
   describe('deleteForCaller', () => {
     it('throws NotFoundException when the task does not exist', async () => {
       repository.findByIdGlobal.mockResolvedValue(undefined);
-      await expect(
-        service.deleteForCaller('task-1', 'user-1'),
-      ).rejects.toThrow(NotFoundException);
+      await expect(service.deleteForCaller('task-1', 'user-1')).rejects.toThrow(
+        NotFoundException,
+      );
     });
 
-    it('deletes using the task\'s own tenant, not any tenant supplied by the caller', async () => {
+    it("deletes using the task's own tenant, not any tenant supplied by the caller", async () => {
       repository.findByIdGlobal.mockResolvedValue({
         id: 'task-1',
         tenantId: 'tenant-2',

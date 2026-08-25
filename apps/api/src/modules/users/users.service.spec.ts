@@ -6,14 +6,20 @@ import { ConfigService } from '@nestjs/config';
 describe('UsersService', () => {
   describe('search', () => {
     it('returns matching active users ordered by display name', async () => {
-      const limitMock = jest
-        .fn()
-        .mockResolvedValue([{ id: 'user-1', displayName: 'Ann Example', email: 'ann@example.com' }]);
+      const limitMock = jest.fn().mockResolvedValue([
+        {
+          id: 'user-1',
+          displayName: 'Ann Example',
+          email: 'ann@example.com',
+        },
+      ]);
       const orderByMock = jest.fn().mockReturnValue({ limit: limitMock });
       const whereMock = jest.fn().mockReturnValue({ orderBy: orderByMock });
       const fromMock = jest.fn().mockReturnValue({ where: whereMock });
       const selectMock = jest.fn().mockReturnValue({ from: fromMock });
-      const drizzle = { db: { select: selectMock } } as unknown as DrizzleService;
+      const drizzle = {
+        db: { select: selectMock },
+      } as unknown as DrizzleService;
 
       const service = new UsersService(
         drizzle,
@@ -32,7 +38,9 @@ describe('UsersService', () => {
 
     it('returns an empty array without querying for a blank query', async () => {
       const selectMock = jest.fn();
-      const drizzle = { db: { select: selectMock } } as unknown as DrizzleService;
+      const drizzle = {
+        db: { select: selectMock },
+      } as unknown as DrizzleService;
 
       const service = new UsersService(
         drizzle,
@@ -52,7 +60,9 @@ describe('UsersService', () => {
       const whereMock = jest.fn().mockReturnValue({ orderBy: orderByMock });
       const fromMock = jest.fn().mockReturnValue({ where: whereMock });
       const selectMock = jest.fn().mockReturnValue({ from: fromMock });
-      const drizzle = { db: { select: selectMock } } as unknown as DrizzleService;
+      const drizzle = {
+        db: { select: selectMock },
+      } as unknown as DrizzleService;
 
       const service = new UsersService(
         drizzle,
