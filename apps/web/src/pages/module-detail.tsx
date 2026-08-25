@@ -258,17 +258,20 @@ export default function ModuleDetailPage() {
             <CardTitle>Module collaborators</CardTitle>
           </CardHeader>
           <CardContent>
-            {module.projectId ? (
-              <p className="text-sm text-muted-foreground">
-                This module is visible to anyone who can see its linked project. Manage
-                collaborators from the project page instead.
-              </p>
-            ) : sameTenant ? (
-              <ModuleCollaboratorsManager
-                tenantId={tenantId}
-                moduleId={module.id}
-                members={membersQuery.data ?? []}
-              />
+            {sameTenant ? (
+              <div className="grid gap-4">
+                {module.projectId ? (
+                  <p className="text-sm text-muted-foreground">
+                    Project collaborators already inherit access. You can also invite someone directly to this module by email.
+                  </p>
+                ) : null}
+                <ModuleCollaboratorsManager
+                  tenantId={tenantId}
+                  moduleId={module.id}
+                  moduleTitle={module.title}
+                  members={membersQuery.data ?? []}
+                />
+              </div>
             ) : (
               <p className="text-sm text-muted-foreground">
                 This module was shared with you from another workspace. Only members of that

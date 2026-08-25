@@ -1,6 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 
-import { ApiError, apiClient, authenticatedJson, responseData } from "@/api/client";
+import { ApiError, apiClient, apiJson, authenticatedJson, responseData } from "@/api/client";
 
 /**
  * None of the API's controllers annotate their response bodies with
@@ -81,7 +81,10 @@ export interface ApiCollaborator {
   id: string;
   tenantId: string;
   userId: string;
+  roleId?: string | null;
   role: string | null;
+  displayName?: string | null;
+  email?: string | null;
   createdAt: string;
   updatedAt: string;
 }
@@ -142,6 +145,33 @@ export interface ApiMember {
   createdAt: string;
 }
 
+export type InvitationTarget = "project" | "module";
+
+export interface ApiInvitation {
+  id: string;
+  projectId?: string;
+  moduleId?: string;
+  email: string;
+  role: string;
+  invitedBy: string;
+  status: string;
+  expiresAt: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface CreatedInvitation {
+  invitation: ApiInvitation;
+  acceptanceToken: string;
+  emailSent?: boolean;
+}
+
+export interface InvitationPreview extends ApiInvitation {
+  type: InvitationTarget;
+  projectTitle?: string | null;
+  moduleTitle?: string | null;
+}
+
 export const apiKeys = {
   me: ["api", "me"] as const,
   workspaces: ["api", "workspaces"] as const,
@@ -154,12 +184,17 @@ export const apiKeys = {
     ["api", "tenant", tenantId, "projects", projectId] as const,
   projectCollaborators: (tenantId: string, projectId: string) =>
     ["api", "tenant", tenantId, "projects", projectId, "collaborators"] as const,
+  projectInvitations: (tenantId: string, projectId: string) =>
+    ["api", "tenant", tenantId, "projects", projectId, "invitations"] as const,
   modules: (tenantId: string, projectId?: string) =>
     ["api", "tenant", tenantId, "modules", projectId ?? "all"] as const,
   module: (tenantId: string, moduleId: string) =>
     ["api", "tenant", tenantId, "modules", "detail", moduleId] as const,
   moduleCollaborators: (tenantId: string, moduleId: string) =>
     ["api", "tenant", tenantId, "modules", moduleId, "collaborators"] as const,
+  moduleInvitations: (tenantId: string, moduleId: string) =>
+    ["api", "tenant", tenantId, "modules", moduleId, "invitations"] as const,
+  invitation: (token: string) => ["api", "invitations", token] as const,
   tasks: (tenantId: string, projectId?: string) =>
     ["api", "tenant", tenantId, "tasks", projectId ?? "all"] as const,
   task: (tenantId: string, taskId: string) =>
@@ -1272,6 +1307,108 @@ export function usePipelineStages(tenantId: string, enabled = true) {
           params: { query: { category: "project_pipeline_stage" } },
         }),
       ),
+  });
+}
+
+function invitationCollectionPath(
+  target: InvitationTarget,
+  tenantId: string,
+  entityId: string,
+) {
+  const collection = target === "project" ? "projects" : "modules";
+  return `/api/v1/tenant/${encodeURIComponent(tenantId)}/${collection}/${encodeURIComponent(entityId)}/invitations`;
+}
+
+function invitationQueryKey(target: InvitationTarget, tenantId: string, entityId: string) {
+  return target === "project"
+    ? apiKeys.projectInvitations(tenantId, entityId)
+    : apiKeys.moduleInvitations(tenantId, entityId);
+}
+
+export async function inviteCollaboratorByEmail(
+  target: InvitationTarget,
+  tenantId: string,
+  entityId: string,
+  email: string,
+) {
+  return apiJson<CreatedInvitation>(invitationCollectionPath(target, tenantId, entityId), {
+    method: "POST",
+    body: JSON.stringify({ email }),
+  });
+}
+
+export function useCollaboratorInvitations(
+  target: InvitationTarget,
+  tenantId: string,
+  entityId: string,
+  enabled = true,
+) {
+  return useQuery({
+    queryKey: invitationQueryKey(target, tenantId, entityId),
+    enabled: enabled && Boolean(tenantId && entityId),
+    queryFn: () =>
+      apiJson<ApiInvitation[]>(invitationCollectionPath(target, tenantId, entityId)),
+  });
+}
+
+export function useInviteCollaborator(
+  target: InvitationTarget,
+  tenantId: string,
+  entityId: string,
+) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (email: string) =>
+      inviteCollaboratorByEmail(target, tenantId, entityId, email),
+    onSuccess: async () => {
+      await queryClient.invalidateQueries({
+        queryKey: invitationQueryKey(target, tenantId, entityId),
+      });
+    },
+  });
+}
+
+export function useRevokeCollaboratorInvitation(
+  target: InvitationTarget,
+  tenantId: string,
+  entityId: string,
+) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (invitationId: string) =>
+      apiJson<ApiInvitation>(
+        `${invitationCollectionPath(target, tenantId, entityId)}/${encodeURIComponent(invitationId)}`,
+        { method: "DELETE" },
+      ),
+    onSuccess: async () => {
+      await queryClient.invalidateQueries({
+        queryKey: invitationQueryKey(target, tenantId, entityId),
+      });
+    },
+  });
+}
+
+export function useInvitationPreview(token: string) {
+  return useQuery({
+    queryKey: apiKeys.invitation(token),
+    enabled: Boolean(token),
+    retry: false,
+    queryFn: () =>
+      apiJson<InvitationPreview>(`/api/v1/invitations/${encodeURIComponent(token)}`),
+  });
+}
+
+export function useAcceptInvitation(token: string) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: () =>
+      apiJson<{ type: InvitationTarget; row: ApiInvitation }>(
+        `/api/v1/invitations/${encodeURIComponent(token)}/accept`,
+        { method: "POST" },
+      ),
+    onSuccess: async () => {
+      await queryClient.invalidateQueries();
+    },
   });
 }
 

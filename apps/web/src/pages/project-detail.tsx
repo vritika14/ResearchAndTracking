@@ -1,9 +1,8 @@
 import { useEffect, useMemo, useState, type FormEvent, type ReactNode } from "react";
-import { ArrowLeft, FolderKanban, Pencil, Save, Search, Trash2, Users, X } from "lucide-react";
+import { ArrowLeft, FolderKanban, Pencil, Save, Trash2, Users, X } from "lucide-react";
 import { Link, useNavigate, useParams, useSearchParams } from "react-router-dom";
 
 import {
-  useAddProjectCollaborator,
   useArchiveMyProject,
   useCurrentWorkspace,
   useMe,
@@ -17,7 +16,6 @@ import {
   useRemoveProjectCollaborator,
   useTasks,
   useUpdateMyProject,
-  useUserSearch,
   type ApiModule,
   type ApiNote,
   type ApiProject,
@@ -25,6 +23,7 @@ import {
   type Membership,
 } from "@/api/hooks";
 import { EmptyState } from "@/components/shared/empty-state";
+import { InvitationPanel } from "@/components/sharing/invitation-panel";
 import { ErrorState } from "@/components/shared/error-state";
 import { LoadingState } from "@/components/shared/loading-state";
 import { StatusBadge } from "@/components/shared/status-badge";
@@ -234,17 +233,18 @@ function ProjectCollaborators({
   projectId,
   ownerUserId,
   members,
+  entityTitle,
+  canManage,
 }: {
   tenantId: string;
   projectId: string;
   ownerUserId: string | undefined;
   members: Membership[];
+  entityTitle: string;
+  canManage: boolean;
 }) {
   const collaboratorsQuery = useProjectCollaborators(tenantId, projectId);
-  const addCollaborator = useAddProjectCollaborator(tenantId, projectId);
   const removeCollaborator = useRemoveProjectCollaborator(tenantId, projectId);
-  const [search, setSearch] = useState("");
-  const [pickerOpen, setPickerOpen] = useState(false);
 
   const memberByUserId = useMemo(() => {
     const map = new Map<string, Membership>();
@@ -252,26 +252,22 @@ function ProjectCollaborators({
     return map;
   }, [members]);
 
-  const collaboratorUserIds = useMemo(
-    () => new Set((collaboratorsQuery.data ?? []).map((collaborator) => collaborator.userId)),
-    [collaboratorsQuery.data],
-  );
-
-  const userSearchQuery = useUserSearch(search, pickerOpen);
-  const matchingMembers = useMemo(() => {
-    return (userSearchQuery.data ?? []).filter(
-      (user) => user.id !== ownerUserId && !collaboratorUserIds.has(user.id),
-    );
-  }, [collaboratorUserIds, ownerUserId, userSearchQuery.data]);
-
   if (collaboratorsQuery.isPending) {
     return <LoadingState title="Loading collaborators" className="min-h-32" />;
   }
 
+  const collaborators = collaboratorsQuery.data ?? [];
+  const ownerIsReturned = collaborators.some(
+    (collaborator) => collaborator.userId === ownerUserId,
+  );
+  const hasAdditionalCollaborators = collaborators.some(
+    (collaborator) => collaborator.userId !== ownerUserId,
+  );
+
   return (
     <div className="flex flex-col gap-4">
       <div className="flex flex-col gap-2">
-        {ownerUserId && memberByUserId.has(ownerUserId) ? (
+        {!ownerIsReturned && ownerUserId && memberByUserId.has(ownerUserId) ? (
           <div className="flex items-center justify-between gap-3 rounded-md border border-border bg-card p-3">
             <span className="min-w-0">
               <span className="block truncate text-sm font-medium">
@@ -284,8 +280,11 @@ function ProjectCollaborators({
             <Badge variant="outline">Owner</Badge>
           </div>
         ) : null}
-        {(collaboratorsQuery.data ?? []).map((collaborator) => {
+        {collaborators.map((collaborator) => {
           const member = memberByUserId.get(collaborator.userId);
+          const displayName =
+            collaborator.displayName ?? member?.displayName ?? "Unknown collaborator";
+          const collaboratorEmail = collaborator.email ?? member?.email;
           return (
             <div
               key={collaborator.id}
@@ -293,88 +292,51 @@ function ProjectCollaborators({
             >
               <span className="min-w-0">
                 <span className="block truncate text-sm font-medium">
-                  {member?.displayName ?? collaborator.userId}
+                  {displayName}
                 </span>
-                {member ? (
+                {collaboratorEmail ? (
                   <span className="block truncate text-xs text-muted-foreground">
-                    {member.email}
+                    {collaboratorEmail}
                   </span>
                 ) : null}
               </span>
               <div className="flex items-center gap-2">
                 <Badge variant="outline">{collaborator.role ?? "Collaborator"}</Badge>
-                <button
-                  type="button"
-                  aria-label={`Remove ${member?.displayName ?? "collaborator"}`}
-                  onClick={() => removeCollaborator.mutate(collaborator.userId)}
-                  className="rounded-full p-1 text-muted-foreground hover:text-destructive focus:outline-none focus:ring-1 focus:ring-ring"
-                >
-                  <X className="h-3.5 w-3.5" />
-                </button>
+                {canManage && collaborator.userId !== ownerUserId ? (
+                  <button
+                    type="button"
+                    aria-label={`Remove ${displayName}`}
+                    onClick={() => removeCollaborator.mutate(collaborator.userId)}
+                    className="rounded-full p-1 text-muted-foreground hover:text-destructive focus:outline-none focus:ring-1 focus:ring-ring"
+                  >
+                    <X className="h-3.5 w-3.5" />
+                  </button>
+                ) : null}
               </div>
             </div>
           );
         })}
-        {(collaboratorsQuery.data ?? []).length === 0 ? (
-          <p className="text-sm text-muted-foreground">No collaborators added yet.</p>
+        {!hasAdditionalCollaborators ? (
+          <p className="text-sm text-muted-foreground">No additional collaborators yet.</p>
         ) : null}
       </div>
 
-      <div
-        className="relative"
-        onBlur={(event) => {
-          if (!event.currentTarget.contains(event.relatedTarget)) setPickerOpen(false);
-        }}
-      >
-        <Search className="pointer-events-none absolute left-3 top-2.5 h-4 w-4 text-muted-foreground" />
-        <Input
-          role="combobox"
-          aria-expanded={pickerOpen}
-          aria-controls="project-detail-collaborator-options"
-          aria-autocomplete="list"
-          value={search}
-          onFocus={() => setPickerOpen(true)}
-          onChange={(event) => {
-            setSearch(event.target.value);
-            setPickerOpen(true);
-          }}
-          placeholder="Type a name or email to search all users"
-          className="pl-9"
-          autoComplete="off"
+      {canManage ? (
+        <InvitationPanel
+          target="project"
+          tenantId={tenantId}
+          entityId={projectId}
+          entityTitle={entityTitle}
+          excludedUserIds={[
+            ...(ownerUserId ? [ownerUserId] : []),
+            ...collaborators.map((collaborator) => collaborator.userId),
+          ]}
         />
-        {pickerOpen && search.trim() ? (
-          <div
-            id="project-detail-collaborator-options"
-            role="listbox"
-            className="absolute z-50 mt-1 max-h-56 w-full overflow-y-auto rounded-md border bg-popover p-1 text-popover-foreground shadow-lg"
-          >
-            {userSearchQuery.isPending ? (
-              <p className="px-3 py-2 text-sm text-muted-foreground">Searching…</p>
-            ) : matchingMembers.length ? (
-              matchingMembers.map((member) => (
-                <button
-                  key={member.id}
-                  type="button"
-                  role="option"
-                  aria-selected="false"
-                  className="flex w-full items-center justify-between gap-3 rounded-sm px-3 py-2 text-left hover:bg-accent focus:bg-accent focus:outline-none"
-                  onClick={() => {
-                    addCollaborator.mutate({ userId: member.id, role: "Collaborator" });
-                    setSearch("");
-                  }}
-                >
-                  <span className="min-w-0">
-                    <span className="block truncate text-sm font-medium">{member.displayName}</span>
-                    <span className="block truncate text-xs text-muted-foreground">{member.email}</span>
-                  </span>
-                </button>
-              ))
-            ) : (
-              <p className="px-3 py-2 text-sm text-muted-foreground">No matching users.</p>
-            )}
-          </div>
-        ) : null}
-      </div>
+      ) : (
+        <p className="border-t pt-4 text-sm text-muted-foreground">
+          Only the project owner can invite or remove collaborators.
+        </p>
+      )}
     </div>
   );
 }
@@ -737,6 +699,8 @@ export default function ProjectDetailPage() {
                   projectId={project.id}
                   ownerUserId={project.userId}
                   members={membersQuery.data ?? []}
+                  entityTitle={project.title}
+                  canManage={me.data?.id === project.userId}
                 />
               ) : (
                 <p className="text-sm text-muted-foreground">

@@ -19,6 +19,6 @@ import { MembershipsModule } from '../memberships/memberships.module';
   ],
   controllers: [ModuleCollaboratorsController],
   providers: [ModuleCollaboratorsService, ModuleCollaboratorsRepository],
-  exports: [ModuleCollaboratorsRepository],
+  exports: [ModuleCollaboratorsRepository, ModuleCollaboratorsService],
 })
 export class ModuleCollaboratorsModule {}

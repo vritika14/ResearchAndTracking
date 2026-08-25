@@ -73,9 +73,10 @@ export class ProjectInvitationsController {
   }
 
   @ApiOperation({
-    summary: 'Invite someone to collaborate on this project (owner only)',
+    summary: 'Invite and email a project collaborator (owner only)',
   })
   @ApiResponse({ status: 201 })
+  @ApiResponse({ status: 503, description: 'Email delivery unavailable' })
   @UseGuards(JwtAuthGuard, TenantMemberGuard)
   @Post()
   async invite(

@@ -25,8 +25,18 @@ export function setApiAccessToken(token: string | undefined) {
 export const apiClient = createClient<paths>({ baseUrl: apiBaseUrl });
 
 export async function authenticatedJson<T>(path: string): Promise<T> {
+  return apiJson<T>(path);
+}
+
+export async function apiJson<T>(path: string, init: RequestInit = {}): Promise<T> {
+  const headers = new Headers(init.headers);
+  if (accessToken) headers.set("Authorization", `Bearer ${accessToken}`);
+  if (init.body !== undefined && !headers.has("Content-Type")) {
+    headers.set("Content-Type", "application/json");
+  }
   const response = await fetch(`${apiBaseUrl.replace(/\/$/, "")}${path}`, {
-    headers: accessToken ? { Authorization: `Bearer ${accessToken}` } : undefined,
+    ...init,
+    headers,
   });
   if (!response.ok) {
     const error = (await response.json().catch(() => undefined)) as
@@ -37,6 +47,7 @@ export async function authenticatedJson<T>(path: string): Promise<T> {
       error?.message ?? error?.error ?? `Request failed with status ${response.status}`,
     );
   }
+  if (response.status === 204) return undefined as T;
   return response.json() as Promise<T>;
 }
 

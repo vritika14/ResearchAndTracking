@@ -21,7 +21,7 @@ import type { AuthenticatedPrincipal } from '../../auth/jwt.strategy';
 import { JwtAuthGuard } from '../../auth/jwt-auth.guard';
 import { TenantMemberGuard } from '../../memberships/policies/tenant-member.guard';
 import { UsersService } from '../../users/users.service';
-import { ModuleCollaboratorsRepository } from '../../module-collaborators/repositories/module-collaborators.repository';
+import { ModuleCollaboratorsService } from '../../module-collaborators/services/module-collaborators.service';
 import { EnumRepository } from '../../enum/repositories/enum.repository';
 import { InviteCollaboratorDto } from '../dto/invite-collaborator.dto';
 import { ModuleInvitationsService } from '../services/module-invitations.service';
@@ -37,7 +37,7 @@ export class ModuleInvitationsController {
   constructor(
     private readonly service: ModuleInvitationsService,
     private readonly usersService: UsersService,
-    private readonly moduleCollaboratorsRepository: ModuleCollaboratorsRepository,
+    private readonly moduleCollaboratorsService: ModuleCollaboratorsService,
     private readonly enumRepository: EnumRepository,
   ) {}
 
@@ -48,7 +48,7 @@ export class ModuleInvitationsController {
   ) {
     const user = await this.usersService.findByExternalAuthId(req.user.sub);
     const membership =
-      await this.moduleCollaboratorsRepository.findByModuleAndUser(
+      await this.moduleCollaboratorsService.ensureOwnerMembership(
         tenantId,
         moduleId,
         user.id,
@@ -85,9 +85,10 @@ export class ModuleInvitationsController {
   }
 
   @ApiOperation({
-    summary: 'Invite someone to collaborate on this module (owner only)',
+    summary: 'Invite and email a module collaborator (owner only)',
   })
   @ApiResponse({ status: 201 })
+  @ApiResponse({ status: 503, description: 'Email delivery unavailable' })
   @UseGuards(JwtAuthGuard, TenantMemberGuard)
   @Post()
   async invite(

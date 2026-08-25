@@ -1,8 +1,6 @@
-import { useEffect, useMemo, useState, type FormEvent, type ReactNode } from "react";
-import { Search, X } from "lucide-react";
+import { useEffect, useState, type FormEvent, type ReactNode } from "react";
 
-import { useUserSearch, type ApiPipelineStage, type ApiUserSearchResult } from "@/api/hooks";
-import { Badge } from "@/components/ui/badge";
+import { type ApiPipelineStage } from "@/api/hooks";
 import { StageListBuilder } from "@/components/pipeline/stage-list-builder";
 import { Button } from "@/components/ui/button";
 import { DatePickerInput } from "@/components/ui/date-picker-input";
@@ -40,14 +38,12 @@ export interface NewProjectInput {
   dueDate: string;
   totalBudget: string;
   targetJournals: string;
-  collaboratorUserIds: string[];
 }
 
 interface NewProjectDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   onCreate: (project: NewProjectInput) => void;
-  currentUserId: string;
   pipelineStages: ApiPipelineStage[];
 }
 
@@ -63,7 +59,6 @@ const INITIAL_FORM: NewProjectInput = {
   dueDate: "",
   totalBudget: "",
   targetJournals: "",
-  collaboratorUserIds: [],
 };
 
 function FormField({ label, htmlFor, required, children }: {
@@ -87,13 +82,9 @@ export function NewProjectDialog({
   open,
   onOpenChange,
   onCreate,
-  currentUserId,
   pipelineStages,
 }: NewProjectDialogProps) {
   const [form, setForm] = useState<NewProjectInput>(INITIAL_FORM);
-  const [memberSearch, setMemberSearch] = useState("");
-  const [memberPickerOpen, setMemberPickerOpen] = useState(false);
-  const [selectedMembers, setSelectedMembers] = useState<ApiUserSearchResult[]>([]);
   const [stagesInitialized, setStagesInitialized] = useState(false);
 
   useEffect(() => {
@@ -109,19 +100,8 @@ export function NewProjectDialog({
     setStagesInitialized(true);
   }, [open, pipelineStages, stagesInitialized]);
 
-  const userSearchQuery = useUserSearch(memberSearch, memberPickerOpen);
-  const matchingMembers = useMemo(() => {
-    const selectedIds = new Set(selectedMembers.map((member) => member.id));
-    return (userSearchQuery.data ?? []).filter(
-      (member) => member.id !== currentUserId && !selectedIds.has(member.id),
-    );
-  }, [currentUserId, userSearchQuery.data, selectedMembers]);
-
   function resetForm() {
     setForm(INITIAL_FORM);
-    setMemberSearch("");
-    setMemberPickerOpen(false);
-    setSelectedMembers([]);
     setStagesInitialized(false);
   }
 
@@ -139,7 +119,6 @@ export function NewProjectDialog({
       researchArea: form.researchArea.trim(),
       targetJournals: form.targetJournals.trim(),
       pipelineStage: form.pipelineStage || form.pipelineStages[0] || "",
-      collaboratorUserIds: selectedMembers.map((member) => member.id),
     });
     resetForm();
     onOpenChange(false);
@@ -194,104 +173,6 @@ export function NewProjectDialog({
                 placeholder="e.g. Structural biology"
               />
             </FormField>
-
-            <div className="sm:col-span-2">
-              <FormField label="Collaborators" htmlFor="project-members">
-                <div
-                  className="relative"
-                  onBlur={(event) => {
-                    if (!event.currentTarget.contains(event.relatedTarget)) {
-                      setMemberPickerOpen(false);
-                    }
-                  }}
-                >
-                  <Search className="pointer-events-none absolute left-3 top-2.5 h-4 w-4 text-muted-foreground" />
-                  <Input
-                    id="project-members"
-                    role="combobox"
-                    aria-expanded={memberPickerOpen}
-                    aria-controls="project-member-options"
-                    aria-autocomplete="list"
-                    value={memberSearch}
-                    onFocus={() => setMemberPickerOpen(true)}
-                    onChange={(event) => {
-                      setMemberSearch(event.target.value);
-                      setMemberPickerOpen(true);
-                    }}
-                    placeholder="Type a name or email to search all users"
-                    className="pl-9"
-                    autoComplete="off"
-                  />
-                  {memberPickerOpen && memberSearch.trim() ? (
-                    <div
-                      id="project-member-options"
-                      role="listbox"
-                      className="absolute z-50 mt-1 max-h-56 w-full overflow-y-auto rounded-md border bg-popover p-1 text-popover-foreground shadow-lg"
-                    >
-                      {userSearchQuery.isPending ? (
-                        <p className="px-3 py-2 text-sm text-muted-foreground">
-                          Searching…
-                        </p>
-                      ) : matchingMembers.length ? (
-                        matchingMembers.map((member) => (
-                          <button
-                            key={member.id}
-                            type="button"
-                            role="option"
-                            aria-selected="false"
-                            className="flex w-full items-center justify-between gap-3 rounded-sm px-3 py-2 text-left hover:bg-accent focus:bg-accent focus:outline-none"
-                            onClick={() => {
-                              setSelectedMembers((current) => [
-                                ...current,
-                                member,
-                              ]);
-                              setMemberSearch("");
-                            }}
-                          >
-                            <span className="min-w-0">
-                              <span className="block truncate text-sm font-medium">
-                                {member.displayName}
-                              </span>
-                              <span className="block truncate text-xs text-muted-foreground">
-                                {member.email}
-                              </span>
-                            </span>
-                          </button>
-                        ))
-                      ) : (
-                        <p className="px-3 py-2 text-sm text-muted-foreground">
-                          No matching users.
-                        </p>
-                      )}
-                    </div>
-                  ) : null}
-                </div>
-                {selectedMembers.length ? (
-                  <div className="mt-2 flex flex-wrap gap-2" aria-label="Selected project members">
-                    {selectedMembers.map((member) => (
-                      <Badge key={member.id} variant="secondary" className="gap-1.5 py-1">
-                        {member.displayName}
-                        <button
-                          type="button"
-                          aria-label={`Remove ${member.displayName}`}
-                          onClick={() =>
-                            setSelectedMembers((current) =>
-                              current.filter((item) => item.id !== member.id),
-                            )
-                          }
-                          className="rounded-full hover:text-destructive focus:outline-none focus:ring-1 focus:ring-ring"
-                        >
-                          <X className="h-3 w-3" />
-                        </button>
-                      </Badge>
-                    ))}
-                  </div>
-                ) : null}
-                <p className="mt-1 text-xs text-muted-foreground">
-                  Added as collaborators once the project is created. You're automatically the owner.
-                </p>
-              </FormField>
-            </div>
 
             <FormField label="Importance" htmlFor="project-priority">
               <Select
@@ -400,6 +281,10 @@ export function NewProjectDialog({
               </FormField>
             </div>
           </div>
+
+          <p className="rounded-lg border border-dashed bg-muted/30 p-3 text-xs text-muted-foreground">
+            After creating the project, open it to invite collaborators by email using a secure acceptance link.
+          </p>
 
           <DialogFooter className="border-t pt-4">
             <DialogClose asChild><Button type="button" variant="outline">Cancel</Button></DialogClose>

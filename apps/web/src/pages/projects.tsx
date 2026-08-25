@@ -2,12 +2,9 @@ import { useMemo, useState } from "react";
 import { ChevronRight, FolderKanban, Pencil, Trash2 } from "lucide-react";
 import { Link } from "react-router-dom";
 
-import { apiClient } from "@/api/client";
 import {
-  apiKeys,
   useArchiveMyProject,
   useCurrentWorkspace,
-  useMe,
   useModules,
   useMyProjects,
   useNotes,
@@ -16,7 +13,6 @@ import {
   useTasks,
   type ApiProject,
 } from "@/api/hooks";
-import { useQueryClient } from "@tanstack/react-query";
 import { ColumnVisibilityMenu } from "@/components/dashboard/column-visibility-menu";
 import { LoadingState } from "@/components/shared/loading-state";
 import { ErrorState } from "@/components/shared/error-state";
@@ -194,7 +190,6 @@ function sortProjects(rows: ApiProject[], sortBy: SortOption, stageOrder: Map<st
 export default function ProjectsPage() {
   const workspace = useCurrentWorkspace();
   const tenantId = workspace.data?.id ?? "";
-  const queryClient = useQueryClient();
 
   // Projects are tenant-agnostic — a project shared with the caller from
   // another workspace must still show up here (see MyProjectsController on
@@ -231,7 +226,6 @@ export default function ProjectsPage() {
   )
     .map((column) => column.width)
     .join(" ");
-  const me = useMe();
 
   function toggleExpanded(id: string) {
     setExpandedId((prev) => (prev === id ? null : id));
@@ -303,7 +297,7 @@ export default function ProjectsPage() {
   async function handleCreateProject(input: NewProjectInput) {
     const firstPipelineStage = [...(pipelineStagesQuery.data ?? [])]
       .sort((a, b) => a.sortOrder - b.sortOrder)[0]?.value;
-    const project = await createProject.mutateAsync({
+    await createProject.mutateAsync({
       title: input.title,
       description: input.description || undefined,
       researchArea: input.researchArea || undefined,
@@ -317,22 +311,6 @@ export default function ProjectsPage() {
       targetJournals: input.targetJournals || undefined,
     });
 
-    await Promise.all(
-      input.collaboratorUserIds.map((userId) =>
-        apiClient.POST(
-          "/api/v1/tenant/{tenantId}/projects/{projectId}/collaborators",
-          {
-            params: { path: { tenantId, projectId: project.id } },
-            body: { userId, role: "Collaborator" },
-          },
-        ),
-      ),
-    );
-    if (input.collaboratorUserIds.length > 0) {
-      await queryClient.invalidateQueries({
-        queryKey: apiKeys.projectCollaborators(tenantId, project.id),
-      });
-    }
   }
 
   async function handleDeleteProject(project: ApiProject) {
@@ -375,7 +353,6 @@ export default function ProjectsPage() {
         open={isNewProjectOpen}
         onOpenChange={setIsNewProjectOpen}
         onCreate={(input) => void handleCreateProject(input)}
-        currentUserId={me.data?.id ?? ""}
         pipelineStages={pipelineStagesQuery.data ?? []}
       />
 

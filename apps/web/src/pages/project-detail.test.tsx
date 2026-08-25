@@ -75,10 +75,12 @@ vi.mock("@/api/hooks", () => ({
   useNotes: () => ({ data: [] }),
   useProjectPipelineStages: () => ({ data: fixtures.pipelineStages }),
   usePipelineStages: () => ({ data: fixtures.pipelineStages }),
-  useUserSearch: () => ({ data: [], isPending: false }),
   useProjectCollaborators: () => ({ data: [], isPending: false }),
-  useAddProjectCollaborator: () => ({ mutate: vi.fn() }),
   useRemoveProjectCollaborator: () => ({ mutate: vi.fn() }),
+  useCollaboratorInvitations: () => ({ data: [], isPending: false }),
+  useInviteCollaborator: () => ({ mutateAsync: vi.fn(), isPending: false, isError: false }),
+  useRevokeCollaboratorInvitation: () => ({ mutate: vi.fn(), isPending: false }),
+  useUserSearch: () => ({ data: [], isPending: false, isError: false }),
 }));
 
 describe("ProjectDetailPage", () => {

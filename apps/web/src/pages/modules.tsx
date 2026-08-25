@@ -1,8 +1,7 @@
 import { useCallback, useMemo, useState } from "react";
-import { Archive, Boxes, Pencil } from "lucide-react";
+import { Archive, Boxes, Pencil, UserPlus } from "lucide-react";
 import { Link } from "react-router-dom";
 
-import { apiClient } from "@/api/client";
 import {
   useArchiveMyModule,
   useCreateModule,
@@ -15,11 +14,19 @@ import {
 } from "@/api/hooks";
 import { ColumnVisibilityMenu } from "@/components/dashboard/column-visibility-menu";
 import { ModuleDialog, type ModuleFormInput } from "@/components/modules/module-dialog";
+import { ModuleCollaboratorsManager } from "@/components/modules/module-collaborators";
 import { ErrorState } from "@/components/shared/error-state";
 import { LoadingState } from "@/components/shared/loading-state";
 import { StatusBadge } from "@/components/shared/status-badge";
 import { PageHeading } from "@/components/typography/heading";
 import { Button } from "@/components/ui/button";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import {
   Select,
@@ -55,9 +62,10 @@ export default function ModulesPage() {
   const projectsQuery = useProjects(tenantId);
   const [isNewModuleOpen, setIsNewModuleOpen] = useState(false);
   const [editingModule, setEditingModule] = useState<ApiModule | null>(null);
+  const [sharingModule, setSharingModule] = useState<ApiModule | null>(null);
   const workspaceMembers = useMembers(
     tenantId,
-    isNewModuleOpen || editingModule !== null,
+    isNewModuleOpen || editingModule !== null || sharingModule !== null,
   );
 
   const createModule = useCreateModule(tenantId);
@@ -102,7 +110,7 @@ export default function ModulesPage() {
   const hasActiveFilters = search !== "" || status !== "All";
 
   async function handleCreateModule(input: ModuleFormInput) {
-    const module = await createModule.mutateAsync({
+    await createModule.mutateAsync({
       title: input.title,
       description: input.description || undefined,
       projectId: input.projectId ?? undefined,
@@ -113,14 +121,6 @@ export default function ModulesPage() {
       assignedToUserId: input.assignedToUserId ?? undefined,
     });
 
-    await Promise.all(
-      input.collaboratorUserIds.map((userId) =>
-        apiClient.POST("/api/v1/tenant/{tenantId}/modules/{moduleId}/collaborators", {
-          params: { path: { tenantId, moduleId: module.id } },
-          body: { userId, role: "Collaborator" },
-        }),
-      ),
-    );
   }
 
   async function handleUpdateModule(input: ModuleFormInput) {
@@ -145,6 +145,7 @@ export default function ModulesPage() {
     }
     await archiveModule.mutateAsync(module.id);
     setEditingModule((current) => (current?.id === module.id ? null : current));
+    setSharingModule((current) => (current?.id === module.id ? null : current));
   }
 
   if (workspace.isPending || modulesQuery.isPending) {
@@ -190,6 +191,35 @@ export default function ModulesPage() {
         module={editingModule}
         onSave={(input) => void handleUpdateModule(input)}
       />
+      <Dialog
+        open={sharingModule !== null}
+        onOpenChange={(open) => {
+          if (!open) setSharingModule(null);
+        }}
+      >
+        <DialogContent className="max-h-[85vh] overflow-y-auto sm:max-w-xl">
+          <DialogHeader>
+            <DialogTitle>Module collaborators</DialogTitle>
+            <DialogDescription>
+              Invite collaborators to {sharingModule?.title ?? "this module"} by email and manage pending access.
+            </DialogDescription>
+          </DialogHeader>
+          {sharingModule ? (
+            sharingModule.tenantId === tenantId ? (
+              <ModuleCollaboratorsManager
+                tenantId={tenantId}
+                moduleId={sharingModule.id}
+                moduleTitle={sharingModule.title}
+                members={workspaceMembers.data ?? []}
+              />
+            ) : (
+              <p className="text-sm text-muted-foreground">
+                This module belongs to another workspace. Only its owner can manage collaborators.
+              </p>
+            )
+          ) : null}
+        </DialogContent>
+      </Dialog>
 
       <div className="surface-toolbar flex flex-wrap items-center gap-3 border-violet-200/70 bg-violet-50/40 dark:border-violet-900/50 dark:bg-violet-950/10">
         <Input
@@ -298,6 +328,17 @@ export default function ModulesPage() {
                   {columns.isColumnVisible("actions") ? (
                     <TableCell>
                       <div className="flex justify-end gap-1">
+                        {module.tenantId === tenantId ? (
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="icon"
+                            aria-label={`Manage collaborators for ${module.title}`}
+                            onClick={() => setSharingModule(module)}
+                          >
+                            <UserPlus />
+                          </Button>
+                        ) : null}
                         <Button
                           type="button"
                           variant="ghost"
