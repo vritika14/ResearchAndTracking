@@ -38,11 +38,12 @@ export class ProjectModulesService {
         );
       return Boolean(projectMembership);
     }
-    const moduleMembership = await this.collaboratorsRepository.findByModuleAndUser(
-      tenantId,
-      module.id,
-      callerUserId,
-    );
+    const moduleMembership =
+      await this.collaboratorsRepository.findByModuleAndUser(
+        tenantId,
+        module.id,
+        callerUserId,
+      );
     return Boolean(moduleMembership);
   }
 
@@ -111,16 +112,22 @@ export class ProjectModulesService {
       tag?: string;
       status?: string;
       pipelineStage?: string;
+      pipelineStages?: string[];
       assignedToUserId?: string;
     },
   ) {
     const tagId = await this.resolveEnum('module_type', input.tag);
     const statusId = await this.resolveEnum('project_status', input.status);
-    const pipelineStageId = await this.resolveEnum('module_pipeline_stage', input.pipelineStage);
-    const ownerRoleId = input.projectId ? undefined : await this.resolveEnum('project_role', 'Owner');
+    const pipelineStages = normalizePipelineStages(input.pipelineStages);
+    const pipelineStageId = pipelineStages.length
+      ? undefined
+      : await this.resolveEnum('module_pipeline_stage', input.pipelineStage);
+    const ownerRoleId = input.projectId
+      ? undefined
+      : await this.resolveEnum('project_role', 'Owner');
     const displayId = await this.sequences.nextDisplayId(tenantId, 'module');
-  
-    const module = await this.repository.create({
+
+    const createValues = {
       projectId: input.projectId,
       tenantId,
       title: input.title,
@@ -130,15 +137,26 @@ export class ProjectModulesService {
       pipelineStageId,
       assignedToUserId: input.assignedToUserId,
       displayId,
-    });
-  
+    };
+    const module = pipelineStages.length
+      ? await this.repository.create(
+          createValues,
+          pipelineStages,
+          pipelineStages.includes(input.pipelineStage ?? '')
+            ? input.pipelineStage
+            : pipelineStages[0],
+        )
+      : await this.repository.create(createValues);
+
     if (!module) {
       throw new NotFoundException('Failed to create module');
     }
-  
+
     if (!input.projectId) {
       if (!ownerRoleId) {
-        throw new NotFoundException('Owner role is not configured in the enum table');
+        throw new NotFoundException(
+          'Owner role is not configured in the enum table',
+        );
       }
       await this.collaboratorsRepository.create({
         tenantId,
@@ -147,7 +165,7 @@ export class ProjectModulesService {
         roleId: ownerRoleId,
       });
     }
-  
+
     const [shaped] = await this.withDisplayValues([module], callerUserId);
     return shaped;
   }
@@ -166,17 +184,17 @@ export class ProjectModulesService {
     }>,
   ) {
     await this.findOne(tenantId, moduleId, callerUserId);
-  
+
     const [tagId, statusId, pipelineStageId] = await Promise.all([
       input.tag ? this.resolveEnum('module_type', input.tag) : undefined,
       input.status
         ? this.resolveEnum('project_status', input.status)
         : undefined,
       input.pipelineStage
-        ? this.resolveEnum('module_pipeline_stage', input.pipelineStage)
+        ? this.resolveModulePipelineStage(moduleId, input.pipelineStage)
         : undefined,
     ]);
-  
+
     const module = await this.repository.update(tenantId, moduleId, {
       title: input.title,
       description: input.description,
@@ -185,11 +203,11 @@ export class ProjectModulesService {
       pipelineStageId,
       assignedToUserId: input.assignedToUserId,
     });
-  
+
     if (!module) {
       throw new NotFoundException('Module not found');
     }
-  
+
     const [shaped] = await this.withDisplayValues([module], callerUserId);
     return shaped;
   }
@@ -248,20 +266,27 @@ export class ProjectModulesService {
   }
 
   private async withDisplayValues<
-  T extends { id: string; tagId: string | null; statusId: string | null; pipelineStageId: string | null },
->(rows: T[], _callerUserId: string) {
-  const enumIds = rows
-    .flatMap((r) => [r.tagId, r.statusId, r.pipelineStageId])
-    .filter((id): id is string => id !== null);
-  const valuesById = await this.enumRepository.findValuesByIds(enumIds);
+    T extends {
+      id: string;
+      tagId: string | null;
+      statusId: string | null;
+      pipelineStageId: string | null;
+    },
+  >(rows: T[], _callerUserId: string) {
+    const enumIds = rows
+      .flatMap((row) => [row.tagId, row.statusId, row.pipelineStageId])
+      .filter((id): id is string => id !== null);
+    const valuesById = await this.enumRepository.findValuesByIds(enumIds);
 
-  return rows.map(({ tagId, statusId, pipelineStageId, ...rest }) => ({
-    ...rest,
-    tag: tagId ? (valuesById.get(tagId) ?? null) : null,
-    status: statusId ? (valuesById.get(statusId) ?? null) : null,
-    pipelineStage: pipelineStageId ? (valuesById.get(pipelineStageId) ?? null) : null,
-  }));
-}
+    return rows.map(({ tagId, statusId, pipelineStageId, ...rest }) => ({
+      ...rest,
+      tag: tagId ? (valuesById.get(tagId) ?? null) : null,
+      status: statusId ? (valuesById.get(statusId) ?? null) : null,
+      pipelineStage: pipelineStageId
+        ? (valuesById.get(pipelineStageId) ?? null)
+        : null,
+    }));
+  }
 
   private async resolveEnum(
     category: string,
@@ -277,4 +302,23 @@ export class ProjectModulesService {
     }
     return match.id;
   }
+
+  private async resolveModulePipelineStage(moduleId: string, value: string) {
+    const match = await this.enumRepository.findPipelineStageForModuleByValue(
+      moduleId,
+      value,
+    );
+    if (!match) {
+      throw new NotFoundException(
+        `Unknown module_pipeline_stage value: "${value}"`,
+      );
+    }
+    return match.id;
+  }
+}
+
+function normalizePipelineStages(stages?: string[]) {
+  return [
+    ...new Set((stages ?? []).map((stage) => stage.trim()).filter(Boolean)),
+  ];
 }

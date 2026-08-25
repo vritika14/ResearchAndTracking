@@ -36,7 +36,7 @@ export function TopNav() {
   const [mobileOpen, setMobileOpen] = useState(false);
 
   return (
-    <header className="sticky top-0 z-40 border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/75">
+    <header className="sticky top-0 z-40 border-b border-blue-200/70 bg-gradient-to-r from-blue-50/95 via-card/95 to-violet-50/95 shadow-sm backdrop-blur-xl dark:border-blue-900/50 dark:from-blue-950/80 dark:via-card/90 dark:to-violet-950/70">
       <div className="container flex h-16 items-center gap-6">
         <Wordmark />
 

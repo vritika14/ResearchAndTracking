@@ -25,7 +25,7 @@ const [primaryGroup, ...moreGroups] = navGroups;
  */
 export function CompactSidebar() {
   return (
-    <aside className="sticky top-0 hidden h-screen w-16 shrink-0 flex-col items-center gap-4 border-r bg-background py-3 md:flex">
+    <aside className="sticky top-0 hidden h-screen w-16 shrink-0 flex-col items-center gap-4 border-r border-blue-200/70 bg-gradient-to-b from-blue-50 via-card to-violet-50/70 py-3 shadow-sm md:flex dark:border-blue-900/50 dark:from-blue-950/30 dark:via-card dark:to-violet-950/20">
       <Wordmark compact />
 
       <nav className="flex flex-1 flex-col items-center gap-1">

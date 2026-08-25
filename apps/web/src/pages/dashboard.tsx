@@ -20,6 +20,7 @@ import { PriorityTasksTable } from "@/components/dashboard/priority-tasks-table"
 // import { WorkOnThisNextBanner } from "@/components/dashboard/work-on-this-next-banner";
 import { PageHeading } from "@/components/typography/heading";
 import { Button } from "@/components/ui/button";
+import { cn } from "@/lib/utils";
 import {
   Card,
   CardContent,
@@ -28,33 +29,43 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 
-const WRITING_STAGE = "Drafting, writing & revisiting";
+const REVIEW_STAGE = "Consolidation & Review";
 
-function buildSummary(counts: { activeProjects: number; openTasks: number; writingStage: number }) {
+function buildSummary(counts: {
+  activeProjects: number;
+  totalProjects: number;
+  openTasks: number;
+  totalTasks: number;
+  reviewStage: number;
+}) {
   return [
     {
       label: "Active Projects",
-      description: "Projects currently underway",
-      value: String(counts.activeProjects),
+      description: "Active of all visible projects",
+      value: `${counts.activeProjects} of ${counts.totalProjects}`,
       icon: FolderKanban,
+      tone: "blue",
     },
     {
       label: "Open Tasks",
-      description: "Tasks awaiting completion",
-      value: String(counts.openTasks),
+      description: "Open of all visible tasks",
+      value: `${counts.openTasks} of ${counts.totalTasks}`,
       icon: ListTodo,
+      tone: "amber",
     },
     {
-      label: "In Writing Stage",
-      description: "Projects in manuscript preparation",
-      value: String(counts.writingStage),
+      label: "In Review Stage",
+      description: "Projects in consolidation and review",
+      value: String(counts.reviewStage),
       icon: FilePenLine,
+      tone: "violet",
     },
     {
       label: "Year to Date Accepted",
       description: "Submissions accepted this calendar year",
       value: "—",
       icon: Send,
+      tone: "emerald",
     },
   ];
 }
@@ -138,9 +149,11 @@ export default function DashboardPage() {
       buildSummary({
         activeProjects: (projectsQuery.data ?? []).filter((project) => project.status === "Active")
           .length,
+        totalProjects: (projectsQuery.data ?? []).length,
         openTasks: (tasksQuery.data ?? []).filter((task) => task.status !== "Complete").length,
-        writingStage: (projectsQuery.data ?? []).filter(
-          (project) => project.pipelineStage === WRITING_STAGE,
+        totalTasks: (tasksQuery.data ?? []).length,
+        reviewStage: (projectsQuery.data ?? []).filter(
+          (project) => project.pipelineStage === REVIEW_STAGE,
         ).length,
       }),
     [projectsQuery.data, tasksQuery.data],
@@ -193,9 +206,10 @@ export default function DashboardPage() {
   }
 
   return (
-    <div className="flex flex-col gap-8">
+    <div className="page-stack">
       <PageHeading
         icon={LayoutDashboard}
+        tone="violet"
         eyebrow="Overview"
         title="Dashboard"
         description="A snapshot of research activity across projects, tasks, daily notes, and project files."
@@ -206,18 +220,37 @@ export default function DashboardPage() {
           </Button>
         }
       />
-      <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4">
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
         {summary.map((item) => (
           <Card
             key={item.label}
-            className="transition-all hover:-translate-y-0.5 hover:shadow-md"
+            className={cn(
+              "group relative overflow-hidden transition-all hover:-translate-y-0.5 hover:shadow-md",
+              item.tone === "blue" && "border-blue-200/70 bg-gradient-to-br from-blue-50/80 to-card dark:border-blue-900/50 dark:from-blue-950/20",
+              item.tone === "amber" && "border-amber-200/70 bg-gradient-to-br from-amber-50/80 to-card dark:border-amber-900/50 dark:from-amber-950/20",
+              item.tone === "violet" && "border-violet-200/70 bg-gradient-to-br from-violet-50/80 to-card dark:border-violet-900/50 dark:from-violet-950/20",
+              item.tone === "emerald" && "border-emerald-200/70 bg-gradient-to-br from-emerald-50/80 to-card dark:border-emerald-900/50 dark:from-emerald-950/20",
+            )}
           >
-            <CardHeader className="gap-3 p-5">
+            <div className={cn(
+              "absolute inset-x-0 top-0 h-0.5 opacity-80",
+              item.tone === "blue" && "bg-blue-500",
+              item.tone === "amber" && "bg-amber-500",
+              item.tone === "violet" && "bg-violet-500",
+              item.tone === "emerald" && "bg-emerald-500",
+            )} />
+            <CardHeader className="gap-3 p-5 sm:p-6">
               <div className="flex items-start justify-between gap-3">
                 <CardDescription className="font-medium">
                   {item.label}
                 </CardDescription>
-                <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-primary/10 text-primary ring-1 ring-primary/20">
+                <span className={cn(
+                  "flex h-10 w-10 shrink-0 items-center justify-center rounded-xl ring-1 transition-transform group-hover:scale-105",
+                  item.tone === "blue" && "bg-blue-100 text-blue-700 ring-blue-200 dark:bg-blue-950 dark:text-blue-300 dark:ring-blue-900",
+                  item.tone === "amber" && "bg-amber-100 text-amber-700 ring-amber-200 dark:bg-amber-950 dark:text-amber-300 dark:ring-amber-900",
+                  item.tone === "violet" && "bg-violet-100 text-violet-700 ring-violet-200 dark:bg-violet-950 dark:text-violet-300 dark:ring-violet-900",
+                  item.tone === "emerald" && "bg-emerald-100 text-emerald-700 ring-emerald-200 dark:bg-emerald-950 dark:text-emerald-300 dark:ring-emerald-900",
+                )}>
                   <item.icon className="h-4 w-4" />
                 </span>
               </div>

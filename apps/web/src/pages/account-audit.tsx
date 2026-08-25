@@ -1,9 +1,9 @@
 import { useMemo, useState } from "react";
-import { Search } from "lucide-react";
+import { Search, ShieldCheck } from "lucide-react";
 
 import { StatusBadge } from "@/components/shared/status-badge";
 import { TableShell } from "@/components/shared/table-shell";
-import { Heading } from "@/components/typography/heading";
+import { PageHeading } from "@/components/typography/heading";
 import { Input } from "@/components/ui/input";
 import {
   Select,
@@ -71,16 +71,14 @@ export default function AccountAuditPage() {
   ];
 
   return (
-    <div className="flex flex-col gap-7">
-      <div className="flex flex-col gap-5 border-b pb-6 sm:flex-row sm:items-end sm:justify-between">
-        <div>
-          <Heading level="h1">Account Audit</Heading>
-          <p className="mt-1.5 text-sm text-muted-foreground">
-            Review security, sign-in and access events for your account.
-          </p>
-        </div>
-
-        <div className="relative w-full sm:w-72">
+    <div className="page-stack">
+      <PageHeading
+        icon={ShieldCheck}
+        tone="rose"
+        eyebrow="Security"
+        title="Account Audit"
+        description="Review security, sign-in and access events for your account."
+        actions={<div className="relative w-full sm:w-72">
           <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
           <Input
             value={search}
@@ -88,10 +86,10 @@ export default function AccountAuditPage() {
             placeholder="Search audit log…"
             className="h-10 bg-card pl-9"
           />
-        </div>
-      </div>
+        </div>}
+      />
 
-      <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
+      <div className="surface-toolbar flex flex-col gap-3 border-rose-200/60 bg-rose-50/35 sm:flex-row sm:items-center dark:border-rose-900/50 dark:bg-rose-950/10">
         <Select value={eventType} onValueChange={setEventType}>
           <SelectTrigger className="w-full bg-card sm:w-52" aria-label="Filter by event type">
             <SelectValue />

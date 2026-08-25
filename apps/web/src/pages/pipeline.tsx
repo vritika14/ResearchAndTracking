@@ -139,6 +139,7 @@ function StageSelect({ row, stages, onStageChange }: {
       title="Change pipeline stage"
       className="h-7 max-w-44 rounded-md border border-input bg-background px-2 text-xs text-muted-foreground focus:outline-none focus:ring-1 focus:ring-ring"
     >
+      <option value="" disabled>Select a stage</option>
       {stages.map((stage, index) => (
         <option key={stage.id} value={index}>{stage.value}</option>
       ))}
@@ -167,7 +168,7 @@ function PipelineProjectRow({
         onDragStart={(event) => onDragStart(event, row)}
         onDragEnd={onDragEnd}
         className={cn(
-          "flex cursor-grab flex-col gap-1.5 rounded-lg border border-border bg-card px-3 py-2.5 shadow-sm active:cursor-grabbing",
+          "flex cursor-grab flex-col gap-1.5 rounded-xl border border-emerald-200/70 bg-gradient-to-br from-emerald-50/70 to-card px-3 py-2.5 shadow-sm transition-shadow hover:shadow-md active:cursor-grabbing dark:border-emerald-900/50 dark:from-emerald-950/20",
           isDragging && "opacity-45",
         )}
       >
@@ -206,7 +207,7 @@ function PipelineProjectRow({
       onDragStart={(event) => onDragStart(event, row)}
       onDragEnd={onDragEnd}
       className={cn(
-        "flex cursor-grab flex-wrap items-center gap-3 rounded-lg border border-border bg-card px-4 py-2.5 shadow-sm active:cursor-grabbing",
+        "flex cursor-grab flex-wrap items-center gap-3 rounded-xl border border-emerald-200/70 bg-gradient-to-r from-emerald-50/70 to-card px-4 py-2.5 shadow-sm transition-shadow hover:shadow-md active:cursor-grabbing dark:border-emerald-900/50 dark:from-emerald-950/20",
         isDragging && "opacity-45",
       )}
     >
@@ -320,6 +321,7 @@ export default function PipelinePage() {
     () => groupByStage(filteredRows, stages.length),
     [filteredRows, stages.length],
   );
+  const unassignedRows = filteredRows.filter((row) => row.stageIndex === undefined);
   const visibleStages = stages
     .map((stage, index) => ({ stage, index }))
     .filter(({ stage }) => !hiddenStageValues.has(stage.value));
@@ -405,15 +407,16 @@ export default function PipelinePage() {
   }
 
   return (
-    <div className="flex flex-col gap-6">
+    <div className="page-stack">
       <PageHeading
         icon={Workflow}
+        tone="emerald"
         eyebrow="Workflows"
         title="Pipeline"
         description="Active projects grouped by their current stage in the research workflow, from early concept through publication."
       />
 
-      <div className="flex flex-col gap-4">
+      <div className="surface-toolbar flex flex-col gap-4 border-emerald-200/70 bg-emerald-50/40 dark:border-emerald-900/50 dark:bg-emerald-950/10">
         <div className="flex flex-wrap items-center gap-2">
           <span className="mr-1 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
             View
@@ -476,17 +479,43 @@ export default function PipelinePage() {
         {unassignedCount > 0 ? (
           <p className="text-xs text-muted-foreground">
             {unassignedCount} project{unassignedCount === 1 ? "" : "s"} without a pipeline stage
-            {" "}aren't shown here — set one from the{" "}
-            <Link to="/projects" className="text-primary hover:underline">
-              Projects
-            </Link>{" "}
-            page.
+            {" "}{unassignedCount === 1 ? "is" : "are"} shown in Unassigned. Choose a stage there
+            or update the project from the Projects page.
           </p>
         ) : null}
       </div>
 
       {view === "Flow" ? (
         <div className="flex flex-col">
+          {unassignedRows.length > 0 ? (
+            <div className="mb-6 flex gap-4">
+              <div className="flex w-4 shrink-0 flex-col items-center">
+                <span className="mt-1.5 h-3.5 w-3.5 shrink-0 rounded-full border-2 border-amber-400 bg-amber-100 dark:bg-amber-950" />
+                <span className="w-px flex-1 bg-border" />
+              </div>
+              <div className="min-h-24 flex-1 rounded-xl border border-amber-200 bg-amber-50/45 p-3 dark:border-amber-900/50 dark:bg-amber-950/15">
+                <div className="flex items-center gap-2">
+                  <h3 className={STAGE_TITLE_CLASS}>Unassigned</h3>
+                  <span className="rounded-full bg-amber-100 px-2 py-0.5 text-xs font-semibold text-amber-800 dark:bg-amber-950 dark:text-amber-300">
+                    {unassignedRows.length}
+                  </span>
+                </div>
+                <div className="mt-3 flex flex-col gap-2">
+                  {unassignedRows.map((row) => (
+                    <PipelineProjectRow
+                      key={row.id}
+                      row={row}
+                      isDragging={draggedProjectId === row.id}
+                      onDragStart={handleDragStart}
+                      onDragEnd={handleDragEnd}
+                      onStageChange={moveProject}
+                      stages={stages}
+                    />
+                  ))}
+                </div>
+              </div>
+            </div>
+          ) : null}
           {visibleStages.map(({ stage, index }, visibleIndex) => {
             const rows = grouped[index] ?? [];
             const hasProjects = rows.length > 0;
@@ -510,7 +539,7 @@ export default function PipelinePage() {
                   onDragOver={(event) => handleDragOver(event, index)}
                   onDrop={(event) => handleDrop(event, index)}
                   className={cn(
-                    "min-h-24 flex-1 rounded-lg p-2 transition-colors",
+                    "min-h-24 flex-1 rounded-xl border border-transparent bg-card/35 p-3 transition-all",
                     !isLast && "mb-6",
                     draggedProjectId && "border border-dashed border-primary/30",
                     dragOverStageIndex === index && "border-primary bg-primary/5 ring-2 ring-primary/30",
@@ -553,8 +582,32 @@ export default function PipelinePage() {
         <div className="overflow-x-auto">
           <div
             className="flex gap-4"
-            style={{ minWidth: `${visibleStages.length * 260}px` }}
+            style={{ minWidth: `${(visibleStages.length + (unassignedRows.length ? 1 : 0)) * 260}px` }}
           >
+            {unassignedRows.length > 0 ? (
+              <div className="flex min-h-48 w-64 shrink-0 flex-col gap-3 rounded-xl border border-amber-200 bg-amber-50/45 p-3 shadow-sm dark:border-amber-900/50 dark:bg-amber-950/15">
+                <div className="flex items-center gap-2">
+                  <h3 className={STAGE_TITLE_CLASS}>Unassigned</h3>
+                  <span className="rounded-full bg-amber-100 px-2 py-0.5 text-xs font-semibold text-amber-800 dark:bg-amber-950 dark:text-amber-300">
+                    {unassignedRows.length}
+                  </span>
+                </div>
+                <div className="flex flex-col gap-2">
+                  {unassignedRows.map((row) => (
+                    <PipelineProjectRow
+                      key={row.id}
+                      row={row}
+                      compact
+                      isDragging={draggedProjectId === row.id}
+                      onDragStart={handleDragStart}
+                      onDragEnd={handleDragEnd}
+                      onStageChange={moveProject}
+                      stages={stages}
+                    />
+                  ))}
+                </div>
+              </div>
+            ) : null}
             {visibleStages.map(({ stage, index }) => {
               const rows = grouped[index] ?? [];
               const hasProjects = rows.length > 0;
@@ -567,7 +620,7 @@ export default function PipelinePage() {
                   onDragOver={(event) => handleDragOver(event, index)}
                   onDrop={(event) => handleDrop(event, index)}
                   className={cn(
-                    "flex min-h-48 w-64 shrink-0 flex-col gap-3 rounded-lg border border-border bg-card p-3 transition-colors",
+                    "flex min-h-48 w-64 shrink-0 flex-col gap-3 rounded-xl border border-emerald-200/60 bg-emerald-50/30 p-3 shadow-sm transition-colors dark:border-emerald-900/40 dark:bg-emerald-950/10",
                     draggedProjectId && "border-dashed border-primary/30",
                     dragOverStageIndex === index && "border-primary bg-primary/5 ring-2 ring-primary/30",
                   )}

@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { ArrowUpDown, Pencil, Plus, Save, Search, Trash2, X } from "lucide-react";
+import { ArrowUpDown, NotebookPen, Pencil, Plus, Save, Search, Trash2, X } from "lucide-react";
 import { Link, useNavigate, useParams } from "react-router-dom";
 
 import { apiClient } from "@/api/client";
@@ -20,7 +20,7 @@ import { NoteMembersManager } from "@/components/notes/note-members";
 import { ErrorState } from "@/components/shared/error-state";
 import { LoadingState } from "@/components/shared/loading-state";
 import { Badge } from "@/components/ui/badge";
-import { Heading } from "@/components/typography/heading";
+import { Heading, PageHeading } from "@/components/typography/heading";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
@@ -290,9 +290,24 @@ export default function DailyNotesPage() {
   }
 
   return (
-    <div className="rounded-xl bg-muted/40 p-4 md:p-6">
-      <div className="flex flex-col gap-4 lg:flex-row lg:items-stretch">
-        <aside className="flex w-full flex-col gap-4 rounded-lg border bg-card p-4 lg:w-80 lg:shrink-0">
+    <div className="page-stack">
+      <PageHeading
+        icon={NotebookPen}
+        tone="violet"
+        eyebrow="Research journal"
+        title="Daily Notes"
+        description="Capture research updates, decisions and observations, then connect them to projects or modules."
+        actions={
+          <Button onClick={startAdding}>
+            <Plus />
+            New note
+          </Button>
+        }
+      />
+
+      <div className="rounded-2xl border border-violet-200/60 bg-gradient-to-br from-violet-50/70 via-muted/25 to-blue-50/40 p-3 shadow-sm sm:p-4 md:p-6 dark:border-violet-900/50 dark:from-violet-950/20 dark:to-blue-950/10">
+        <div className="flex flex-col gap-4 lg:flex-row lg:items-stretch">
+        <aside className="flex w-full flex-col gap-4 rounded-xl border border-violet-200/60 bg-card/95 p-4 shadow-sm lg:w-80 lg:shrink-0 dark:border-violet-900/50">
           <Heading level="h3">Daily Notes</Heading>
 
           <button
@@ -332,8 +347,8 @@ export default function DailyNotesPage() {
                     type="button"
                     onClick={() => selectNote(note.id)}
                     className={cn(
-                      "flex flex-col gap-0.5 rounded-lg px-3 py-2.5 text-left transition-colors",
-                      isSelected ? "bg-blue-50 dark:bg-blue-500/10" : "hover:bg-muted",
+                      "flex flex-col gap-0.5 rounded-lg border px-3 py-2.5 text-left transition-all",
+                      isSelected ? "border-primary/20 bg-primary/10 shadow-sm" : "border-transparent hover:bg-muted",
                     )}
                   >
                     <span className="text-sm font-semibold leading-snug">{note.title}</span>
@@ -350,7 +365,7 @@ export default function DailyNotesPage() {
           </div>
         </aside>
 
-        <section className="min-h-[620px] flex-1 rounded-lg border bg-card p-6">
+        <section className="min-h-[620px] flex-1 rounded-xl border bg-card p-4 shadow-sm sm:p-6">
           <div className="mb-8 flex flex-col gap-4 border-b pb-5 sm:flex-row sm:items-start sm:justify-between">
             <div>
               <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
@@ -697,6 +712,7 @@ export default function DailyNotesPage() {
           )}
         </section>
       </div>
+    </div>
     </div>
   );
 }

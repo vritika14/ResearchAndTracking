@@ -12,10 +12,11 @@ export default function SignInPage() {
 
   return (
     <AuthScreenBackground className="flex items-center justify-center px-4 py-8">
-      <div className="flex w-full max-w-sm flex-col items-center gap-6 rounded-xl border bg-card p-10 text-center shadow-lg">
+      <div className="relative flex w-full max-w-md flex-col items-center gap-7 overflow-hidden rounded-2xl border bg-card/95 p-8 text-center shadow-lg backdrop-blur sm:p-10">
+        <div aria-hidden="true" className="absolute inset-x-0 top-0 h-1 bg-gradient-to-r from-primary/20 via-primary to-primary/20" />
         <div className="flex flex-col items-center gap-3">
           <Wordmark />
-          <p className="text-sm text-muted-foreground">Sign in with your account to continue.</p>
+          <p className="max-w-xs text-sm leading-6 text-muted-foreground">Sign in to continue managing your research projects, tasks, pipeline and notes.</p>
         </div>
         <Button
           size="lg"

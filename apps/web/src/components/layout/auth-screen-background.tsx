@@ -23,7 +23,7 @@ export function AuthScreenBackground({ children, className }: AuthScreenBackgrou
         aria-hidden="true"
         className="fixed inset-0 z-0 [background-image:radial-gradient(hsl(var(--foreground)/0.08)_1px,transparent_1px)] [background-size:20px_20px]"
       />
-      <div className={cn("relative z-10 min-h-screen", className)}>{children}</div>
+      <div className={cn("auth-stage relative z-10 min-h-screen", className)}>{children}</div>
     </div>
   );
 }

@@ -56,15 +56,15 @@ export function NavTree({ onNavigate }: NavTreeProps) {
   }
 
   return (
-    <nav className="flex flex-col gap-6">
+    <nav className="flex flex-col gap-7">
       {navGroups.map((group) => (
         <div key={group.label} className="flex flex-col gap-1">
           {group.label ? (
-            <span className="px-3 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+            <span className="px-3 text-[10px] font-bold uppercase tracking-[0.14em] text-muted-foreground/80">
               {group.label}
             </span>
           ) : null}
-          <div className="flex flex-col gap-0.5">
+          <div className="flex flex-col gap-1">
             {group.items.map((item) => {
               const hasChildren = Boolean(item.children?.length);
               const isOpen = expanded.has(item.to);
@@ -78,12 +78,12 @@ export function NavTree({ onNavigate }: NavTreeProps) {
                       onClick={onNavigate}
                       className={({ isActive }) =>
                         cn(
-                          "flex flex-1 items-center gap-3 rounded-md border-l-2 border-transparent px-3 py-2 text-sm font-medium text-muted-foreground transition-colors hover:bg-accent hover:text-accent-foreground",
-                          isActive && "border-primary bg-primary/10 font-semibold text-primary hover:bg-primary/10 hover:text-primary",
+                          "group flex min-h-10 flex-1 items-center gap-3 rounded-lg border border-transparent px-3 py-2 text-sm font-medium text-muted-foreground transition-all hover:bg-accent/70 hover:text-foreground",
+                          isActive && "border-primary/15 bg-primary/10 font-semibold text-primary shadow-sm hover:bg-primary/10 hover:text-primary",
                         )
                       }
                     >
-                      {item.icon ? <item.icon className="h-4 w-4 shrink-0" /> : null}
+                      {item.icon ? <item.icon className="h-[1.05rem] w-[1.05rem] shrink-0 transition-transform group-hover:scale-105" /> : null}
                       <span className="flex-1">{item.label}</span>
                       {item.to === "/settings" && me.data?.profileComplete === false ? (
                         <CircleAlert

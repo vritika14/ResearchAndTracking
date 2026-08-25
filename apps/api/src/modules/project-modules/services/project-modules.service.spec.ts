@@ -20,6 +20,7 @@ describe('ProjectModulesService', () => {
   };
   let enumRepository: {
     findByCategoryAndValue: jest.Mock;
+    findPipelineStageForModuleByValue: jest.Mock;
     findValuesByIds: jest.Mock;
   };
   let collaboratorsRepository: {
@@ -46,6 +47,7 @@ describe('ProjectModulesService', () => {
     };
     enumRepository = {
       findByCategoryAndValue: jest.fn(),
+      findPipelineStageForModuleByValue: jest.fn(),
       findValuesByIds: jest.fn().mockResolvedValue(new Map()),
     };
     collaboratorsRepository = {
@@ -116,7 +118,9 @@ describe('ProjectModulesService', () => {
       });
       const result = await service.findOne('tenant-1', 'module-1', 'user-1');
       expect(result).toEqual(expect.objectContaining({ id: 'module-1' }));
-      expect(collaboratorsRepository.findByModuleAndUser).not.toHaveBeenCalled();
+      expect(
+        collaboratorsRepository.findByModuleAndUser,
+      ).not.toHaveBeenCalled();
     });
 
     it('throws NotFoundException for a project-scoped module when the caller cannot see the parent project', async () => {
@@ -134,31 +138,72 @@ describe('ProjectModulesService', () => {
 
   describe('listForCaller', () => {
     it('combines project-linked modules with independent modules the caller collaborates on', async () => {
-      projectCollaboratorsRepository.findProjectIdsByUser.mockResolvedValue(['project-1']);
-      collaboratorsRepository.findModuleIdsByUser.mockResolvedValue(['module-2']);
+      projectCollaboratorsRepository.findProjectIdsByUser.mockResolvedValue([
+        'project-1',
+      ]);
+      collaboratorsRepository.findModuleIdsByUser.mockResolvedValue([
+        'module-2',
+      ]);
       repository.findByProjectIds.mockResolvedValue([
-        { id: 'module-1', projectId: 'project-1', tagId: null, statusId: null, archivedAt: null },
+        {
+          id: 'module-1',
+          projectId: 'project-1',
+          tagId: null,
+          statusId: null,
+          archivedAt: null,
+        },
       ]);
       repository.findByIds.mockResolvedValue([
-        { id: 'module-2', projectId: null, tagId: null, statusId: null, archivedAt: null },
+        {
+          id: 'module-2',
+          projectId: null,
+          tagId: null,
+          statusId: null,
+          archivedAt: null,
+        },
       ]);
 
       const result = await service.listForCaller('user-1');
 
       expect(repository.findByProjectIds).toHaveBeenCalledWith(['project-1']);
       expect(repository.findByIds).toHaveBeenCalledWith(['module-2']);
-      expect(result.map((module) => module.id)).toEqual(['module-1', 'module-2']);
+      expect(result.map((module) => module.id)).toEqual([
+        'module-1',
+        'module-2',
+      ]);
     });
 
     it('excludes archived modules and de-duplicates modules reachable both ways', async () => {
-      projectCollaboratorsRepository.findProjectIdsByUser.mockResolvedValue(['project-1']);
-      collaboratorsRepository.findModuleIdsByUser.mockResolvedValue(['module-1']);
+      projectCollaboratorsRepository.findProjectIdsByUser.mockResolvedValue([
+        'project-1',
+      ]);
+      collaboratorsRepository.findModuleIdsByUser.mockResolvedValue([
+        'module-1',
+      ]);
       repository.findByProjectIds.mockResolvedValue([
-        { id: 'module-1', projectId: 'project-1', tagId: null, statusId: null, archivedAt: null },
-        { id: 'module-2', projectId: 'project-1', tagId: null, statusId: null, archivedAt: new Date() },
+        {
+          id: 'module-1',
+          projectId: 'project-1',
+          tagId: null,
+          statusId: null,
+          archivedAt: null,
+        },
+        {
+          id: 'module-2',
+          projectId: 'project-1',
+          tagId: null,
+          statusId: null,
+          archivedAt: new Date(),
+        },
       ]);
       repository.findByIds.mockResolvedValue([
-        { id: 'module-1', projectId: 'project-1', tagId: null, statusId: null, archivedAt: null },
+        {
+          id: 'module-1',
+          projectId: 'project-1',
+          tagId: null,
+          statusId: null,
+          archivedAt: null,
+        },
       ]);
 
       const result = await service.listForCaller('user-1');
@@ -180,7 +225,9 @@ describe('ProjectModulesService', () => {
         tagId: null,
         statusId: null,
       });
-      collaboratorsRepository.findByModuleAndUser.mockResolvedValue({ roleId: 'role-1' });
+      collaboratorsRepository.findByModuleAndUser.mockResolvedValue({
+        roleId: 'role-1',
+      });
 
       const result = await service.findOneForCaller('module-1', 'user-1');
 
@@ -209,8 +256,12 @@ describe('ProjectModulesService', () => {
         tagId: null,
         statusId: null,
       });
-      collaboratorsRepository.findByModuleAndUser.mockResolvedValue({ roleId: 'role-1' });
-      enumRepository.findByCategoryAndValue.mockResolvedValue({ id: 'archived-status-id' });
+      collaboratorsRepository.findByModuleAndUser.mockResolvedValue({
+        roleId: 'role-1',
+      });
+      enumRepository.findByCategoryAndValue.mockResolvedValue({
+        id: 'archived-status-id',
+      });
       repository.archive.mockResolvedValue({
         id: 'module-1',
         tagId: null,
@@ -243,16 +294,23 @@ describe('ProjectModulesService', () => {
       ]);
       collaboratorsRepository.findByModuleAndUser.mockImplementation(
         (_tenantId: string, moduleId: string) =>
-          Promise.resolve(moduleId === 'module-1' ? { roleId: 'role-1' } : undefined),
+          Promise.resolve(
+            moduleId === 'module-1' ? { roleId: 'role-1' } : undefined,
+          ),
       );
       projectCollaboratorsRepository.findByProjectAndUser.mockImplementation(
         (_tenantId: string, projectId: string) =>
-          Promise.resolve(projectId === 'project-1' ? { roleId: 'role-1' } : undefined),
+          Promise.resolve(
+            projectId === 'project-1' ? { roleId: 'role-1' } : undefined,
+          ),
       );
 
       const result = await service.listActive('tenant-1', 'user-1');
 
-      expect(result.map((module) => module.id)).toEqual(['module-1', 'module-2']);
+      expect(result.map((module) => module.id)).toEqual([
+        'module-1',
+        'module-2',
+      ]);
     });
   });
 
@@ -282,6 +340,35 @@ describe('ProjectModulesService', () => {
       );
     });
 
+    it('passes an ordered module-specific stage list to the creation transaction', async () => {
+      enumRepository.findByCategoryAndValue.mockImplementation(
+        (category: string, value: string) =>
+          Promise.resolve({ id: `${category}-${value}-id` }),
+      );
+      repository.create.mockResolvedValue({
+        id: 'module-1',
+        tagId: null,
+        statusId: null,
+        pipelineStageId: 'scoped-stage-1',
+      });
+
+      await service.create('tenant-1', 'user-1', {
+        title: 'Custom workflow module',
+        pipelineStage: 'Drafting',
+        pipelineStages: ['Drafting', 'Internal Review', 'Published'],
+      });
+
+      expect(repository.create).toHaveBeenCalledWith(
+        expect.objectContaining({ pipelineStageId: undefined }),
+        ['Drafting', 'Internal Review', 'Published'],
+        'Drafting',
+      );
+      expect(enumRepository.findByCategoryAndValue).not.toHaveBeenCalledWith(
+        'module_pipeline_stage',
+        expect.any(String),
+      );
+    });
+
     it('throws NotFoundException for an unknown tag value', async () => {
       enumRepository.findByCategoryAndValue.mockResolvedValue(undefined);
       await expect(
@@ -303,7 +390,9 @@ describe('ProjectModulesService', () => {
         statusId: null,
       });
 
-      await service.create('tenant-1', 'user-1', { title: 'Independent module' });
+      await service.create('tenant-1', 'user-1', {
+        title: 'Independent module',
+      });
 
       expect(collaboratorsRepository.create).toHaveBeenCalledWith({
         tenantId: 'tenant-1',

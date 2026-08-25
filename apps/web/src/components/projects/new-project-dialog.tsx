@@ -1,8 +1,9 @@
-import { useMemo, useState, type FormEvent, type ReactNode } from "react";
+import { useEffect, useMemo, useState, type FormEvent, type ReactNode } from "react";
 import { Search, X } from "lucide-react";
 
 import { useUserSearch, type ApiPipelineStage, type ApiUserSearchResult } from "@/api/hooks";
 import { Badge } from "@/components/ui/badge";
+import { StageListBuilder } from "@/components/pipeline/stage-list-builder";
 import { Button } from "@/components/ui/button";
 import { DatePickerInput } from "@/components/ui/date-picker-input";
 import {
@@ -34,6 +35,7 @@ export interface NewProjectInput {
   status: string;
   priority: string;
   pipelineStage: string;
+  pipelineStages: string[];
   scheduledFor: string;
   dueDate: string;
   totalBudget: string;
@@ -56,6 +58,7 @@ const INITIAL_FORM: NewProjectInput = {
   status: "Active",
   priority: "Medium",
   pipelineStage: "",
+  pipelineStages: [],
   scheduledFor: "",
   dueDate: "",
   totalBudget: "",
@@ -91,6 +94,20 @@ export function NewProjectDialog({
   const [memberSearch, setMemberSearch] = useState("");
   const [memberPickerOpen, setMemberPickerOpen] = useState(false);
   const [selectedMembers, setSelectedMembers] = useState<ApiUserSearchResult[]>([]);
+  const [stagesInitialized, setStagesInitialized] = useState(false);
+
+  useEffect(() => {
+    if (!open || stagesInitialized || !pipelineStages.length) return;
+    const stages = [...pipelineStages]
+      .sort((left, right) => left.sortOrder - right.sortOrder)
+      .map((stage) => stage.value);
+    setForm((current) => ({
+      ...current,
+      pipelineStages: stages,
+      pipelineStage: current.pipelineStage || stages[0] || "",
+    }));
+    setStagesInitialized(true);
+  }, [open, pipelineStages, stagesInitialized]);
 
   const userSearchQuery = useUserSearch(memberSearch, memberPickerOpen);
   const matchingMembers = useMemo(() => {
@@ -105,6 +122,7 @@ export function NewProjectDialog({
     setMemberSearch("");
     setMemberPickerOpen(false);
     setSelectedMembers([]);
+    setStagesInitialized(false);
   }
 
   function handleOpenChange(nextOpen: boolean) {
@@ -120,6 +138,7 @@ export function NewProjectDialog({
       description: form.description.trim(),
       researchArea: form.researchArea.trim(),
       targetJournals: form.targetJournals.trim(),
+      pipelineStage: form.pipelineStage || form.pipelineStages[0] || "",
       collaboratorUserIds: selectedMembers.map((member) => member.id),
     });
     resetForm();
@@ -128,7 +147,7 @@ export function NewProjectDialog({
 
   return (
     <Dialog open={open} onOpenChange={handleOpenChange}>
-      <DialogContent className="max-w-2xl">
+      <DialogContent className="max-w-4xl">
         <DialogHeader>
           <DialogTitle>Create a new project</DialogTitle>
           <DialogDescription>
@@ -302,17 +321,34 @@ export function NewProjectDialog({
               </Select>
             </FormField>
 
-            <FormField label="Pipeline stage" htmlFor="project-stage">
+            <div className="sm:col-span-2">
+              <StageListBuilder
+                availableStages={pipelineStages}
+                selectedStages={form.pipelineStages}
+                entityLabel="project"
+                onChange={(stages) =>
+                  setForm((current) => ({
+                    ...current,
+                    pipelineStages: stages,
+                    pipelineStage: stages.includes(current.pipelineStage)
+                      ? current.pipelineStage
+                      : stages[0] ?? "",
+                  }))
+                }
+              />
+            </div>
+
+            <FormField label="Starting stage" htmlFor="project-stage" required>
               <Select
-                value={form.pipelineStage}
+                value={form.pipelineStage || form.pipelineStages[0] || ""}
                 onValueChange={(value) =>
                   setForm((prev) => ({ ...prev, pipelineStage: value }))
                 }
               >
                 <SelectTrigger id="project-stage"><SelectValue placeholder="Select a stage" /></SelectTrigger>
                 <SelectContent>
-                  {pipelineStages.map((stage) => (
-                    <SelectItem key={stage.id} value={stage.value}>{stage.value}</SelectItem>
+                  {form.pipelineStages.map((stage) => (
+                    <SelectItem key={stage} value={stage}>{stage}</SelectItem>
                   ))}
                 </SelectContent>
               </Select>
@@ -367,7 +403,7 @@ export function NewProjectDialog({
 
           <DialogFooter className="border-t pt-4">
             <DialogClose asChild><Button type="button" variant="outline">Cancel</Button></DialogClose>
-            <Button type="submit">Create Project</Button>
+            <Button type="submit" disabled={!form.pipelineStages.length}>Create Project</Button>
           </DialogFooter>
         </form>
       </DialogContent>

@@ -138,7 +138,7 @@ export default function TaskDetailPage() {
     : undefined;
 
   return (
-    <div className="flex flex-col gap-8">
+    <div className="page-stack">
       <Button asChild variant="ghost" size="sm" className="w-fit">
         <Link to="/tasks">
           <ArrowLeft />
@@ -147,6 +147,7 @@ export default function TaskDetailPage() {
       </Button>
 
       <PageHeading
+        tone="amber"
         icon={ListTodo}
         eyebrow={task.displayId ?? task.id}
         title={task.title}

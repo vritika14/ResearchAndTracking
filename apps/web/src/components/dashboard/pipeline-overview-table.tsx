@@ -63,6 +63,7 @@ export function PipelineOverviewTable() {
     [pipelineStagesQuery.data],
   );
   const stageNames = stages.map((s) => s.value);
+  const stageFilterOptions = ["All", "Unassigned", ...stageNames];
   const stageIndexByValue = useMemo(() => {
     const map = new Map<string, number>();
     stages.forEach((s, index) => map.set(s.value, index));
@@ -84,8 +85,7 @@ export function PipelineOverviewTable() {
 
   const projectRows = useMemo(
     () =>
-      (projectsQuery.data ?? [])
-        .map((project) => {
+      (projectsQuery.data ?? []).map((project) => {
           const counts = taskCountByProject.get(project.id) ?? { completed: 0, total: 0 };
           const stageIndex = project.pipelineStage
             ? stageIndexByValue.get(project.pipelineStage)
@@ -97,8 +97,7 @@ export function PipelineOverviewTable() {
             stageIndex,
             completion: counts.total > 0 ? Math.round((counts.completed / counts.total) * 100) : 0,
           };
-        })
-        .filter((row): row is typeof row & { stageIndex: number } => row.stageIndex !== undefined),
+        }),
     [projectsQuery.data, taskCountByProject, stageIndexByValue],
   );
 
@@ -106,7 +105,8 @@ export function PipelineOverviewTable() {
     const query = search.trim().toLowerCase();
     return projectRows.filter((row) => {
       if (priority !== "All" && row.priority !== priority) return false;
-      if (stage !== "All" && stageNames[row.stageIndex] !== stage) return false;
+      const rowStage = row.stageIndex === undefined ? "Unassigned" : stageNames[row.stageIndex];
+      if (stage !== "All" && rowStage !== stage) return false;
       if (query && !row.name.toLowerCase().includes(query)) return false;
       return true;
     });
@@ -159,7 +159,7 @@ export function PipelineOverviewTable() {
               <SelectValue placeholder="Stage" />
             </SelectTrigger>
             <SelectContent>
-              {["All", ...stageNames].map((option) => (
+              {stageFilterOptions.map((option) => (
                 <SelectItem key={option} value={option}>
                   {option === "All" ? "All stages" : option}
                 </SelectItem>
@@ -223,10 +223,16 @@ export function PipelineOverviewTable() {
 
                   {columns.isColumnVisible("pipeline") ? (
                     <TableCell style={{ minWidth: pipelineWidth }}>
-                      <PipelineBar
-                        stageIndex={row.stageIndex}
-                        stageCount={stageNames.length}
-                      />
+                      {row.stageIndex === undefined ? (
+                        <Badge variant="outline" className="border-amber-300 bg-amber-50 text-amber-800 dark:border-amber-800 dark:bg-amber-950/30 dark:text-amber-300">
+                          Unassigned — choose a stage in Projects
+                        </Badge>
+                      ) : (
+                        <PipelineBar
+                          stageIndex={row.stageIndex}
+                          stageCount={stageNames.length}
+                        />
+                      )}
                     </TableCell>
                   ) : null}
 

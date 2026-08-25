@@ -3,6 +3,7 @@ import { Search, X } from "lucide-react";
 
 import {
   useEnumValues,
+  useModulePipelineStages,
   useUserSearch,
   type ApiModule,
   type ApiProject,
@@ -10,6 +11,7 @@ import {
   type Membership,
 } from "@/api/hooks";
 import { ModuleCollaboratorsManager } from "@/components/modules/module-collaborators";
+import { StageListBuilder } from "@/components/pipeline/stage-list-builder";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
@@ -39,6 +41,8 @@ export interface ModuleFormInput {
   description: string;
   projectId: string | null;
   status: string;
+  pipelineStage: string;
+  pipelineStages: string[];
   tag: string;
   assignedToUserId: string | null;
   /** Applied by the caller after creation, since a brand-new module has no id yet. */
@@ -60,6 +64,8 @@ const INITIAL_FORM: ModuleFormInput = {
   description: "",
   projectId: null,
   status: "Active",
+  pipelineStage: "",
+  pipelineStages: [],
   tag: "",
   assignedToUserId: null,
   collaboratorUserIds: [],
@@ -92,12 +98,19 @@ export function ModuleDialog({
   onSave,
 }: ModuleDialogProps) {
   const tagValuesQuery = useEnumValues("module_type", open);
+  const stageValuesQuery = useEnumValues("module_pipeline_stage", open);
   const [form, setForm] = useState<ModuleFormInput>(INITIAL_FORM);
   const [isIndependent, setIsIndependent] = useState(true);
   const [memberSearch, setMemberSearch] = useState("");
   const [memberPickerOpen, setMemberPickerOpen] = useState(false);
   const [selectedMembers, setSelectedMembers] = useState<ApiUserSearchResult[]>([]);
+  const [stagesInitialized, setStagesInitialized] = useState(false);
   const isEditing = Boolean(module);
+  const moduleStageValuesQuery = useModulePipelineStages(
+    module?.tenantId ?? tenantId,
+    module?.id ?? "",
+    open && isEditing,
+  );
 
   useEffect(() => {
     if (!open) return;
@@ -107,6 +120,8 @@ export function ModuleDialog({
         description: module.description ?? "",
         projectId: module.projectId,
         status: module.status ?? "Active",
+        pipelineStage: module.pipelineStage ?? "",
+        pipelineStages: [],
         tag: module.tag ?? "",
         assignedToUserId: module.assignedToUserId,
         collaboratorUserIds: [],
@@ -115,11 +130,25 @@ export function ModuleDialog({
     } else {
       setForm(INITIAL_FORM);
       setIsIndependent(true);
+      setStagesInitialized(false);
     }
     setMemberSearch("");
     setMemberPickerOpen(false);
     setSelectedMembers([]);
   }, [open, module]);
+
+  useEffect(() => {
+    if (!open || module || stagesInitialized || !stageValuesQuery.data?.length) return;
+    const stages = [...stageValuesQuery.data]
+      .sort((left, right) => left.sortOrder - right.sortOrder)
+      .map((stage) => stage.value);
+    setForm((current) => ({
+      ...current,
+      pipelineStages: stages,
+      pipelineStage: current.pipelineStage || stages[0] || "",
+    }));
+    setStagesInitialized(true);
+  }, [open, module, stageValuesQuery.data, stagesInitialized]);
 
   const userSearchQuery = useUserSearch(memberSearch, memberPickerOpen);
   const matchingMembers = useMemo(() => {
@@ -135,6 +164,7 @@ export function ModuleDialog({
       title: form.title.trim(),
       description: form.description.trim(),
       projectId: isIndependent ? null : form.projectId,
+      pipelineStage: form.pipelineStage || form.pipelineStages[0] || "",
       collaboratorUserIds: selectedMembers.map((member) => member.id),
     });
     onOpenChange(false);
@@ -142,7 +172,7 @@ export function ModuleDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-xl">
+      <DialogContent className="max-w-4xl">
         <DialogHeader>
           <DialogTitle>{isEditing ? "Edit module" : "Create a new module"}</DialogTitle>
           <DialogDescription>
@@ -241,6 +271,29 @@ export function ModuleDialog({
               </Select>
             </FormField>
 
+            {isEditing ? (
+            <FormField label="Pipeline stage" htmlFor="module-pipeline-stage" required>
+              <Select
+                value={form.pipelineStage}
+                onValueChange={(value) =>
+                  setForm((current) => ({ ...current, pipelineStage: value }))
+                }
+                required
+              >
+                <SelectTrigger id="module-pipeline-stage">
+                  <SelectValue placeholder="Select a stage" />
+                </SelectTrigger>
+                <SelectContent>
+                  {(moduleStageValuesQuery.data ?? stageValuesQuery.data ?? []).map((stageValue) => (
+                    <SelectItem key={stageValue.id} value={stageValue.value}>
+                      {stageValue.value}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </FormField>
+            ) : null}
+
             <FormField label="Assigned to" htmlFor="module-assignee">
               <Select
                 value={form.assignedToUserId ?? UNASSIGNED}
@@ -263,6 +316,43 @@ export function ModuleDialog({
               </Select>
             </FormField>
           </div>
+
+          {!isEditing ? (
+            <>
+              <StageListBuilder
+                availableStages={stageValuesQuery.data ?? []}
+                selectedStages={form.pipelineStages}
+                entityLabel="module"
+                onChange={(stages) =>
+                  setForm((current) => ({
+                    ...current,
+                    pipelineStages: stages,
+                    pipelineStage: stages.includes(current.pipelineStage)
+                      ? current.pipelineStage
+                      : stages[0] ?? "",
+                  }))
+                }
+              />
+              <FormField label="Starting stage" htmlFor="module-pipeline-stage" required>
+                <Select
+                  value={form.pipelineStage || form.pipelineStages[0] || ""}
+                  onValueChange={(value) =>
+                    setForm((current) => ({ ...current, pipelineStage: value }))
+                  }
+                  required
+                >
+                  <SelectTrigger id="module-pipeline-stage">
+                    <SelectValue placeholder="Select a stage" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {form.pipelineStages.map((stage) => (
+                      <SelectItem key={stage} value={stage}>{stage}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </FormField>
+            </>
+          ) : null}
 
           {isIndependent && isEditing && module && module.tenantId === tenantId ? (
             <div className="flex flex-col gap-2 border-t border-border pt-4">
@@ -380,7 +470,9 @@ export function ModuleDialog({
 
           <DialogFooter className="border-t pt-4">
             <DialogClose asChild><Button type="button" variant="outline">Cancel</Button></DialogClose>
-            <Button type="submit">{isEditing ? "Save Changes" : "Create Module"}</Button>
+            <Button type="submit" disabled={!isEditing && !form.pipelineStages.length}>
+              {isEditing ? "Save Changes" : "Create Module"}
+            </Button>
           </DialogFooter>
         </form>
       </DialogContent>

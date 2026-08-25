@@ -13,6 +13,7 @@ type ModuleFixture = {
   description: string | null;
   tag: string | null;
   status: string | null;
+  pipelineStage: string | null;
   assignedToUserId: string | null;
   archivedAt: string | null;
   createdAt: string;
@@ -55,6 +56,10 @@ const fixtures = vi.hoisted(() => ({
   tagValues: [
     { id: "tag-1", tenantId: null, category: "module_type", value: "Research Paper", sortOrder: 1, createdAt: "", updatedAt: "" },
   ],
+  stageValues: [
+    { id: "stage-1", tenantId: null, category: "module_pipeline_stage", value: "Concept & Ideation", sortOrder: 1, createdAt: "", updatedAt: "" },
+    { id: "stage-2", tenantId: null, category: "module_pipeline_stage", value: "Literature Review", sortOrder: 2, createdAt: "", updatedAt: "" },
+  ],
   // Proves the "Collaborators" search hits the platform-wide user-search
   // endpoint, not a workspace-member list.
   allUsers: [
@@ -89,7 +94,10 @@ vi.mock("@/api/hooks", async () => {
       error: undefined,
       refetch: vi.fn(),
     }),
-    useEnumValues: () => ({ data: fixtures.tagValues }),
+    useEnumValues: (category: string) => ({
+      data: category === "module_pipeline_stage" ? fixtures.stageValues : fixtures.tagValues,
+    }),
+    useModulePipelineStages: () => ({ data: fixtures.stageValues }),
     useCreateModule: () => ({
       mutateAsync: vi.fn(async (input: Record<string, unknown>) => {
         const modules = store.getModules();
@@ -102,6 +110,7 @@ vi.mock("@/api/hooks", async () => {
           description: (input.description as string | undefined) ?? null,
           tag: (input.tag as string | undefined) ?? null,
           status: (input.status as string | undefined) ?? "Active",
+          pipelineStage: (input.pipelineStage as string | undefined) ?? null,
           assignedToUserId: (input.assignedToUserId as string | undefined) ?? null,
           archivedAt: null,
           createdAt: "2026-01-01T00:00:00.000Z",
@@ -145,6 +154,7 @@ describe("ModulesPage", () => {
         description: "",
         tag: null,
         status: "Active",
+        pipelineStage: "Concept & Ideation",
         assignedToUserId: null,
         archivedAt: null,
         createdAt: "2026-01-01T00:00:00.000Z",
@@ -163,6 +173,11 @@ describe("ModulesPage", () => {
 
     fireEvent.click(screen.getByRole("button", { name: "New Module" }));
     expect(screen.getByRole("textbox", { name: /Description/ })).not.toBeRequired();
+    await waitFor(() =>
+      expect(screen.getByRole("combobox", { name: /Starting stage/ })).toHaveTextContent(
+        "Concept & Ideation",
+      ),
+    );
     fireEvent.change(screen.getByRole("textbox", { name: /Module title/ }), {
       target: { value: "Independent literature synthesis" },
     });
@@ -172,6 +187,7 @@ describe("ModulesPage", () => {
       expect(screen.getByText("Independent literature synthesis")).toBeInTheDocument(),
     );
     expect(screen.getAllByText("Independent module").length).toBeGreaterThan(0);
+    expect(screen.getAllByText("Concept & Ideation").length).toBeGreaterThan(0);
   });
 
   it("edits an existing module", async () => {
