@@ -122,9 +122,7 @@ export class ProjectModulesService {
     const pipelineStageId = pipelineStages.length
       ? undefined
       : await this.resolveEnum('module_pipeline_stage', input.pipelineStage);
-    const ownerRoleId = input.projectId
-      ? undefined
-      : await this.resolveEnum('project_role', 'Owner');
+    const ownerRoleId = await this.resolveEnum('project_role', 'Owner');
     const displayId = await this.sequences.nextDisplayId(tenantId, 'module');
 
     const createValues = {
@@ -152,19 +150,17 @@ export class ProjectModulesService {
       throw new NotFoundException('Failed to create module');
     }
 
-    if (!input.projectId) {
-      if (!ownerRoleId) {
-        throw new NotFoundException(
-          'Owner role is not configured in the enum table',
-        );
-      }
-      await this.collaboratorsRepository.create({
-        tenantId,
-        moduleId: module.id,
-        userId: callerUserId,
-        roleId: ownerRoleId,
-      });
+    if (!ownerRoleId) {
+      throw new NotFoundException(
+        'Owner role is not configured in the enum table',
+      );
     }
+    await this.collaboratorsRepository.create({
+      tenantId,
+      moduleId: module.id,
+      userId: callerUserId,
+      roleId: ownerRoleId,
+    });
 
     const [shaped] = await this.withDisplayValues([module], callerUserId);
     return shaped;

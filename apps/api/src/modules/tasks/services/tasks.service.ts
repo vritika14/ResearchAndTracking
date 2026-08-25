@@ -132,14 +132,19 @@ export class TasksService {
       );
     }
 
-    const [{ projectId, moduleId }, statusId, priorityId, visibilityId, displayId] =
-      await Promise.all([
-        this.resolveLinkage(tenantId, input),
-        this.resolveEnum('task_status', input.status),
-        this.resolveEnum('importance', input.priority),
-        this.resolveEnum('visibility', visibilityValue),
-        this.sequences.nextDisplayId(tenantId, 'task'),
-      ]);
+    const [
+      { projectId, moduleId },
+      statusId,
+      priorityId,
+      visibilityId,
+      displayId,
+    ] = await Promise.all([
+      this.resolveLinkage(tenantId, input),
+      this.resolveEnum('task_status', input.status),
+      this.resolveEnum('importance', input.priority),
+      this.resolveEnum('visibility', visibilityValue),
+      this.sequences.nextDisplayId(tenantId, 'task'),
+    ]);
 
     const task = await this.repository.create({
       tenantId,

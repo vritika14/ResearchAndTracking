@@ -12,7 +12,13 @@ import { ProjectsRepository } from './repositories/projects.repository';
 import { ProjectsService } from './services/projects.service';
 
 @Module({
-  imports: [UsersModule, EnumModule, ProjectCollaboratorsModule, TenantSequencesModule, MembershipsModule],
+  imports: [
+    UsersModule,
+    EnumModule,
+    ProjectCollaboratorsModule,
+    TenantSequencesModule,
+    MembershipsModule,
+  ],
   controllers: [ProjectsController, MyProjectsController],
   providers: [ProjectsService, ProjectsRepository, ProjectAccessGuard],
   exports: [ProjectsRepository],

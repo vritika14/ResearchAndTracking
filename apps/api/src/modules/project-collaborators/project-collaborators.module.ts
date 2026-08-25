@@ -8,7 +8,7 @@ import { MembershipsModule } from '../memberships/memberships.module';
 import { UsersModule } from '../users/users.module';
 
 @Module({
-  imports: [EnumModule,MembershipsModule,UsersModule],
+  imports: [EnumModule, MembershipsModule, UsersModule],
   controllers: [ProjectCollaboratorsController],
   providers: [ProjectCollaboratorsService, ProjectCollaboratorsRepository],
   exports: [ProjectCollaboratorsRepository],

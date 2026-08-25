@@ -379,7 +379,7 @@ describe('ProjectModulesService', () => {
       ).rejects.toThrow(NotFoundException);
     });
 
-    it('adds the creator as a module collaborator for an independent module', async () => {
+    it('adds a collaborator for a project-scoped module too', async () => {
       enumRepository.findByCategoryAndValue.mockImplementation(
         (category: string, value: string) =>
           Promise.resolve({ id: `${category}-${value}-id` }),
@@ -389,9 +389,9 @@ describe('ProjectModulesService', () => {
         tagId: null,
         statusId: null,
       });
-
       await service.create('tenant-1', 'user-1', {
-        title: 'Independent module',
+        title: 'Project module',
+        projectId: 'project-1',
       });
 
       expect(collaboratorsRepository.create).toHaveBeenCalledWith({
@@ -400,25 +400,6 @@ describe('ProjectModulesService', () => {
         userId: 'user-1',
         roleId: 'project_role-Owner-id',
       });
-    });
-
-    it('does not add a collaborator for a project-scoped module', async () => {
-      enumRepository.findByCategoryAndValue.mockImplementation(
-        (category: string, value: string) =>
-          Promise.resolve({ id: `${category}-${value}-id` }),
-      );
-      repository.create.mockResolvedValue({
-        id: 'module-1',
-        tagId: null,
-        statusId: null,
-      });
-
-      await service.create('tenant-1', 'user-1', {
-        title: 'Project module',
-        projectId: 'project-1',
-      });
-
-      expect(collaboratorsRepository.create).not.toHaveBeenCalled();
     });
   });
 

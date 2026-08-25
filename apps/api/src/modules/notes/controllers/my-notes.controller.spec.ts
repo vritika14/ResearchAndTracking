@@ -35,7 +35,9 @@ describe('MyNotesController', () => {
   it('list() resolves the caller and delegates to listForCaller', async () => {
     notesService.listForCaller.mockResolvedValue([{ id: 'note-1' }]);
     const result = await controller.list(req());
-    expect(usersService.findByExternalAuthId).toHaveBeenCalledWith('cognito-sub-1');
+    expect(usersService.findByExternalAuthId).toHaveBeenCalledWith(
+      'cognito-sub-1',
+    );
     expect(notesService.listForCaller).toHaveBeenCalledWith('user-1');
     expect(result).toEqual([{ id: 'note-1' }]);
   });
@@ -43,23 +45,38 @@ describe('MyNotesController', () => {
   it('findOne() delegates to findOneForCaller with the note id and caller id', async () => {
     notesService.findOneForCaller.mockResolvedValue({ id: 'note-1' });
     const result = await controller.findOne('note-1', req());
-    expect(notesService.findOneForCaller).toHaveBeenCalledWith('note-1', 'user-1');
+    expect(notesService.findOneForCaller).toHaveBeenCalledWith(
+      'note-1',
+      'user-1',
+    );
     expect(result).toEqual({ id: 'note-1' });
   });
 
   it('update() delegates to updateForCaller with the note id, caller id, and body', async () => {
-    notesService.updateForCaller.mockResolvedValue({ id: 'note-1', title: 'Updated' });
-    const result = await controller.update('note-1', req(), { title: 'Updated' });
-    expect(notesService.updateForCaller).toHaveBeenCalledWith('note-1', 'user-1', {
+    notesService.updateForCaller.mockResolvedValue({
+      id: 'note-1',
       title: 'Updated',
     });
+    const result = await controller.update('note-1', req(), {
+      title: 'Updated',
+    });
+    expect(notesService.updateForCaller).toHaveBeenCalledWith(
+      'note-1',
+      'user-1',
+      {
+        title: 'Updated',
+      },
+    );
     expect(result).toEqual({ id: 'note-1', title: 'Updated' });
   });
 
   it('remove() delegates to deleteForCaller with the note id and caller id', async () => {
     notesService.deleteForCaller.mockResolvedValue({ id: 'note-1' });
     const result = await controller.remove('note-1', req());
-    expect(notesService.deleteForCaller).toHaveBeenCalledWith('note-1', 'user-1');
+    expect(notesService.deleteForCaller).toHaveBeenCalledWith(
+      'note-1',
+      'user-1',
+    );
     expect(result).toEqual({ id: 'note-1' });
   });
 });

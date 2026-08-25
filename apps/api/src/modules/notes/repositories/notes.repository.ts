@@ -27,7 +27,10 @@ export class NotesRepository {
 
   /** All notes the given user created, across every tenant. */
   async findByCreator(userId: string) {
-    return this.drizzle.db.select().from(notes).where(eq(notes.createdBy, userId));
+    return this.drizzle.db
+      .select()
+      .from(notes)
+      .where(eq(notes.createdBy, userId));
   }
 
   async findByIds(ids: string[]) {

@@ -11,7 +11,9 @@ function decodeJwtSub(token: string): string | undefined {
   try {
     const payloadSegment = token.split('.')[1];
     if (!payloadSegment) return undefined;
-    const payload = JSON.parse(Buffer.from(payloadSegment, 'base64').toString('utf-8')) as {
+    const payload = JSON.parse(
+      Buffer.from(payloadSegment, 'base64').toString('utf-8'),
+    ) as {
       sub?: string;
     };
     return payload.sub;
@@ -37,7 +39,9 @@ export class TenantContextMiddleware implements NestMiddleware {
       const token = authHeader.slice('Bearer '.length);
       const sub = decodeJwtSub(token);
       if (sub) {
-        const user = await this.usersService.findByExternalAuthId(sub).catch(() => undefined);
+        const user = await this.usersService
+          .findByExternalAuthId(sub)
+          .catch(() => undefined);
         userId = user?.id ?? null;
       }
     }
@@ -48,10 +52,16 @@ export class TenantContextMiddleware implements NestMiddleware {
     try {
       await client.query('BEGIN');
       if (tenantId) {
-        await client.query('SELECT set_config($1, $2, true)', ['app.current_tenant_id', tenantId]);
+        await client.query('SELECT set_config($1, $2, true)', [
+          'app.current_tenant_id',
+          tenantId,
+        ]);
       }
       if (userId) {
-        await client.query('SELECT set_config($1, $2, true)', ['app.current_user_id', userId]);
+        await client.query('SELECT set_config($1, $2, true)', [
+          'app.current_user_id',
+          userId,
+        ]);
       }
 
       requestContextStorage.run({ tenantId, userId, tx }, () => {
