@@ -1,5 +1,5 @@
 import { Injectable } from '@nestjs/common';
-import { modules } from '@research-tracker/migrations';
+import { enumTable, modules } from '@research-tracker/migrations';
 import { and, eq, inArray, isNull } from 'drizzle-orm';
 import { DrizzleService } from '../../../db/drizzle.service';
 
@@ -53,22 +53,48 @@ export class ProjectModulesRepository {
       .where(and(...conditions));
   }
 
-  async create(values: {
-    projectId?: string;
-    tenantId: string;
-    title: string;
-    description?: string;
-    tagId?: string;
-    statusId?: string;
-    pipelineStageId?: string;
-    assignedToUserId?: string;
-    displayId?: string;
-  }) {
-    const [module] = await this.drizzle.db
-      .insert(modules)
-      .values(values)
-      .returning();
-    return module;
+  async create(
+    values: {
+      projectId?: string;
+      tenantId: string;
+      title: string;
+      description?: string;
+      tagId?: string;
+      statusId?: string;
+      pipelineStageId?: string;
+      assignedToUserId?: string;
+      displayId?: string;
+    },
+    pipelineStages?: string[],
+    initialPipelineStage?: string,
+  ) {
+    return this.drizzle.db.transaction(async (tx) => {
+      let [module] = await tx.insert(modules).values(values).returning();
+      if (!module || !pipelineStages?.length) return module;
+
+      const stageRows = await tx
+        .insert(enumTable)
+        .values(
+          pipelineStages.map((value, index) => ({
+            moduleId: module!.id,
+            category: 'module_pipeline_stage',
+            value,
+            sortOrder: index + 1,
+          })),
+        )
+        .returning();
+      const initialStage =
+        stageRows.find((stage) => stage.value === initialPipelineStage) ??
+        stageRows[0];
+      if (initialStage) {
+        [module] = await tx
+          .update(modules)
+          .set({ pipelineStageId: initialStage.id, updatedAt: new Date() })
+          .where(eq(modules.id, module.id))
+          .returning();
+      }
+      return module;
+    });
   }
 
   async update(

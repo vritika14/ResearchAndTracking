@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useCallback, useMemo, useState } from "react";
 import { Archive, Boxes, Pencil } from "lucide-react";
 import { Link } from "react-router-dom";
 
@@ -36,6 +36,7 @@ const MODULE_COLUMNS = [
   { id: "module", label: "Module" },
   { id: "project", label: "Project" },
   { id: "status", label: "Status" },
+  { id: "stage", label: "Stage" },
   { id: "type", label: "Type" },
   { id: "assignee", label: "Assigned To" },
   { id: "actions", label: "Actions" },
@@ -79,10 +80,10 @@ export default function ModulesPage() {
     return map;
   }, [workspaceMembers.data]);
 
-  function projectName(projectId: string | null) {
+  const projectName = useCallback((projectId: string | null) => {
     if (!projectId) return "Independent module";
     return projectById.get(projectId) ?? "Unknown project";
-  }
+  }, [projectById]);
 
   const visibleModules = useMemo(() => {
     const query = search.trim().toLowerCase();
@@ -96,7 +97,7 @@ export default function ModulesPage() {
         linkedProject.toLowerCase().includes(query)
       );
     });
-  }, [modulesQuery.data, search, status, projectById]);
+  }, [modulesQuery.data, search, status, projectName]);
 
   const hasActiveFilters = search !== "" || status !== "All";
 
@@ -106,6 +107,8 @@ export default function ModulesPage() {
       description: input.description || undefined,
       projectId: input.projectId ?? undefined,
       status: input.status,
+      pipelineStage: input.pipelineStage,
+      pipelineStages: input.pipelineStages,
       tag: input.tag || undefined,
       assignedToUserId: input.assignedToUserId ?? undefined,
     });
@@ -128,6 +131,7 @@ export default function ModulesPage() {
         title: input.title,
         description: input.description || undefined,
         status: input.status,
+        pipelineStage: input.pipelineStage,
         tag: input.tag || undefined,
         assignedToUserId: input.assignedToUserId ?? undefined,
       },
@@ -157,8 +161,9 @@ export default function ModulesPage() {
   }
 
   return (
-    <div className="flex flex-col gap-6">
+    <div className="page-stack">
       <PageHeading
+        tone="violet"
         icon={Boxes}
         eyebrow="Workflows"
         title="Modules"
@@ -186,7 +191,7 @@ export default function ModulesPage() {
         onSave={(input) => void handleUpdateModule(input)}
       />
 
-      <div className="flex flex-wrap items-center gap-3 rounded-lg border p-4">
+      <div className="surface-toolbar flex flex-wrap items-center gap-3 border-violet-200/70 bg-violet-50/40 dark:border-violet-900/50 dark:bg-violet-950/10">
         <Input
           value={search}
           onChange={(event) => setSearch(event.target.value)}
@@ -222,13 +227,14 @@ export default function ModulesPage() {
         ) : null}
       </div>
 
-      <div className="overflow-x-auto rounded-lg border">
+      <div className="overflow-x-auto rounded-xl border border-violet-200/50 bg-card/90 shadow-sm dark:border-violet-900/40">
         <Table className="min-w-[900px]">
           <TableHeader>
             <TableRow>
               {columns.isColumnVisible("module") ? <TableHead>Module</TableHead> : null}
               {columns.isColumnVisible("project") ? <TableHead>Project</TableHead> : null}
               {columns.isColumnVisible("status") ? <TableHead>Status</TableHead> : null}
+              {columns.isColumnVisible("stage") ? <TableHead>Stage</TableHead> : null}
               {columns.isColumnVisible("type") ? <TableHead>Type</TableHead> : null}
               {columns.isColumnVisible("assignee") ? <TableHead>Assigned To</TableHead> : null}
               {columns.isColumnVisible("actions") ? <TableHead className="text-right">Actions</TableHead> : null}
@@ -270,6 +276,11 @@ export default function ModulesPage() {
                   {columns.isColumnVisible("status") ? (
                     <TableCell>
                       <StatusBadge status={module.status ?? "—"} />
+                    </TableCell>
+                  ) : null}
+                  {columns.isColumnVisible("stage") ? (
+                    <TableCell className="text-sm font-medium text-violet-700 dark:text-violet-300">
+                      {module.pipelineStage ?? "Unassigned"}
                     </TableCell>
                   ) : null}
                   {columns.isColumnVisible("type") ? (

@@ -17,7 +17,6 @@ CREATE POLICY project_invitations_visibility ON project_invitations
       WHERE id = NULLIF(current_setting('app.current_user_id', true), '')::uuid
     )
   );
-
 ALTER POLICY project_invitations_visibility ON project_invitations
   WITH CHECK (
     EXISTS (
@@ -67,4 +66,3 @@ ALTER POLICY module_invitations_visibility ON module_invitations
         )
     )
   );
-  

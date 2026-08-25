@@ -12,6 +12,7 @@ import {
   useMyProject,
   useNotes,
   usePipelineStages,
+  useProjectPipelineStages,
   useProjectCollaborators,
   useRemoveProjectCollaborator,
   useTasks,
@@ -392,7 +393,6 @@ export default function ProjectDetailPage() {
   const modulesQuery = useModules(tenantId, projectId);
   const tasksQuery = useTasks(tenantId, projectId);
   const notesQuery = useNotes(tenantId, projectId);
-  const pipelineStagesQuery = usePipelineStages(tenantId);
   const membersQuery = useMembers(tenantId);
   const me = useMe();
   const updateProject = useUpdateMyProject();
@@ -400,6 +400,15 @@ export default function ProjectDetailPage() {
 
   const project = projectQuery.data;
   const sameTenant = Boolean(project && tenantId && project.tenantId === tenantId);
+  const scopedPipelineStagesQuery = useProjectPipelineStages(
+    project?.tenantId ?? tenantId,
+    projectId,
+    sameTenant,
+  );
+  const globalPipelineStagesQuery = usePipelineStages(tenantId, !sameTenant);
+  const pipelineStagesQuery = sameTenant
+    ? scopedPipelineStagesQuery
+    : globalPipelineStagesQuery;
   const [isEditing, setIsEditing] = useState(() => searchParams.get("edit") === "true");
   const [form, setForm] = useState<EditableProject | null>(null);
 
@@ -498,7 +507,7 @@ export default function ProjectDetailPage() {
   };
 
   return (
-    <div className="flex flex-col gap-8">
+    <div className="page-stack">
       <Button asChild variant="ghost" size="sm" className="w-fit">
         <Link to="/projects">
           <ArrowLeft />
@@ -507,6 +516,7 @@ export default function ProjectDetailPage() {
       </Button>
 
       <PageHeading
+        tone="blue"
         icon={FolderKanban}
         eyebrow={project.displayId ?? project.id}
         title={project.title}

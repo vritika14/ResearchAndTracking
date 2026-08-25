@@ -1,6 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 
-import { ApiError, apiClient, responseData } from "@/api/client";
+import { ApiError, apiClient, authenticatedJson, responseData } from "@/api/client";
 
 /**
  * None of the API's controllers annotate their response bodies with
@@ -95,6 +95,7 @@ export interface ApiModule {
   description: string | null;
   tag: string | null;
   status: string | null;
+  pipelineStage: string | null;
   assignedToUserId: string | null;
   archivedAt: string | null;
   createdAt: string;
@@ -300,6 +301,7 @@ export interface CreateProjectInput {
   researchArea?: string;
   status?: string;
   pipelineStage?: string;
+  pipelineStages?: string[];
   importance?: string;
   scheduledFor?: string;
   dueDate?: string;
@@ -344,8 +346,17 @@ export function useCreateProject(tenantId: string) {
           body: input,
         }),
       ),
-    async onSuccess() {
-      await queryClient.invalidateQueries({ queryKey: apiKeys.projects(tenantId) });
+    async onSuccess(project) {
+      const addProject = (current: ApiProject[] | undefined) => {
+        if (!current) return [project];
+        return current.some((item) => item.id === project.id) ? current : [project, ...current];
+      };
+      queryClient.setQueryData<ApiProject[]>(apiKeys.projects(tenantId), addProject);
+      queryClient.setQueryData<ApiProject[]>(["api", "me", "projects"], addProject);
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: apiKeys.projects(tenantId) }),
+        queryClient.invalidateQueries({ queryKey: ["api", "me", "projects"] }),
+      ]);
     },
   });
 }
@@ -520,6 +531,8 @@ export interface CreateModuleInput {
   projectId?: string;
   tag?: string;
   status?: string;
+  pipelineStage?: string;
+  pipelineStages?: string[];
   assignedToUserId?: string;
 }
 export type UpdateModuleInput = Partial<CreateModuleInput>;
@@ -565,10 +578,17 @@ export function useCreateModule(tenantId: string) {
           body: input,
         }),
       ),
-    async onSuccess() {
-      await queryClient.invalidateQueries({
-        queryKey: ["api", "tenant", tenantId, "modules"],
-      });
+    async onSuccess(module) {
+      const addModule = (current: ApiModule[] | undefined) => {
+        if (!current) return [module];
+        return current.some((item) => item.id === module.id) ? current : [module, ...current];
+      };
+      queryClient.setQueryData<ApiModule[]>(["api", "tenant", tenantId, "modules"], addModule);
+      queryClient.setQueryData<ApiModule[]>(["api", "me", "modules"], addModule);
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: ["api", "tenant", tenantId, "modules"] }),
+        queryClient.invalidateQueries({ queryKey: ["api", "me", "modules"] }),
+      ]);
     },
   });
 }
@@ -1240,18 +1260,47 @@ export interface ApiPipelineStage {
   updatedAt: string;
 }
 
-const pipelineStagesKey = (tenantId: string) =>
-  ["api", "tenant", tenantId, "pipeline-stages"] as const;
+const pipelineStagesKey = ["api", "enum", "project_pipeline_stage"] as const;
 
 export function usePipelineStages(tenantId: string, enabled = true) {
   return useQuery({
-    queryKey: pipelineStagesKey(tenantId),
+    queryKey: pipelineStagesKey,
     enabled: Boolean(tenantId) && enabled,
     queryFn: async () =>
       responseData<ApiPipelineStage[]>(
-        await apiClient.GET("/api/v1/tenant/{tenantId}/pipeline-stages", {
-          params: { path: { tenantId } },
+        await apiClient.GET("/api/v1/enum", {
+          params: { query: { category: "project_pipeline_stage" } },
         }),
+      ),
+  });
+}
+
+export function useProjectPipelineStages(
+  tenantId: string,
+  projectId: string,
+  enabled = true,
+) {
+  return useQuery({
+    queryKey: ["api", "tenant", tenantId, "projects", projectId, "pipeline-stages"] as const,
+    enabled: Boolean(tenantId) && Boolean(projectId) && enabled,
+    queryFn: () =>
+      authenticatedJson<ApiPipelineStage[]>(
+        `/api/v1/tenant/${encodeURIComponent(tenantId)}/projects/${encodeURIComponent(projectId)}/pipeline-stages`,
+      ),
+  });
+}
+
+export function useModulePipelineStages(
+  tenantId: string,
+  moduleId: string,
+  enabled = true,
+) {
+  return useQuery({
+    queryKey: ["api", "tenant", tenantId, "modules", moduleId, "pipeline-stages"] as const,
+    enabled: Boolean(tenantId) && Boolean(moduleId) && enabled,
+    queryFn: () =>
+      authenticatedJson<ApiPipelineStage[]>(
+        `/api/v1/tenant/${encodeURIComponent(tenantId)}/modules/${encodeURIComponent(moduleId)}/pipeline-stages`,
       ),
   });
 }
@@ -1267,7 +1316,7 @@ export function useCreatePipelineStage(tenantId: string) {
         }),
       ),
     async onSuccess() {
-      await queryClient.invalidateQueries({ queryKey: pipelineStagesKey(tenantId) });
+      await queryClient.invalidateQueries({ queryKey: pipelineStagesKey });
     },
   });
 }
@@ -1289,7 +1338,7 @@ export function useUpdatePipelineStage(tenantId: string) {
         }),
       ),
     async onSuccess() {
-      await queryClient.invalidateQueries({ queryKey: pipelineStagesKey(tenantId) });
+      await queryClient.invalidateQueries({ queryKey: pipelineStagesKey });
     },
   });
 }
@@ -1304,7 +1353,7 @@ export function useDeletePipelineStage(tenantId: string) {
         }),
       ),
     async onSuccess() {
-      await queryClient.invalidateQueries({ queryKey: pipelineStagesKey(tenantId) });
+      await queryClient.invalidateQueries({ queryKey: pipelineStagesKey });
     },
   });
 }

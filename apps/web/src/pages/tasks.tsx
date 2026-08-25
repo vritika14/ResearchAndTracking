@@ -301,9 +301,10 @@ export default function TasksPage() {
   }
 
   return (
-    <div className="flex flex-col gap-6">
+    <div className="page-stack">
       <PageHeading
         icon={ListTodo}
+        tone="amber"
         eyebrow="Workflows"
         title="Tasks and To Do"
         description="Everything outstanding across your projects — filter by status or priority, then sort any column."
@@ -338,7 +339,7 @@ export default function TasksPage() {
         />
       ) : null}
 
-      <div className="flex flex-wrap items-center gap-3 rounded-lg border p-4">
+      <div className="surface-toolbar flex flex-wrap items-center gap-3 border-amber-200/70 bg-amber-50/40 dark:border-amber-900/50 dark:bg-amber-950/10">
         <Input
           value={search}
           onChange={(event) => setSearch(event.target.value)}
@@ -385,10 +386,10 @@ export default function TasksPage() {
         ) : null}
       </div>
 
-      <div className="overflow-x-auto">
+      <div className="overflow-x-auto rounded-xl border border-border/70 bg-muted/20 p-3 shadow-sm sm:p-4">
         <div className="min-w-[720px]">
           <div
-            className="grid gap-4 px-4 pb-2 text-xs font-semibold uppercase tracking-wide text-primary"
+            className="mb-3 grid gap-4 rounded-lg border border-amber-200/70 bg-amber-100/65 px-4 py-3 text-[11px] font-bold uppercase tracking-[0.08em] text-amber-950 dark:border-amber-900/50 dark:bg-amber-950/35 dark:text-amber-200"
             style={{ gridTemplateColumns: gridTemplate }}
           >
             {TASK_COLUMNS.filter((column) =>
@@ -414,7 +415,7 @@ export default function TasksPage() {
               visibleTasks.map((task) => (
                 <div
                   key={task.id}
-                  className="grid items-center gap-4 rounded-lg border border-border bg-card px-4 py-4 shadow-sm"
+                  className="grid items-center gap-4 rounded-xl border border-amber-200/70 bg-gradient-to-r from-amber-50/55 via-card to-card px-4 py-4 shadow-sm transition-all hover:border-amber-300 hover:shadow-md dark:border-amber-900/50 dark:from-amber-950/15"
                   style={{ gridTemplateColumns: gridTemplate }}
                 >
                   {columns.isColumnVisible("code") ? (

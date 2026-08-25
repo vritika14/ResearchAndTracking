@@ -24,6 +24,22 @@ export function setApiAccessToken(token: string | undefined) {
 
 export const apiClient = createClient<paths>({ baseUrl: apiBaseUrl });
 
+export async function authenticatedJson<T>(path: string): Promise<T> {
+  const response = await fetch(`${apiBaseUrl.replace(/\/$/, "")}${path}`, {
+    headers: accessToken ? { Authorization: `Bearer ${accessToken}` } : undefined,
+  });
+  if (!response.ok) {
+    const error = (await response.json().catch(() => undefined)) as
+      | { message?: string; error?: string }
+      | undefined;
+    throw new ApiError(
+      response.status,
+      error?.message ?? error?.error ?? `Request failed with status ${response.status}`,
+    );
+  }
+  return response.json() as Promise<T>;
+}
+
 apiClient.use({
   onRequest({ request }) {
     if (accessToken) request.headers.set("Authorization", `Bearer ${accessToken}`);

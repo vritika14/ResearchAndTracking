@@ -90,6 +90,7 @@ export default function SettingsPage() {
     <div className="min-h-full pb-12">
       <div className="mx-auto w-full max-w-5xl">
         <PageHeading
+          tone="cyan"
           icon={SettingsIcon}
           title="Settings"
           description="Review your authenticated account and manage the active workspace."

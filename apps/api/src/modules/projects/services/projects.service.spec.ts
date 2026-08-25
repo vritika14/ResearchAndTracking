@@ -18,6 +18,7 @@ describe('ProjectsService', () => {
   };
   let enumRepository: {
     findByCategoryAndValue: jest.Mock;
+    findPipelineStageForProjectByValue: jest.Mock;
     findValuesByIds: jest.Mock;
   };
   let collaboratorsRepository: {
@@ -38,6 +39,7 @@ describe('ProjectsService', () => {
     };
     enumRepository = {
       findByCategoryAndValue: jest.fn(),
+      findPipelineStageForProjectByValue: jest.fn(),
       findValuesByIds: jest
         .fn()
         .mockImplementation((ids: string[]) =>
@@ -326,6 +328,36 @@ describe('ProjectsService', () => {
           pipelineStageId: 'project_pipeline_stage-Concept & Ideation-id',
           importanceId: 'importance-High-id',
         }),
+        expect.any(String),
+      );
+    });
+
+    it('passes an ordered project-specific stage list to the creation transaction', async () => {
+      enumRepository.findByCategoryAndValue.mockImplementation(
+        (category: string, value: string) =>
+          Promise.resolve({ id: `${category}-${value}-id` }),
+      );
+      repository.create.mockResolvedValue({
+        id: 'project-1',
+        statusId: null,
+        pipelineStageId: 'scoped-stage-2',
+        importanceId: null,
+      });
+
+      await service.create('user-1', 'tenant-1', {
+        title: 'Custom workflow project',
+        pipelineStage: 'Analysis',
+        pipelineStages: ['Concept', 'Analysis', 'Publication'],
+      });
+
+      expect(repository.create).toHaveBeenCalledWith(
+        expect.objectContaining({ pipelineStageId: undefined }),
+        expect.any(String),
+        ['Concept', 'Analysis', 'Publication'],
+        'Analysis',
+      );
+      expect(enumRepository.findByCategoryAndValue).not.toHaveBeenCalledWith(
+        'project_pipeline_stage',
         expect.any(String),
       );
     });

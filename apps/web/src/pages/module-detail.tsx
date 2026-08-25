@@ -169,6 +169,7 @@ export default function ModuleDetailPage() {
         title: input.title,
         description: input.description || undefined,
         status: input.status,
+        pipelineStage: input.pipelineStage,
         tag: input.tag || undefined,
         assignedToUserId: input.assignedToUserId ?? undefined,
       },
@@ -183,7 +184,7 @@ export default function ModuleDetailPage() {
   const moduleNotes = (notesQuery.data ?? []).filter((note) => note.moduleId === module.id);
 
   return (
-    <div className="flex flex-col gap-8">
+    <div className="page-stack">
       <Button asChild variant="ghost" size="sm" className="w-fit">
         <Link to="/modules">
           <ArrowLeft />
@@ -192,6 +193,7 @@ export default function ModuleDetailPage() {
       </Button>
 
       <PageHeading
+        tone="violet"
         icon={Boxes}
         eyebrow={module.displayId ?? module.id}
         title={module.title}
@@ -231,6 +233,7 @@ export default function ModuleDetailPage() {
             </DetailItem>
             <DetailItem label="Type">{module.tag ?? "—"}</DetailItem>
             <DetailItem label="Status">{module.status ?? "—"}</DetailItem>
+            <DetailItem label="Pipeline stage">{module.pipelineStage ?? "Unassigned"}</DetailItem>
             <DetailItem label="Assigned to">{assignee?.displayName ?? "Unassigned"}</DetailItem>
             <DetailItem label="Description" className="sm:col-span-2">
               <span className="font-normal text-muted-foreground">

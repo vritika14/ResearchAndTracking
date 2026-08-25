@@ -4,7 +4,7 @@
 
 @layer base {
   :root {
-    --background: 214 40% 97%;
+    --background: 216 33% 97%;
     --foreground: 222.2 84% 4.9%;
 
     --card: 0 0% 100%;
@@ -20,7 +20,7 @@
     --secondary: 210 40% 96.1%;
     --secondary-foreground: 222.2 47.4% 11.2%;
 
-    --muted: 214 32% 94%;
+    --muted: 215 28% 94%;
     --muted-foreground: 215.4 16.3% 46.9%;
 
     --accent: 210 60% 94%;
@@ -29,24 +29,24 @@
     --destructive: 0 84.2% 60.2%;
     --destructive-foreground: 210 40% 98%;
 
-    --border: 214 32% 88%;
-    --input: 214 32% 88%;
+    --border: 215 25% 88%;
+    --input: 215 24% 84%;
     --ring: 221.2 83.2% 53.3%;
 
     --pipeline-start: 213 94% 80%;
     --pipeline-middle: 217 91% 60%;
     --pipeline-end: 224 64% 33%;
 
-    --radius: 0.5rem;
+    --radius: 0.75rem;
 
     /* Design theme tokens — every [data-design-theme] block below redefines
        all of these too, so a theme can be safely scoped on a small preview
        element as well as on <html>. These :root values are the "modern"
        theme's values and match Tailwind's stock shadow/spacing defaults, so
        the default look is unchanged from before design themes existed. */
-    --shadow-sm: 0 1px 3px 0 rgb(0 0 0 / 0.08), 0 1px 2px -1px rgb(0 0 0 / 0.06);
-    --shadow-md: 0 6px 16px -4px rgb(0 0 0 / 0.14), 0 3px 6px -3px rgb(0 0 0 / 0.1);
-    --control-height: 2.25rem;
+    --shadow-sm: 0 1px 2px rgb(15 23 42 / 0.04), 0 4px 12px -8px rgb(15 23 42 / 0.18);
+    --shadow-md: 0 16px 34px -20px rgb(15 23 42 / 0.32), 0 4px 12px -6px rgb(15 23 42 / 0.12);
+    --control-height: 2.5rem;
     --card-padding: 1.5rem;
     --font-sans: Inter, ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
     --font-heading: Inter, ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
@@ -58,7 +58,7 @@
      <html> for the whole app or to a small preview swatch element. */
 
   [data-design-theme="modern"] {
-    --background: 214 40% 97%;
+    --background: 216 33% 97%;
     --foreground: 222.2 84% 4.9%;
     --card: 0 0% 100%;
     --card-foreground: 222.2 84% 4.9%;
@@ -68,22 +68,22 @@
     --primary-foreground: 210 40% 98%;
     --secondary: 210 40% 96.1%;
     --secondary-foreground: 222.2 47.4% 11.2%;
-    --muted: 214 32% 94%;
+    --muted: 215 28% 94%;
     --muted-foreground: 215.4 16.3% 46.9%;
     --accent: 210 60% 94%;
     --accent-foreground: 222.2 47.4% 11.2%;
     --destructive: 0 84.2% 60.2%;
     --destructive-foreground: 210 40% 98%;
-    --border: 214 32% 88%;
-    --input: 214 32% 88%;
+    --border: 215 25% 88%;
+    --input: 215 24% 84%;
     --ring: 221.2 83.2% 53.3%;
     --pipeline-start: 213 94% 80%;
     --pipeline-middle: 217 91% 60%;
     --pipeline-end: 224 64% 33%;
-    --radius: 0.5rem;
-    --shadow-sm: 0 1px 3px 0 rgb(0 0 0 / 0.08), 0 1px 2px -1px rgb(0 0 0 / 0.06);
-    --shadow-md: 0 6px 16px -4px rgb(0 0 0 / 0.14), 0 3px 6px -3px rgb(0 0 0 / 0.1);
-    --control-height: 2.25rem;
+    --radius: 0.75rem;
+    --shadow-sm: 0 1px 2px rgb(15 23 42 / 0.04), 0 4px 12px -8px rgb(15 23 42 / 0.18);
+    --shadow-md: 0 16px 34px -20px rgb(15 23 42 / 0.32), 0 4px 12px -6px rgb(15 23 42 / 0.12);
+    --control-height: 2.5rem;
     --card-padding: 1.5rem;
     --font-sans: Inter, ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
     --font-heading: Inter, ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
@@ -287,7 +287,95 @@
   }
 
   body {
-    @apply bg-background text-foreground antialiased;
+    @apply min-w-0 bg-background text-foreground antialiased;
+    background-image:
+      radial-gradient(circle at 8% 4%, hsl(var(--primary) / 0.075), transparent 24rem),
+      radial-gradient(circle at 92% 92%, hsl(var(--pipeline-middle) / 0.055), transparent 28rem),
+      linear-gradient(to bottom, hsl(var(--primary) / 0.025), transparent 18rem);
+    background-attachment: fixed;
     transition: background-color 180ms ease, color 180ms ease;
+  }
+
+  ::selection {
+    background: hsl(var(--primary) / 0.18);
+  }
+
+  :focus-visible {
+    scroll-margin: 1rem;
+  }
+
+  button, a, input, textarea, [role="button"] {
+    -webkit-tap-highlight-color: transparent;
+  }
+}
+
+@layer utilities {
+  .page-stack {
+    @apply flex flex-col gap-6 lg:gap-8;
+  }
+
+  .surface-toolbar {
+    @apply rounded-xl border bg-card/80 p-4 shadow-sm backdrop-blur-sm;
+  }
+
+  .route-stage {
+    animation: route-enter 360ms cubic-bezier(0.22, 1, 0.36, 1) both;
+  }
+
+  .route-stage > .page-stack > * {
+    animation: content-rise 420ms cubic-bezier(0.22, 1, 0.36, 1) both;
+  }
+
+  .route-stage > .page-stack > :nth-child(1) { animation-delay: 45ms; }
+  .route-stage > .page-stack > :nth-child(2) { animation-delay: 80ms; }
+  .route-stage > .page-stack > :nth-child(3) { animation-delay: 115ms; }
+  .route-stage > .page-stack > :nth-child(4) { animation-delay: 150ms; }
+  .route-stage > .page-stack > :nth-child(5) { animation-delay: 185ms; }
+  .route-stage > .page-stack > :nth-child(6) { animation-delay: 220ms; }
+  .route-stage > .page-stack > :nth-child(n + 7) { animation-delay: 255ms; }
+
+  .auth-stage > * {
+    animation: route-enter 420ms cubic-bezier(0.22, 1, 0.36, 1) both;
+  }
+}
+
+@keyframes route-enter {
+  from {
+    opacity: 0;
+    filter: blur(2px);
+    transform: translateY(10px) scale(0.995);
+  }
+
+  to {
+    opacity: 1;
+    filter: blur(0);
+    transform: translateY(0) scale(1);
+  }
+}
+
+@keyframes content-rise {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html {
+    scroll-behavior: auto;
+  }
+
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    scroll-behavior: auto !important;
+    transition-duration: 0.01ms !important;
   }
 }

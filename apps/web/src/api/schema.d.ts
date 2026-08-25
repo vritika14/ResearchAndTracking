@@ -681,6 +681,8 @@ export interface components {
             status?: string;
             /** @example Concept & Ideation */
             pipelineStage?: string;
+            /** @description Ordered pipeline stages configured specifically for this project */
+            pipelineStages?: string[];
             /** @example High */
             importance?: string;
             scheduledFor?: string;
@@ -697,6 +699,8 @@ export interface components {
             status?: string;
             /** @example Concept & Ideation */
             pipelineStage?: string;
+            /** @description Ordered pipeline stages configured specifically for this project */
+            pipelineStages?: string[];
             /** @example High */
             importance?: string;
             scheduledFor?: string;
@@ -723,6 +727,10 @@ export interface components {
             tag?: string;
             /** @example Active */
             status?: string;
+            /** @example Concept & Ideation */
+            pipelineStage?: string;
+            /** @description Ordered pipeline stages configured specifically for this module */
+            pipelineStages?: string[];
             assignedToUserId?: string;
         };
         UpdateModuleDto: {
@@ -734,6 +742,10 @@ export interface components {
             tag?: string;
             /** @example Active */
             status?: string;
+            /** @example Concept & Ideation */
+            pipelineStage?: string;
+            /** @description Ordered pipeline stages configured specifically for this module */
+            pipelineStages?: string[];
             assignedToUserId?: string;
         };
         CreateNoteDto: {

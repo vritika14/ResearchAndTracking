@@ -14,7 +14,7 @@ import { cn } from "@/lib/utils";
 const headingVariants = cva("font-heading font-semibold tracking-[var(--heading-tracking)] text-foreground", {
   variants: {
     level: {
-      h1: "text-2xl sm:text-[1.75rem]",
+      h1: "text-[1.65rem] leading-tight sm:text-[2rem]",
       h2: "text-xl sm:text-2xl",
       h3: "text-lg sm:text-xl",
       h4: "text-base sm:text-lg",
@@ -51,22 +51,58 @@ export interface PageHeadingProps extends React.HTMLAttributes<HTMLDivElement> {
   eyebrow?: string;
   icon?: LucideIcon;
   actions?: React.ReactNode;
+  tone?: "blue" | "violet" | "emerald" | "amber" | "rose" | "cyan";
 }
+
+const pageHeadingTones = {
+  blue: {
+    surface: "border-blue-200/70 bg-gradient-to-br from-blue-50 via-card to-card dark:border-blue-900/60 dark:from-blue-950/30",
+    icon: "bg-blue-600 text-white ring-blue-500/15",
+    glow: "from-blue-400/20",
+  },
+  violet: {
+    surface: "border-violet-200/70 bg-gradient-to-br from-violet-50 via-card to-card dark:border-violet-900/60 dark:from-violet-950/30",
+    icon: "bg-violet-600 text-white ring-violet-500/15",
+    glow: "from-violet-400/20",
+  },
+  emerald: {
+    surface: "border-emerald-200/70 bg-gradient-to-br from-emerald-50 via-card to-card dark:border-emerald-900/60 dark:from-emerald-950/30",
+    icon: "bg-emerald-600 text-white ring-emerald-500/15",
+    glow: "from-emerald-400/20",
+  },
+  amber: {
+    surface: "border-amber-200/80 bg-gradient-to-br from-amber-50 via-card to-card dark:border-amber-900/60 dark:from-amber-950/30",
+    icon: "bg-amber-500 text-white ring-amber-500/15",
+    glow: "from-amber-400/20",
+  },
+  rose: {
+    surface: "border-rose-200/70 bg-gradient-to-br from-rose-50 via-card to-card dark:border-rose-900/60 dark:from-rose-950/30",
+    icon: "bg-rose-600 text-white ring-rose-500/15",
+    glow: "from-rose-400/20",
+  },
+  cyan: {
+    surface: "border-cyan-200/70 bg-gradient-to-br from-cyan-50 via-card to-card dark:border-cyan-900/60 dark:from-cyan-950/30",
+    icon: "bg-cyan-600 text-white ring-cyan-500/15",
+    glow: "from-cyan-400/20",
+  },
+};
 
 /** Standard top-of-page header: icon badge, eyebrow, bold title, description, actions. */
 const PageHeading = React.forwardRef<HTMLDivElement, PageHeadingProps>(
-  ({ className, title, description, eyebrow, icon: Icon, actions, ...props }, ref) => (
+  ({ className, title, description, eyebrow, icon: Icon, actions, tone = "blue", ...props }, ref) => (
     <div
       ref={ref}
       className={cn(
-        "flex flex-col gap-4 border-b pb-6 sm:flex-row sm:items-end sm:justify-between",
+        "relative overflow-hidden rounded-2xl border px-5 py-5 shadow-sm backdrop-blur-sm sm:flex sm:items-center sm:justify-between sm:px-6 sm:py-6",
+        pageHeadingTones[tone].surface,
         className,
       )}
       {...props}
     >
-      <div className="flex items-start gap-4">
+      <div aria-hidden="true" className={cn("pointer-events-none absolute inset-y-0 right-0 w-2/5 bg-gradient-to-l to-transparent", pageHeadingTones[tone].glow)} />
+      <div className="relative flex items-start gap-4">
         {Icon ? (
-          <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-primary/10 text-primary ring-1 ring-primary/20">
+          <span className={cn("flex h-11 w-11 shrink-0 items-center justify-center rounded-xl shadow-sm ring-4", pageHeadingTones[tone].icon)}>
             <Icon className="h-5 w-5" />
           </span>
         ) : null}
@@ -84,7 +120,7 @@ const PageHeading = React.forwardRef<HTMLDivElement, PageHeadingProps>(
           ) : null}
         </div>
       </div>
-      {actions ? <div className="flex shrink-0 items-center gap-2">{actions}</div> : null}
+      {actions ? <div className="relative mt-4 flex shrink-0 flex-wrap items-center gap-2 sm:mt-0 sm:justify-end">{actions}</div> : null}
     </div>
   ),
 );

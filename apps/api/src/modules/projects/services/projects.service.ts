@@ -74,6 +74,7 @@ export class ProjectsService {
       researchArea?: string;
       status?: string;
       pipelineStage?: string;
+      pipelineStages?: string[];
       importance?: string;
       scheduledFor?: string;
       dueDate?: string;
@@ -81,10 +82,13 @@ export class ProjectsService {
       targetJournals?: string;
     },
   ) {
+    const pipelineStages = normalizePipelineStages(input.pipelineStages);
     const [statusId, pipelineStageId, importanceId, ownerRoleId, displayId] =
       await Promise.all([
         this.resolveEnum('project_status', input.status),
-        this.resolveEnum('project_pipeline_stage', input.pipelineStage),
+        pipelineStages.length
+          ? undefined
+          : this.resolveEnum('project_pipeline_stage', input.pipelineStage),
         this.resolveEnum('importance', input.importance),
         this.resolveEnum('project_role', 'Owner'),
         this.sequences.nextDisplayId(tenantId, 'project'),
@@ -96,24 +100,31 @@ export class ProjectsService {
       );
     }
 
-    const project = await this.repository.create(
-      {
-        userId,
-        tenantId,
-        title: input.title,
-        description: input.description,
-        researchArea: input.researchArea,
-        statusId,
-        pipelineStageId,
-        importanceId,
-        scheduledFor: input.scheduledFor,
-        dueDate: input.dueDate,
-        totalBudget: input.totalBudget,
-        targetJournals: input.targetJournals,
-        displayId,
-      },
-      ownerRoleId,
-    );
+    const createValues = {
+      userId,
+      tenantId,
+      title: input.title,
+      description: input.description,
+      researchArea: input.researchArea,
+      statusId,
+      pipelineStageId,
+      importanceId,
+      scheduledFor: input.scheduledFor,
+      dueDate: input.dueDate,
+      totalBudget: input.totalBudget,
+      targetJournals: input.targetJournals,
+      displayId,
+    };
+    const project = pipelineStages.length
+      ? await this.repository.create(
+          createValues,
+          ownerRoleId,
+          pipelineStages,
+          pipelineStages.includes(input.pipelineStage ?? '')
+            ? input.pipelineStage
+            : pipelineStages[0],
+        )
+      : await this.repository.create(createValues, ownerRoleId);
 
     if (!project) {
       throw new NotFoundException('Failed to create project');
@@ -147,7 +158,7 @@ export class ProjectsService {
         ? this.resolveEnum('project_status', input.status)
         : undefined,
       input.pipelineStage
-        ? this.resolveEnum('project_pipeline_stage', input.pipelineStage)
+        ? this.resolveProjectPipelineStage(projectId, input.pipelineStage)
         : undefined,
       input.importance
         ? this.resolveEnum('importance', input.importance)
@@ -290,4 +301,23 @@ export class ProjectsService {
     }
     return match.id;
   }
+
+  private async resolveProjectPipelineStage(projectId: string, value: string) {
+    const match = await this.enumRepository.findPipelineStageForProjectByValue(
+      projectId,
+      value,
+    );
+    if (!match) {
+      throw new NotFoundException(
+        `Unknown project_pipeline_stage value: "${value}"`,
+      );
+    }
+    return match.id;
+  }
+}
+
+function normalizePipelineStages(stages?: string[]) {
+  return [
+    ...new Set((stages ?? []).map((stage) => stage.trim()).filter(Boolean)),
+  ];
 }

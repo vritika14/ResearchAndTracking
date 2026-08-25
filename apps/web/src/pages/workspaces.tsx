@@ -79,6 +79,7 @@ export default function WorkspacesPage() {
   return (
     <div className="mx-auto w-full max-w-6xl pb-12">
       <PageHeading
+        tone="cyan"
         icon={Building2}
         title="Workspaces"
         description="View every research workspace you can access and choose which one is active."
@@ -107,9 +108,7 @@ export default function WorkspacesPage() {
             return (
               <Card
                 key={workspace.id}
-                className={
-                  isCurrent ? "border-primary/50 shadow-md" : undefined
-                }
+                className={isCurrent ? "border-primary/40 bg-primary/[0.025] shadow-md" : "transition-all hover:-translate-y-0.5 hover:border-primary/20 hover:shadow-md"}
               >
                 <CardHeader>
                   <div className="flex items-start justify-between gap-4">

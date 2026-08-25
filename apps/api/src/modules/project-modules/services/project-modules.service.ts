@@ -112,19 +112,20 @@ export class ProjectModulesService {
       tag?: string;
       status?: string;
       pipelineStage?: string;
+      pipelineStages?: string[];
       assignedToUserId?: string;
     },
   ) {
     const tagId = await this.resolveEnum('module_type', input.tag);
     const statusId = await this.resolveEnum('project_status', input.status);
-    const pipelineStageId = await this.resolveEnum(
-      'module_pipeline_stage',
-      input.pipelineStage,
-    );
+    const pipelineStages = normalizePipelineStages(input.pipelineStages);
+    const pipelineStageId = pipelineStages.length
+      ? undefined
+      : await this.resolveEnum('module_pipeline_stage', input.pipelineStage);
     const ownerRoleId = await this.resolveEnum('project_role', 'Owner');
     const displayId = await this.sequences.nextDisplayId(tenantId, 'module');
 
-    const module = await this.repository.create({
+    const createValues = {
       projectId: input.projectId,
       tenantId,
       title: input.title,
@@ -134,7 +135,16 @@ export class ProjectModulesService {
       pipelineStageId,
       assignedToUserId: input.assignedToUserId,
       displayId,
-    });
+    };
+    const module = pipelineStages.length
+      ? await this.repository.create(
+          createValues,
+          pipelineStages,
+          pipelineStages.includes(input.pipelineStage ?? '')
+            ? input.pipelineStage
+            : pipelineStages[0],
+        )
+      : await this.repository.create(createValues);
 
     if (!module) {
       throw new NotFoundException('Failed to create module');
@@ -177,7 +187,7 @@ export class ProjectModulesService {
         ? this.resolveEnum('project_status', input.status)
         : undefined,
       input.pipelineStage
-        ? this.resolveEnum('module_pipeline_stage', input.pipelineStage)
+        ? this.resolveModulePipelineStage(moduleId, input.pipelineStage)
         : undefined,
     ]);
 
@@ -260,7 +270,7 @@ export class ProjectModulesService {
     },
   >(rows: T[], _callerUserId: string) {
     const enumIds = rows
-      .flatMap((r) => [r.tagId, r.statusId, r.pipelineStageId])
+      .flatMap((row) => [row.tagId, row.statusId, row.pipelineStageId])
       .filter((id): id is string => id !== null);
     const valuesById = await this.enumRepository.findValuesByIds(enumIds);
 
@@ -288,4 +298,23 @@ export class ProjectModulesService {
     }
     return match.id;
   }
+
+  private async resolveModulePipelineStage(moduleId: string, value: string) {
+    const match = await this.enumRepository.findPipelineStageForModuleByValue(
+      moduleId,
+      value,
+    );
+    if (!match) {
+      throw new NotFoundException(
+        `Unknown module_pipeline_stage value: "${value}"`,
+      );
+    }
+    return match.id;
+  }
+}
+
+function normalizePipelineStages(stages?: string[]) {
+  return [
+    ...new Set((stages ?? []).map((stage) => stage.trim()).filter(Boolean)),
+  ];
 }

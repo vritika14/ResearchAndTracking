@@ -1,5 +1,9 @@
 import { Injectable } from '@nestjs/common';
-import { projectCollaborators, projects } from '@research-tracker/migrations';
+import {
+  enumTable,
+  projectCollaborators,
+  projects,
+} from '@research-tracker/migrations';
 import { and, eq, inArray, isNull } from 'drizzle-orm';
 import { DrizzleService } from '../../../db/drizzle.service';
 
@@ -57,17 +61,45 @@ export class ProjectsRepository {
       displayId?: string;
     },
     ownerRoleId: string,
+    pipelineStages?: string[],
+    initialPipelineStage?: string,
   ) {
     return this.drizzle.db.transaction(async (tx) => {
-      const [project] = await tx.insert(projects).values(values).returning();
+      let [project] = await tx.insert(projects).values(values).returning();
 
       if (!project) {
         return undefined;
       }
+      const projectId = project.id;
+
+      if (pipelineStages?.length) {
+        const stageRows = await tx
+          .insert(enumTable)
+          .values(
+            pipelineStages.map((value, index) => ({
+              projectId,
+              category: 'project_pipeline_stage',
+              value,
+              sortOrder: index + 1,
+            })),
+          )
+          .returning();
+        const initialStage =
+          stageRows.find((stage) => stage.value === initialPipelineStage) ??
+          stageRows[0];
+        if (initialStage) {
+          const [updatedProject] = await tx
+            .update(projects)
+            .set({ pipelineStageId: initialStage.id, updatedAt: new Date() })
+            .where(eq(projects.id, projectId))
+            .returning();
+          if (updatedProject) project = updatedProject;
+        }
+      }
 
       await tx.insert(projectCollaborators).values({
         tenantId: values.tenantId,
-        projectId: project.id,
+        projectId,
         userId: values.userId,
         roleId: ownerRoleId,
       });

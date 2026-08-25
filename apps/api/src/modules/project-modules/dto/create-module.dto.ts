@@ -1,6 +1,15 @@
 // apps/api/src/modules/project-modules/dto/create-module.dto.ts
 import { ApiProperty } from '@nestjs/swagger';
-import { IsString, IsOptional, IsUUID, Length } from 'class-validator';
+import {
+  ArrayMaxSize,
+  ArrayMinSize,
+  ArrayUnique,
+  IsArray,
+  IsOptional,
+  IsString,
+  IsUUID,
+  Length,
+} from 'class-validator';
 
 export class CreateModuleDto {
   @ApiProperty({ example: 'Draft Manuscript' })
@@ -32,6 +41,21 @@ export class CreateModuleDto {
   @IsOptional()
   @IsString()
   pipelineStage?: string;
+
+  @ApiProperty({
+    required: false,
+    type: [String],
+    description:
+      'Ordered pipeline stages configured specifically for this module',
+  })
+  @IsOptional()
+  @IsArray()
+  @ArrayMinSize(1)
+  @ArrayMaxSize(30)
+  @ArrayUnique()
+  @IsString({ each: true })
+  @Length(2, 100, { each: true })
+  pipelineStages?: string[];
 
   @ApiProperty({ required: false })
   @IsOptional()

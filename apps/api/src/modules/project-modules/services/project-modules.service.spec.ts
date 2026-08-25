@@ -20,6 +20,7 @@ describe('ProjectModulesService', () => {
   };
   let enumRepository: {
     findByCategoryAndValue: jest.Mock;
+    findPipelineStageForModuleByValue: jest.Mock;
     findValuesByIds: jest.Mock;
   };
   let collaboratorsRepository: {
@@ -46,6 +47,7 @@ describe('ProjectModulesService', () => {
     };
     enumRepository = {
       findByCategoryAndValue: jest.fn(),
+      findPipelineStageForModuleByValue: jest.fn(),
       findValuesByIds: jest.fn().mockResolvedValue(new Map()),
     };
     collaboratorsRepository = {
@@ -338,6 +340,35 @@ describe('ProjectModulesService', () => {
       );
     });
 
+    it('passes an ordered module-specific stage list to the creation transaction', async () => {
+      enumRepository.findByCategoryAndValue.mockImplementation(
+        (category: string, value: string) =>
+          Promise.resolve({ id: `${category}-${value}-id` }),
+      );
+      repository.create.mockResolvedValue({
+        id: 'module-1',
+        tagId: null,
+        statusId: null,
+        pipelineStageId: 'scoped-stage-1',
+      });
+
+      await service.create('tenant-1', 'user-1', {
+        title: 'Custom workflow module',
+        pipelineStage: 'Drafting',
+        pipelineStages: ['Drafting', 'Internal Review', 'Published'],
+      });
+
+      expect(repository.create).toHaveBeenCalledWith(
+        expect.objectContaining({ pipelineStageId: undefined }),
+        ['Drafting', 'Internal Review', 'Published'],
+        'Drafting',
+      );
+      expect(enumRepository.findByCategoryAndValue).not.toHaveBeenCalledWith(
+        'module_pipeline_stage',
+        expect.any(String),
+      );
+    });
+
     it('throws NotFoundException for an unknown tag value', async () => {
       enumRepository.findByCategoryAndValue.mockResolvedValue(undefined);
       await expect(
@@ -358,12 +389,11 @@ describe('ProjectModulesService', () => {
         tagId: null,
         statusId: null,
       });
-    
       await service.create('tenant-1', 'user-1', {
         title: 'Project module',
         projectId: 'project-1',
       });
-    
+
       expect(collaboratorsRepository.create).toHaveBeenCalledWith({
         tenantId: 'tenant-1',
         moduleId: 'module-1',

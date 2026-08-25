@@ -17,4 +17,3 @@ ALTER POLICY project_invitations_visibility ON project_invitations
         AND lower(users.email) = lower(project_invitations.email)
     )
   );
-  

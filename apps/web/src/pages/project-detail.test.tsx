@@ -73,6 +73,7 @@ vi.mock("@/api/hooks", () => ({
   useModules: () => ({ data: [] }),
   useTasks: () => ({ data: [] }),
   useNotes: () => ({ data: [] }),
+  useProjectPipelineStages: () => ({ data: fixtures.pipelineStages }),
   usePipelineStages: () => ({ data: fixtures.pipelineStages }),
   useUserSearch: () => ({ data: [], isPending: false }),
   useProjectCollaborators: () => ({ data: [], isPending: false }),

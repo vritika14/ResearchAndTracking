@@ -301,13 +301,16 @@ export default function ProjectsPage() {
   }
 
   async function handleCreateProject(input: NewProjectInput) {
+    const firstPipelineStage = [...(pipelineStagesQuery.data ?? [])]
+      .sort((a, b) => a.sortOrder - b.sortOrder)[0]?.value;
     const project = await createProject.mutateAsync({
       title: input.title,
       description: input.description || undefined,
       researchArea: input.researchArea || undefined,
       status: input.status,
       importance: input.priority,
-      pipelineStage: input.pipelineStage || undefined,
+      pipelineStage: input.pipelineStage || firstPipelineStage || undefined,
+      pipelineStages: input.pipelineStages,
       scheduledFor: input.scheduledFor || undefined,
       dueDate: input.dueDate || undefined,
       totalBudget: input.totalBudget || undefined,
@@ -358,9 +361,10 @@ export default function ProjectsPage() {
   }
 
   return (
-    <div className="flex flex-col gap-6">
+    <div className="page-stack">
       <PageHeading
         icon={FolderKanban}
+        tone="blue"
         eyebrow="Workflows"
         title="Projects"
         description="Track research work by stage, dates, collaborators and outstanding tasks."
@@ -375,7 +379,7 @@ export default function ProjectsPage() {
         pipelineStages={pipelineStagesQuery.data ?? []}
       />
 
-      <div className="flex flex-col gap-4 rounded-lg border p-4 lg:flex-row lg:items-start lg:justify-between">
+      <div className="surface-toolbar flex flex-col gap-4 border-blue-200/60 bg-blue-50/40 lg:flex-row lg:items-start lg:justify-between dark:border-blue-900/50 dark:bg-blue-950/10">
         <div className="flex flex-1 flex-wrap items-center gap-3">
           <Input
             value={search}
@@ -442,10 +446,10 @@ export default function ProjectsPage() {
         </div>
       </div>
 
-      <div className="overflow-x-auto">
+      <div className="overflow-x-auto rounded-xl border border-border/70 bg-muted/20 p-3 shadow-sm sm:p-4">
         <div className="min-w-[720px]">
           <div
-            className="grid gap-4 px-4 pb-2 text-xs font-semibold uppercase tracking-wide text-primary"
+            className="mb-3 grid gap-4 rounded-lg border border-blue-200/60 bg-blue-100/60 px-4 py-3 text-[11px] font-bold uppercase tracking-[0.08em] text-blue-900 dark:border-blue-900/50 dark:bg-blue-950/35 dark:text-blue-200"
             style={{ gridTemplateColumns: gridTemplate }}
           >
             {PROJECT_COLUMNS.filter((column) =>
@@ -482,8 +486,8 @@ export default function ProjectsPage() {
                         }
                       }}
                       className={cn(
-                        "grid cursor-pointer items-center gap-4 border border-border bg-card px-4 py-4 shadow-sm transition-colors hover:bg-accent/40",
-                        isExpanded ? "rounded-t-lg border-b-0" : "rounded-lg",
+                        "grid cursor-pointer items-center gap-4 border border-blue-200/70 bg-gradient-to-r from-blue-50/55 via-card to-card px-4 py-4 shadow-sm transition-all hover:border-blue-300 hover:bg-blue-50/75 hover:shadow-md dark:border-blue-900/50 dark:from-blue-950/15",
+                        isExpanded ? "rounded-t-xl border-b-0" : "rounded-xl",
                       )}
                       style={{ gridTemplateColumns: gridTemplate }}
                     >
@@ -598,7 +602,7 @@ export default function ProjectsPage() {
                     </div>
 
                     {isExpanded ? (
-                      <div className="flex flex-col gap-5 rounded-b-lg border border-t-0 border-border bg-muted/30 px-4 py-5">
+                      <div className="flex flex-col gap-5 rounded-b-xl border border-t-0 border-border bg-card/70 px-5 py-5 shadow-sm">
                         <ProjectOverviewDetails
                           project={project}
                           moduleCount={moduleCountByProject.get(project.id) ?? 0}
