@@ -12,6 +12,12 @@ vi.mock("@/api/hooks", () => ({
       membershipRole: "owner",
     },
   }),
+  usePipelineStages: () => ({
+    data: [
+      { value: "Concept & Ideation", sortOrder: 1 },
+      { value: "Consolidation & Review", sortOrder: 2 },
+    ],
+  }),
   useProjects: () => ({ data: [] }),
   useTasks: () => ({ data: [] }),
 }));
@@ -33,7 +39,21 @@ describe("DashboardPage", () => {
     window.localStorage.clear();
   });
 
-  it("hides and reorders dashboard tables and preserves the layout", () => {
+  it("shows live pipeline and task-health insight charts", () => {
+    render(
+      <MemoryRouter>
+        <DashboardPage />
+      </MemoryRouter>,
+    );
+
+    expect(screen.getByRole("heading", { name: "Pipeline distribution" })).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "Task health" })).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "Priority workload" })).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "Project progress" })).toBeInTheDocument();
+    expect(screen.getByRole("img", { name: /tasks completed/ })).toBeInTheDocument();
+  });
+
+  it("customizes insights and tables and preserves the layout", () => {
     const view = render(
       <MemoryRouter>
         <DashboardPage />
@@ -41,12 +61,16 @@ describe("DashboardPage", () => {
     );
 
     fireEvent.click(screen.getByRole("button", { name: "Customize dashboard" }));
+    expect(screen.getByRole("heading", { name: "Insights" })).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "Tables" })).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("checkbox", { name: /Task health/ }));
     fireEvent.click(screen.getByRole("checkbox", { name: /Tasks to be done/ }));
     fireEvent.click(
       screen.getByRole("button", { name: "Move Pipeline project overview up" }),
     );
     fireEvent.click(screen.getByRole("button", { name: "Done" }));
 
+    expect(screen.getByRole("heading", { name: "Task health" }).closest("div.hidden")).not.toBeNull();
     expect(screen.queryByTestId("dashboard-table-tasks")).not.toBeInTheDocument();
     expect(screen.getAllByTestId(/dashboard-table-/).map((table) => table.textContent)).toEqual([
       "Pipeline table",
@@ -60,6 +84,7 @@ describe("DashboardPage", () => {
       </MemoryRouter>,
     );
 
+    expect(screen.getByRole("heading", { name: "Task health" }).closest("div.hidden")).not.toBeNull();
     expect(screen.queryByTestId("dashboard-table-tasks")).not.toBeInTheDocument();
     expect(screen.getAllByTestId(/dashboard-table-/).map((table) => table.textContent)).toEqual([
       "Pipeline table",

@@ -13,28 +13,29 @@ import {
 } from "@/components/ui/dialog";
 import { cn } from "@/lib/utils";
 
-export interface DashboardTableOption<T extends string> {
+export interface DashboardWidgetOption<T extends string> {
   id: T;
   label: string;
   description: string;
+  group: "Insights" | "Tables";
 }
 
 interface CustomizeDashboardDialogProps<T extends string> {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  tables: readonly DashboardTableOption<T>[];
-  visibleTables: ReadonlySet<T>;
-  onToggle: (table: T) => void;
-  onMove: (table: T, direction: "up" | "down") => void;
-  onReorder: (draggedTable: T, targetTable: T) => void;
+  widgets: readonly DashboardWidgetOption<T>[];
+  visibleWidgets: ReadonlySet<T>;
+  onToggle: (widget: T) => void;
+  onMove: (widget: T, direction: "up" | "down") => void;
+  onReorder: (draggedWidget: T, targetWidget: T) => void;
   onReset: () => void;
 }
 
 export function CustomizeDashboardDialog<T extends string>({
   open,
   onOpenChange,
-  tables,
-  visibleTables,
+  widgets,
+  visibleWidgets,
   onToggle,
   onMove,
   onReorder,
@@ -77,23 +78,36 @@ export function CustomizeDashboardDialog<T extends string>({
             Customize dashboard
           </DialogTitle>
           <DialogDescription>
-            Choose which tables are visible and arrange the order they appear in.
+            Choose which insights and tables are visible, then arrange each section to fit your workflow.
           </DialogDescription>
         </DialogHeader>
 
-        <div className="grid gap-2">
-          {tables.map((table, index) => (
+        <div className="max-h-[65vh] space-y-5 overflow-y-auto pr-1">
+          {(["Insights", "Tables"] as const).map((group) => {
+            const groupedWidgets = widgets.filter((widget) => widget.group === group);
+            return (
+            <section key={group} aria-labelledby={`dashboard-${group.toLowerCase()}-heading`}>
+              <div className="mb-2 flex items-center justify-between">
+                <h3 id={`dashboard-${group.toLowerCase()}-heading`} className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                  {group}
+                </h3>
+                <span className="text-xs tabular-nums text-muted-foreground">
+                  {groupedWidgets.filter((widget) => visibleWidgets.has(widget.id)).length}/{groupedWidgets.length} visible
+                </span>
+              </div>
+              <div className="grid gap-2">
+          {groupedWidgets.map((widget, index) => (
             <div
-              key={table.id}
+              key={widget.id}
               draggable
-              onDragStart={(event) => handleDragStart(event, table.id)}
-              onDragOver={(event) => handleDragOver(event, table.id)}
-              onDrop={(event) => handleDrop(event, table.id)}
+              onDragStart={(event) => handleDragStart(event, widget.id)}
+              onDragOver={(event) => handleDragOver(event, widget.id)}
+              onDrop={(event) => handleDrop(event, widget.id)}
               onDragEnd={handleDragEnd}
               className={cn(
                 "flex cursor-grab items-center gap-3 rounded-lg border border-border bg-muted/20 p-3 transition-colors active:cursor-grabbing",
-                draggedId === table.id && "opacity-45",
-                dragOverId === table.id && "border-primary bg-primary/5 ring-2 ring-primary/30",
+                draggedId === widget.id && "opacity-45",
+                dragOverId === widget.id && "border-primary bg-primary/5 ring-2 ring-primary/30",
               )}
             >
               <GripVertical
@@ -103,14 +117,14 @@ export function CustomizeDashboardDialog<T extends string>({
               <label className="flex min-w-0 flex-1 cursor-pointer items-start gap-3">
                 <input
                   type="checkbox"
-                  checked={visibleTables.has(table.id)}
-                  onChange={() => onToggle(table.id)}
+                  checked={visibleWidgets.has(widget.id)}
+                  onChange={() => onToggle(widget.id)}
                   className="mt-1 h-4 w-4 shrink-0 accent-primary"
                 />
                 <span className="min-w-0">
-                  <span className="block text-sm font-medium">{table.label}</span>
+                  <span className="block text-sm font-medium">{widget.label}</span>
                   <span className="block text-xs text-muted-foreground">
-                    {table.description}
+                    {widget.description}
                   </span>
                 </span>
               </label>
@@ -120,8 +134,8 @@ export function CustomizeDashboardDialog<T extends string>({
                   variant="outline"
                   size="icon"
                   disabled={index === 0}
-                  aria-label={`Move ${table.label} up`}
-                  onClick={() => onMove(table.id, "up")}
+                  aria-label={`Move ${widget.label} up`}
+                  onClick={() => onMove(widget.id, "up")}
                 >
                   <ChevronUp />
                 </Button>
@@ -129,15 +143,19 @@ export function CustomizeDashboardDialog<T extends string>({
                   type="button"
                   variant="outline"
                   size="icon"
-                  disabled={index === tables.length - 1}
-                  aria-label={`Move ${table.label} down`}
-                  onClick={() => onMove(table.id, "down")}
+                  disabled={index === groupedWidgets.length - 1}
+                  aria-label={`Move ${widget.label} down`}
+                  onClick={() => onMove(widget.id, "down")}
                 >
                   <ChevronDown />
                 </Button>
               </div>
             </div>
           ))}
+              </div>
+            </section>
+            );
+          })}
         </div>
 
         <DialogFooter className="border-t pt-4 sm:justify-between">
