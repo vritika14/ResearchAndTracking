@@ -11,7 +11,7 @@ describe('WorkspacesService', () => {
     findWorkspaceForMember: jest.Mock;
     setCurrentWorkspace: jest.Mock;
   };
-  let drizzle: { db: { transaction: jest.Mock } };
+  let drizzle: { db: { insert: jest.Mock } };
 
   beforeEach(() => {
     repository = {
@@ -20,43 +20,37 @@ describe('WorkspacesService', () => {
       findWorkspaceForMember: jest.fn(),
       setCurrentWorkspace: jest.fn(),
     };
-    drizzle = { db: { transaction: jest.fn() } };
+    drizzle = { db: { insert: jest.fn() } };
     service = new WorkspacesService(
       repository as unknown as WorkspacesRepository,
       drizzle as unknown as DrizzleService,
     );
   });
 
-  it('creates a workspace, owner membership, and current context transactionally', async () => {
+  it('creates a workspace, owner membership, and current context', async () => {
     const tenant = { id: 'tenant-1', name: 'My Workspace' };
     let insertCall = 0;
-    const tx = {
-      insert: jest.fn().mockImplementation(() => {
-        insertCall += 1;
-        if (insertCall === 1) {
-          return {
-            values: () => ({ returning: () => Promise.resolve([tenant]) }),
-          };
-        }
-        if (insertCall === 2) {
-          return { values: () => Promise.resolve(undefined) };
-        }
+    drizzle.db.insert.mockImplementation(() => {
+      insertCall += 1;
+      if (insertCall === 1) {
         return {
-          values: () => ({
-            onConflictDoUpdate: () => Promise.resolve(undefined),
-          }),
+          values: () => ({ returning: () => Promise.resolve([tenant]) }),
         };
-      }),
-    };
-    drizzle.db.transaction.mockImplementation(
-      (callback: (value: typeof tx) => unknown) =>
-        Promise.resolve(callback(tx)),
-    );
-
+      }
+      if (insertCall === 2) {
+        return { values: () => Promise.resolve(undefined) };
+      }
+      return {
+        values: () => ({
+          onConflictDoUpdate: () => Promise.resolve(undefined),
+        }),
+      };
+    });
+  
     await expect(
       service.createWorkspace('user-1', 'My Workspace'),
     ).resolves.toEqual({ ...tenant, membershipRole: 'owner' });
-    expect(tx.insert).toHaveBeenCalledTimes(3);
+    expect(drizzle.db.insert).toHaveBeenCalledTimes(3);
   });
 
   it('lists every active workspace available to the user', async () => {
