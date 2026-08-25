@@ -29,44 +29,42 @@ export class WorkspacesService {
   async createWorkspace(ownerUserId: string, name: string) {
     const slug = `${slugify(name)}-${Date.now()}`;
 
-    return this.drizzle.db.transaction(async (tx) => {
-      const [tenant] = await tx
-        .insert(tenants)
-        .values({
-          name,
-          slug,
-          ownerUserId,
-          status: 'active',
-        })
-        .returning();
-
-      if (!tenant) {
-        throw new ConflictException('Failed to create workspace');
-      }
-
-      await tx.insert(tenantMemberships).values({
-        tenantId: tenant.id,
-        userId: ownerUserId,
-        role: 'owner',
+    const [tenant] = await this.drizzle.db
+      .insert(tenants)
+      .values({
+        name,
+        slug,
+        ownerUserId,
         status: 'active',
-        invitedAt: new Date(),
-        joinedAt: new Date(),
+      })
+      .returning();
+
+    if (!tenant) {
+      throw new ConflictException('Failed to create workspace');
+    }
+
+    await this.drizzle.db.insert(tenantMemberships).values({
+      tenantId: tenant.id,
+      userId: ownerUserId,
+      role: 'owner',
+      status: 'active',
+      invitedAt: new Date(),
+      joinedAt: new Date(),
+    });
+
+    await this.drizzle.db
+      .insert(workspaceContexts)
+      .values({
+        userId: ownerUserId,
+        tenantId: tenant.id,
+        updatedAt: new Date(),
+      })
+      .onConflictDoUpdate({
+        target: workspaceContexts.userId,
+        set: { tenantId: tenant.id, updatedAt: new Date() },
       });
 
-      await tx
-        .insert(workspaceContexts)
-        .values({
-          userId: ownerUserId,
-          tenantId: tenant.id,
-          updatedAt: new Date(),
-        })
-        .onConflictDoUpdate({
-          target: workspaceContexts.userId,
-          set: { tenantId: tenant.id, updatedAt: new Date() },
-        });
-
-      return { ...tenant, membershipRole: 'owner' as const };
-    });
+    return { ...tenant, membershipRole: 'owner' as const };
   }
 
   async listWorkspaces(userId: string) {

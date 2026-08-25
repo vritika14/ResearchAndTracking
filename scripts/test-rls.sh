@@ -142,6 +142,17 @@ else
 fi
 
 echo ""
+echo "--- No isolated drizzle.db.transaction() usage (breaks RLS context) ---"
+TRANSACTION_USAGE=$(grep -rl "drizzle.db.transaction(" apps/api/src/modules/ 2>/dev/null)
+if [ -z "$TRANSACTION_USAGE" ]; then
+  echo "  PASS - No isolated transaction() calls found"
+  PASS_COUNT=$((PASS_COUNT + 1))
+else
+  echo "  FAIL - Found isolated transaction() calls that break RLS context: $TRANSACTION_USAGE"
+  FAIL_COUNT=$((FAIL_COUNT + 1))
+fi
+
+echo ""
 echo "=========================================="
 echo "Results: $PASS_COUNT passed, $FAIL_COUNT failed"
 echo "=========================================="

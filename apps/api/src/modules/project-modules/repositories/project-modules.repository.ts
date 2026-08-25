@@ -68,33 +68,37 @@ export class ProjectModulesRepository {
     pipelineStages?: string[],
     initialPipelineStage?: string,
   ) {
-    return this.drizzle.db.transaction(async (tx) => {
-      let [module] = await tx.insert(modules).values(values).returning();
-      if (!module || !pipelineStages?.length) return module;
+    let [module] = await this.drizzle.db
+      .insert(modules)
+      .values(values)
+      .returning();
+    if (!module || !pipelineStages?.length) return module;
 
-      const stageRows = await tx
-        .insert(enumTable)
-        .values(
-          pipelineStages.map((value, index) => ({
-            moduleId: module!.id,
-            category: 'module_pipeline_stage',
-            value,
-            sortOrder: index + 1,
-          })),
-        )
+    const stageRows = await this.drizzle.db
+      .insert(enumTable)
+      .values(
+        pipelineStages.map((value, index) => ({
+          moduleId: module!.id,
+          category: 'module_pipeline_stage',
+          value,
+          sortOrder: index + 1,
+        })),
+      )
+      .returning();
+
+    const initialStage =
+      stageRows.find((stage) => stage.value === initialPipelineStage) ??
+      stageRows[0];
+
+    if (initialStage) {
+      [module] = await this.drizzle.db
+        .update(modules)
+        .set({ pipelineStageId: initialStage.id, updatedAt: new Date() })
+        .where(eq(modules.id, module.id))
         .returning();
-      const initialStage =
-        stageRows.find((stage) => stage.value === initialPipelineStage) ??
-        stageRows[0];
-      if (initialStage) {
-        [module] = await tx
-          .update(modules)
-          .set({ pipelineStageId: initialStage.id, updatedAt: new Date() })
-          .where(eq(modules.id, module.id))
-          .returning();
-      }
-      return module;
-    });
+    }
+
+    return module;
   }
 
   async update(
