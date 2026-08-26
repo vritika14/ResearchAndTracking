@@ -87,7 +87,7 @@ export function UserMenu({ compact = false }: UserMenuProps) {
           );
         })}
         <DropdownMenuItem asChild>
-          <Link to="/workspaces">
+          <Link to="/settings">
             <Users className="h-4 w-4 shrink-0 text-muted-foreground" />
             Manage workspaces
           </Link>

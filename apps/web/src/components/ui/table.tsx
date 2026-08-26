@@ -4,7 +4,7 @@ import { cn } from "@/lib/utils";
 
 const Table = React.forwardRef<HTMLTableElement, React.HTMLAttributes<HTMLTableElement>>(
   ({ className, ...props }, ref) => (
-    <div className="relative w-full overflow-auto rounded-xl border border-primary/15 bg-card shadow-sm">
+    <div className="relative w-full overflow-auto rounded-xl border border-primary/15 bg-gradient-to-b from-muted/40 to-card shadow-sm">
       <table ref={ref} className={cn("w-full caption-bottom text-sm", className)} {...props} />
     </div>
   ),
@@ -17,7 +17,7 @@ const TableHeader = React.forwardRef<
 >(({ className, ...props }, ref) => (
   <thead
     ref={ref}
-    className={cn("sticky top-0 z-10 bg-gradient-to-r from-primary/[0.12] via-primary/[0.07] to-violet-500/[0.06] backdrop-blur [&_tr]:border-b [&_tr]:border-primary/15", className)}
+    className={cn("sticky top-0 z-10 bg-gradient-to-r from-primary/[0.18] via-primary/[0.11] to-violet-500/[0.1] backdrop-blur [&_tr]:border-b [&_tr]:border-primary/15", className)}
     {...props}
   />
 ));
@@ -27,7 +27,7 @@ const TableBody = React.forwardRef<
   HTMLTableSectionElement,
   React.HTMLAttributes<HTMLTableSectionElement>
 >(({ className, ...props }, ref) => (
-  <tbody ref={ref} className={cn("[&_tr:last-child]:border-0 [&_tr:nth-child(even)]:bg-primary/[0.025]", className)} {...props} />
+  <tbody ref={ref} className={cn("[&_tr:last-child]:border-0 [&_tr:nth-child(even)]:bg-primary/[0.05]", className)} {...props} />
 ));
 TableBody.displayName = "TableBody";
 

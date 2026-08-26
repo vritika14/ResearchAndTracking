@@ -167,10 +167,14 @@ export function DashboardInsights({
   return (
     <section aria-label="Dashboard insights" className="grid grid-cols-1 gap-4 xl:grid-cols-5">
       <Card
-        className={cn("overflow-hidden xl:col-span-3", !visible.has("pipeline-distribution") && "hidden")}
+        className={cn("relative isolate overflow-hidden xl:col-span-3", !visible.has("pipeline-distribution") && "hidden")}
         style={{ order: position("pipeline-distribution") }}
       >
-        <CardHeader className="border-b border-border/70 bg-muted/20 sm:flex-row sm:items-start sm:justify-between">
+        <GitBranch
+          aria-hidden="true"
+          className="pointer-events-none absolute -bottom-8 -right-8 h-40 w-40 rotate-12 text-primary/[0.05]"
+        />
+        <CardHeader className="relative z-10 border-b border-border/70 bg-muted/50 sm:flex-row sm:items-start sm:justify-between">
           <div className="space-y-1.5">
             <CardTitle className="flex items-center gap-2">
               <GitBranch className="h-4 w-4 text-blue-600" />
@@ -182,9 +186,9 @@ export function DashboardInsights({
             {projects.length} {projects.length === 1 ? "project" : "projects"}
           </Badge>
         </CardHeader>
-        <CardContent className="pt-6">
+        <CardContent className="relative z-10 pt-6">
           {projects.length === 0 ? (
-            <div className="flex min-h-48 flex-col items-center justify-center rounded-xl border border-dashed bg-muted/20 px-6 text-center">
+            <div className="flex min-h-48 flex-col items-center justify-center rounded-xl border border-dashed bg-muted/40 px-6 text-center">
               <GitBranch className="mb-3 h-7 w-7 text-muted-foreground/60" />
               <p className="font-medium">No pipeline data yet</p>
               <p className="mt-1 text-sm text-muted-foreground">
@@ -216,14 +220,18 @@ export function DashboardInsights({
       </Card>
 
       <Card
-        className={cn("overflow-hidden xl:col-span-2", !visible.has("task-health") && "hidden")}
+        className={cn("relative isolate overflow-hidden xl:col-span-2", !visible.has("task-health") && "hidden")}
         style={{ order: position("task-health") }}
       >
-        <CardHeader className="border-b border-border/70 bg-muted/20">
+        <CheckCircle2
+          aria-hidden="true"
+          className="pointer-events-none absolute -bottom-8 -left-8 h-36 w-36 -rotate-12 text-primary/[0.05]"
+        />
+        <CardHeader className="relative z-10 border-b border-border/70 bg-muted/50">
           <CardTitle>Task health</CardTitle>
           <CardDescription>A quick view of delivery progress and deadline risk.</CardDescription>
         </CardHeader>
-        <CardContent className="grid gap-6 pt-6 sm:grid-cols-[auto_1fr] sm:items-center xl:grid-cols-1 2xl:grid-cols-[auto_1fr]">
+        <CardContent className="relative z-10 grid gap-6 pt-6 sm:grid-cols-[auto_1fr] sm:items-center xl:grid-cols-1 2xl:grid-cols-[auto_1fr]">
           <div
             className="relative mx-auto h-40 w-40 shrink-0 rounded-full shadow-inner"
             style={{ background: chartBackground }}
@@ -237,7 +245,7 @@ export function DashboardInsights({
           </div>
           <div className="grid grid-cols-2 gap-2 sm:grid-cols-1 xl:grid-cols-2 2xl:grid-cols-1">
             {healthItems.map((item) => (
-              <div key={item.label} className="flex items-center gap-3 rounded-xl border bg-background/70 p-3">
+              <div key={item.label} className="flex items-center gap-3 rounded-xl border bg-background/80 p-3">
                 <span className={cn("flex h-8 w-8 items-center justify-center rounded-lg bg-muted", item.tone)}>
                   <item.icon className="h-4 w-4" />
                 </span>
@@ -254,19 +262,23 @@ export function DashboardInsights({
         </CardContent>
       </Card>
       <Card
-        className={cn("overflow-hidden xl:col-span-2", !visible.has("priority-workload") && "hidden")}
+        className={cn("relative isolate overflow-hidden xl:col-span-2", !visible.has("priority-workload") && "hidden")}
         style={{ order: position("priority-workload") }}
       >
-        <CardHeader className="border-b border-border/70 bg-muted/20">
+        <BarChart3
+          aria-hidden="true"
+          className="pointer-events-none absolute -bottom-8 -right-8 h-36 w-36 rotate-12 text-primary/[0.05]"
+        />
+        <CardHeader className="relative z-10 border-b border-border/70 bg-muted/50">
           <CardTitle className="flex items-center gap-2">
             <BarChart3 className="h-4 w-4 text-amber-600" />
             Priority workload
           </CardTitle>
           <CardDescription>Open tasks grouped by urgency to expose workload risk.</CardDescription>
         </CardHeader>
-        <CardContent className="pt-6">
+        <CardContent className="relative z-10 pt-6">
           {activeTasks.length === 0 ? (
-            <div className="flex min-h-44 flex-col items-center justify-center rounded-xl border border-dashed bg-muted/20 text-center">
+            <div className="flex min-h-44 flex-col items-center justify-center rounded-xl border border-dashed bg-muted/40 text-center">
               <CheckCircle2 className="mb-3 h-7 w-7 text-emerald-500" />
               <p className="font-medium">No open workload</p>
               <p className="mt-1 text-sm text-muted-foreground">All visible tasks are complete.</p>
@@ -291,10 +303,14 @@ export function DashboardInsights({
       </Card>
 
       <Card
-        className={cn("overflow-hidden xl:col-span-3", !visible.has("project-progress") && "hidden")}
+        className={cn("relative isolate overflow-hidden xl:col-span-3", !visible.has("project-progress") && "hidden")}
         style={{ order: position("project-progress") }}
       >
-        <CardHeader className="border-b border-border/70 bg-muted/20 sm:flex-row sm:items-start sm:justify-between">
+        <TrendingUp
+          aria-hidden="true"
+          className="pointer-events-none absolute -bottom-8 -right-8 h-40 w-40 rotate-12 text-primary/[0.05]"
+        />
+        <CardHeader className="relative z-10 border-b border-border/70 bg-muted/50 sm:flex-row sm:items-start sm:justify-between">
           <div className="space-y-1.5">
             <CardTitle className="flex items-center gap-2">
               <TrendingUp className="h-4 w-4 text-emerald-600" />
@@ -304,7 +320,7 @@ export function DashboardInsights({
           </div>
           <Badge variant="outline" className="mt-3 w-fit bg-background sm:mt-0">Top 5 projects</Badge>
         </CardHeader>
-        <CardContent className="p-0">
+        <CardContent className="relative z-10 p-0">
           <Table>
             <TableHeader>
               <TableRow>

@@ -7,7 +7,6 @@ import {
   type ApiProject,
   type ApiTask,
   type ApiUserSearchResult,
-  type Membership,
 } from "@/api/hooks";
 import { TaskMembersManager } from "@/components/tasks/task-members";
 import { Badge } from "@/components/ui/badge";
@@ -65,8 +64,6 @@ interface TaskDialogProps {
   tenantId: string;
   projects: ApiProject[];
   modules: ApiModule[];
-  members: Membership[];
-  membersLoading: boolean;
   task?: ApiTask | null;
   onSave: (input: TaskFormInput) => void;
 }
@@ -135,8 +132,6 @@ export function TaskDialog({
   tenantId,
   projects,
   modules,
-  members,
-  membersLoading,
   task,
   onSave,
 }: TaskDialogProps) {
@@ -351,8 +346,6 @@ export function TaskDialog({
               <TaskMembersManager
                 tenantId={tenantId}
                 taskId={task.id}
-                members={members}
-                membersLoading={membersLoading}
               />
             </div>
           ) : form.visibility === "Shared" && isEditing && task ? (
@@ -454,6 +447,9 @@ export function TaskDialog({
                   ))}
                 </div>
               ) : null}
+              <p className="mt-2 text-xs text-muted-foreground">
+                Selected users receive access directly when the task is created. No email invitation is sent.
+              </p>
             </FormField>
           ) : null}
 

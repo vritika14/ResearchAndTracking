@@ -7,7 +7,6 @@ import {
   useCreateNote,
   useCurrentWorkspace,
   useDeleteMyNote,
-  useMembers,
   useModules,
   useMyNotes,
   useProjects,
@@ -122,7 +121,6 @@ export default function DailyNotesPage() {
   const [memberSearch, setMemberSearch] = useState("");
   const [memberPickerOpen, setMemberPickerOpen] = useState(false);
   const [selectedMembers, setSelectedMembers] = useState<ApiUserSearchResult[]>([]);
-  const membersQuery = useMembers(tenantId, editingId !== null);
   const userSearchQuery = useUserSearch(memberSearch, memberPickerOpen);
 
   const notes = notesQuery.data ?? [];
@@ -621,6 +619,23 @@ export default function DailyNotesPage() {
                       ))}
                     </div>
                   ) : null}
+                  <p className="text-xs text-muted-foreground">
+                    Selected users receive access directly when the note is saved. No email invitation is sent.
+                  </p>
+                </div>
+              ) : null}
+
+              {draft.visibility === "Shared" && editingId !== "new" && selectedNote ? (
+                <div className="flex flex-col gap-2 border-t border-border pt-4">
+                  <span className="text-sm font-medium">Shared with</span>
+                  {sameTenant ? (
+                    <NoteMembersManager tenantId={tenantId} noteId={selectedNote.id} />
+                  ) : (
+                    <p className="text-sm text-muted-foreground">
+                      This note was shared with you from another workspace. Only its creator
+                      can manage who has access.
+                    </p>
+                  )}
                 </div>
               ) : null}
 
@@ -686,7 +701,6 @@ export default function DailyNotesPage() {
                       <NoteMembersManager
                         tenantId={tenantId}
                         noteId={selectedNote.id}
-                        members={membersQuery.data ?? []}
                       />
                     ) : (
                       <p className="text-sm text-muted-foreground">

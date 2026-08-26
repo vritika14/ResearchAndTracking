@@ -6,7 +6,6 @@ import {
   useNoteMembers,
   useRemoveNoteMember,
   useUserSearch,
-  type Membership,
 } from "@/api/hooks";
 import { LoadingState } from "@/components/shared/loading-state";
 import { Input } from "@/components/ui/input";
@@ -14,25 +13,17 @@ import { Input } from "@/components/ui/input";
 interface NoteMembersManagerProps {
   tenantId: string;
   noteId: string;
-  members: Membership[];
 }
 
 export function NoteMembersManager({
   tenantId,
   noteId,
-  members,
 }: NoteMembersManagerProps) {
   const noteMembersQuery = useNoteMembers(tenantId, noteId);
   const addMember = useAddNoteMember(tenantId, noteId);
   const removeMember = useRemoveNoteMember(tenantId, noteId);
   const [search, setSearch] = useState("");
   const [pickerOpen, setPickerOpen] = useState(false);
-
-  const memberByUserId = useMemo(() => {
-    const map = new Map<string, Membership>();
-    for (const member of members) map.set(member.userId, member);
-    return map;
-  }, [members]);
 
   const noteMemberUserIds = useMemo(
     () => new Set((noteMembersQuery.data ?? []).map((member) => member.userId)),
@@ -52,7 +43,7 @@ export function NoteMembersManager({
     <div className="flex flex-col gap-3">
       <div className="flex flex-col gap-2">
         {(noteMembersQuery.data ?? []).map((member) => {
-          const workspaceMember = memberByUserId.get(member.userId);
+          const displayName = member.displayName ?? "Unknown user";
           return (
             <div
               key={member.id}
@@ -60,17 +51,17 @@ export function NoteMembersManager({
             >
               <span className="min-w-0">
                 <span className="block truncate text-sm font-medium">
-                  {workspaceMember?.displayName ?? member.userId}
+                  {displayName}
                 </span>
-                {workspaceMember ? (
+                {member.email ? (
                   <span className="block truncate text-xs text-muted-foreground">
-                    {workspaceMember.email}
+                    {member.email}
                   </span>
                 ) : null}
               </span>
               <button
                 type="button"
-                aria-label={`Remove ${workspaceMember?.displayName ?? "member"}`}
+                aria-label={`Remove ${displayName}`}
                 onClick={() => removeMember.mutate(member.userId)}
                 className="rounded-full p-1 text-muted-foreground hover:text-destructive focus:outline-none focus:ring-1 focus:ring-ring"
               >
@@ -139,6 +130,9 @@ export function NoteMembersManager({
           </div>
         ) : null}
       </div>
+      <p className="text-xs text-muted-foreground">
+        Selecting a user grants access immediately. No email invitation is sent.
+      </p>
     </div>
   );
 }

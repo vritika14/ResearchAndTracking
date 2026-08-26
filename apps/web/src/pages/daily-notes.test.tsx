@@ -62,6 +62,10 @@ const fixtures = vi.hoisted(() => ({
   ],
 }));
 
+const sharingMutations = vi.hoisted(() => ({
+  addNoteMember: vi.fn(),
+}));
+
 vi.mock("@/api/client", () => ({
   apiClient: {
     POST: vi.fn().mockResolvedValue({ data: {}, error: undefined, response: new Response() }),
@@ -136,13 +140,14 @@ vi.mock("@/api/hooks", async () => {
       }),
     }),
     useNoteMembers: () => ({ data: [], isPending: false }),
-    useAddNoteMember: () => ({ mutate: vi.fn() }),
+    useAddNoteMember: () => ({ mutate: sharingMutations.addNoteMember }),
     useRemoveNoteMember: () => ({ mutate: vi.fn() }),
   };
 });
 
 describe("DailyNotesPage", () => {
   beforeEach(() => {
+    sharingMutations.addNoteMember.mockClear();
     store.setNotes([
       {
         id: "note-1",
@@ -216,6 +221,28 @@ describe("DailyNotesPage", () => {
     expect(screen.getByLabelText("Selected note members")).toHaveTextContent(
       "Jamie Outsider",
     );
+  });
+
+  it("directly assigns any platform user when a private note is changed to shared", () => {
+    render(
+      <MemoryRouter>
+        <DailyNotesPage />
+      </MemoryRouter>,
+    );
+
+    fireEvent.click(screen.getByRole("button", { name: "Edit note" }));
+    const visibilityTrigger = screen
+      .getAllByRole("combobox")
+      .find((element) => element.textContent?.includes("Private"));
+    fireEvent.click(visibilityTrigger!);
+    fireEvent.click(screen.getByRole("option", { name: "Shared" }));
+
+    const search = screen.getByPlaceholderText("Type a name or email to search all users");
+    fireEvent.change(search, { target: { value: "Jamie" } });
+    fireEvent.click(screen.getByRole("option", { name: /Jamie Outsider/ }));
+
+    expect(sharingMutations.addNoteMember).toHaveBeenCalledWith("user-outside-workspace");
+    expect(screen.getByText(/No email invitation is sent/)).toBeInTheDocument();
   });
 
   it("edits an existing note's title and content", async () => {

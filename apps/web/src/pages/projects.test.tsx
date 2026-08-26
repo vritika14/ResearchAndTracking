@@ -119,6 +119,7 @@ vi.mock("@/api/hooks", () => ({
     },
   }),
   useCurrentWorkspace: () => ({ data: { id: fixtures.tenantId }, isPending: false }),
+  useMembers: () => ({ data: [], isPending: false }),
   useMyProjects: () => ({ data: [fixtures.project], isPending: false, isError: false }),
   useCreateProject: () => ({ mutateAsync: vi.fn(), isPending: false }),
   useArchiveMyProject: () => ({ mutateAsync: vi.fn(), isPending: false }),
@@ -126,6 +127,12 @@ vi.mock("@/api/hooks", () => ({
   useTasks: () => ({ data: [fixtures.task] }),
   useNotes: () => ({ data: [fixtures.note] }),
   usePipelineStages: () => ({ data: fixtures.pipelineStages }),
+}));
+
+vi.mock("@/components/projects/project-collaborators", () => ({
+  ProjectCollaborators: ({ entityTitle }: { entityTitle: string }) => (
+    <div>Collaborators for {entityTitle}</div>
+  ),
 }));
 
 function renderPage() {
@@ -155,6 +162,21 @@ describe("ProjectsPage", () => {
 
     expect(editLink).toHaveAttribute("href", "/projects/PRJ-101?edit=true");
     expect(screen.getByText("Low")).toBeInTheDocument();
+  });
+
+  it("opens collaborator management directly from the project row", () => {
+    renderPage();
+
+    fireEvent.click(
+      screen.getByRole("button", {
+        name: "Manage collaborators for Enzyme Kinetics Inhibition Study Across Temperature Gradients",
+      }),
+    );
+
+    expect(screen.getByRole("heading", { name: "Project collaborators" })).toBeInTheDocument();
+    expect(
+      screen.getByText("Collaborators for Enzyme Kinetics Inhibition Study Across Temperature Gradients"),
+    ).toBeInTheDocument();
   });
 
   it("shows scheduled dates in the table and new-project form", () => {

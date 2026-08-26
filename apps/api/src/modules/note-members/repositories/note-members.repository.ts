@@ -1,6 +1,6 @@
 // apps/api/src/modules/note-members/repositories/note-members.repository.ts
 import { Injectable } from '@nestjs/common';
-import { noteMembers } from '@research-tracker/migrations';
+import { noteMembers, users } from '@research-tracker/migrations';
 import { and, eq } from 'drizzle-orm';
 import { DrizzleService } from '../../../db/drizzle.service';
 
@@ -10,8 +10,17 @@ export class NoteMembersRepository {
 
   async findByNote(tenantId: string, noteId: string) {
     return this.drizzle.db
-      .select()
+      .select({
+        id: noteMembers.id,
+        tenantId: noteMembers.tenantId,
+        noteId: noteMembers.noteId,
+        userId: noteMembers.userId,
+        displayName: users.displayName,
+        email: users.email,
+        createdAt: noteMembers.createdAt,
+      })
       .from(noteMembers)
+      .innerJoin(users, eq(noteMembers.userId, users.id))
       .where(
         and(eq(noteMembers.tenantId, tenantId), eq(noteMembers.noteId, noteId)),
       );
