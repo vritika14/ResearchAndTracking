@@ -1,8 +1,10 @@
 import {
   Body,
   Controller,
+  Delete,
   Get,
   NotFoundException,
+  Param,
   Post,
   Put,
   Req,
@@ -116,5 +118,28 @@ export class WorkspacesController {
       user.id,
       dto.workspaceId,
     );
+  }
+
+  @ApiOperation({
+    summary:
+      'Permanently delete a workspace owned by the authenticated user, and everything in it',
+  })
+  @ApiResponse({ status: 200 })
+  @UseGuards(JwtAuthGuard)
+  @Delete(':workspaceId')
+  async remove(
+    @Req() req: AuthenticatedRequest,
+    @Param('workspaceId') workspaceId: string,
+  ) {
+    const user = await this.usersService.findOrProvisionFromAccessToken(
+      req.user.sub,
+      req.user.accessToken,
+    );
+
+    if (!user) {
+      throw new NotFoundException('User could not be found or provisioned');
+    }
+
+    return this.workspacesService.deleteWorkspace(user.id, workspaceId);
   }
 }

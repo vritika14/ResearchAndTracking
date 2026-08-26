@@ -78,7 +78,7 @@ vi.mock("@/api/hooks", async () => {
     useMe: store.useMe,
     useMembers: () => ({ data: fixtures.members, isPending: false }),
     useProjects: () => ({ data: fixtures.projects, isPending: false, isError: false }),
-    useMyModules: () => ({
+    useModules: () => ({
       data: useStore(store.subscribe, store.getModules),
       isPending: false,
       isError: false,
@@ -115,7 +115,7 @@ vi.mock("@/api/hooks", async () => {
         return module;
       }),
     }),
-    useUpdateMyModule: () => ({
+    useUpdateModule: () => ({
       mutateAsync: vi.fn(
         async ({ moduleId, input }: { moduleId: string; input: Record<string, unknown> }) => {
           const updated = store.getModules().map((item) =>
@@ -126,7 +126,7 @@ vi.mock("@/api/hooks", async () => {
         },
       ),
     }),
-    useArchiveMyModule: () => ({
+    useArchiveModule: () => ({
       mutateAsync: vi.fn(async (moduleId: string) => {
         store.setModules(store.getModules().filter((item) => item.id !== moduleId));
       }),

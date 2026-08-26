@@ -6,11 +6,11 @@ import { apiClient } from "@/api/client";
 import {
   useCreateNote,
   useCurrentWorkspace,
-  useDeleteMyNote,
+  useDeleteNote,
   useModules,
-  useMyNotes,
+  useNotes,
   useProjects,
-  useUpdateMyNote,
+  useUpdateNote,
   useUserSearch,
   type ApiNote,
   type ApiUserSearchResult,
@@ -103,15 +103,13 @@ export default function DailyNotesPage() {
   const workspace = useCurrentWorkspace();
   const tenantId = workspace.data?.id ?? "";
 
-  // Notes are tenant-agnostic — a note shared with the caller from another
-  // workspace must still show up here (see MyNotesController on the backend).
-  const notesQuery = useMyNotes();
+  const notesQuery = useNotes(tenantId);
   const projectsQuery = useProjects(tenantId);
   const modulesQuery = useModules(tenantId);
 
   const createNote = useCreateNote(tenantId);
-  const updateNote = useUpdateMyNote();
-  const deleteNote = useDeleteMyNote();
+  const updateNote = useUpdateNote(tenantId);
+  const deleteNote = useDeleteNote(tenantId);
 
   const [selectedId, setSelectedId] = useState<string | null>(noteId ?? null);
   const [sortOrder, setSortOrder] = useState<"newest" | "oldest">("newest");

@@ -311,6 +311,34 @@ export function useCreateWorkspace() {
   });
 }
 
+export function useDeleteWorkspace() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async (workspaceId: string) => {
+      const result = await apiClient.DELETE("/api/v1/workspaces/{workspaceId}", {
+        params: { path: { workspaceId } },
+      });
+
+      if (result.response.status !== 200) {
+        await responseData(result);
+        throw new ApiError(
+          result.response.status,
+          `Workspace deletion returned unexpected status ${result.response.status}`,
+        );
+      }
+
+      return responseData<Workspace>(result);
+    },
+    async onSuccess() {
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: apiKeys.workspaces }),
+        queryClient.invalidateQueries({ queryKey: apiKeys.currentWorkspace }),
+        queryClient.invalidateQueries({ queryKey: ["api", "tenant"] }),
+      ]);
+    },
+  });
+}
+
 export function useMembers(tenantId: string, enabled = true) {
   return useQuery({
     queryKey: apiKeys.members(tenantId),
@@ -1290,6 +1318,8 @@ export function useUserSearch(query: string, enabled = true) {
 export interface ApiPipelineStage {
   id: string;
   tenantId: string | null;
+  projectId?: string | null;
+  moduleId?: string | null;
   category: string;
   value: string;
   sortOrder: number;
@@ -1298,6 +1328,7 @@ export interface ApiPipelineStage {
 }
 
 const pipelineStagesKey = ["api", "enum", "project_pipeline_stage"] as const;
+const modulePipelineStagePoolKey = ["api", "enum", "module_pipeline_stage"] as const;
 
 export function usePipelineStages(tenantId: string, enabled = true) {
   return useQuery({
@@ -1306,7 +1337,21 @@ export function usePipelineStages(tenantId: string, enabled = true) {
     queryFn: async () =>
       responseData<ApiPipelineStage[]>(
         await apiClient.GET("/api/v1/enum", {
-          params: { query: { category: "project_pipeline_stage" } },
+          params: { query: { category: "project_pipeline_stage", tenantId } },
+        }),
+      ),
+  });
+}
+
+/** Tenant-wide pool of module pipeline stages — mirrors usePipelineStages for projects. */
+export function useModulePipelineStagePool(tenantId: string, enabled = true) {
+  return useQuery({
+    queryKey: modulePipelineStagePoolKey,
+    enabled: Boolean(tenantId) && enabled,
+    queryFn: async () =>
+      responseData<ApiPipelineStage[]>(
+        await apiClient.GET("/api/v1/enum", {
+          params: { query: { category: "module_pipeline_stage", tenantId } },
         }),
       ),
   });
@@ -1444,6 +1489,121 @@ export function useModulePipelineStages(
   });
 }
 
+function projectPipelineStagesKey(tenantId: string, projectId: string) {
+  return ["api", "tenant", tenantId, "projects", projectId, "pipeline-stages"] as const;
+}
+function modulePipelineStagesKey(tenantId: string, moduleId: string) {
+  return ["api", "tenant", tenantId, "modules", moduleId, "pipeline-stages"] as const;
+}
+
+export function useCreateProjectPipelineStage(tenantId: string, projectId: string) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (input: { value: string; sortOrder?: number }) =>
+      apiJson<ApiPipelineStage>(
+        `/api/v1/tenant/${encodeURIComponent(tenantId)}/projects/${encodeURIComponent(projectId)}/pipeline-stages`,
+        { method: "POST", body: JSON.stringify(input) },
+      ),
+    async onSuccess() {
+      await queryClient.invalidateQueries({
+        queryKey: projectPipelineStagesKey(tenantId, projectId),
+      });
+    },
+  });
+}
+
+export function useUpdateProjectPipelineStage(tenantId: string, projectId: string) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({
+      id,
+      input,
+    }: {
+      id: string;
+      input: { value?: string; sortOrder?: number };
+    }) =>
+      apiJson<ApiPipelineStage>(
+        `/api/v1/tenant/${encodeURIComponent(tenantId)}/projects/${encodeURIComponent(projectId)}/pipeline-stages/${encodeURIComponent(id)}`,
+        { method: "PATCH", body: JSON.stringify(input) },
+      ),
+    async onSuccess() {
+      await queryClient.invalidateQueries({
+        queryKey: projectPipelineStagesKey(tenantId, projectId),
+      });
+    },
+  });
+}
+
+export function useDeleteProjectPipelineStage(tenantId: string, projectId: string) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (id: string) =>
+      apiJson<ApiPipelineStage>(
+        `/api/v1/tenant/${encodeURIComponent(tenantId)}/projects/${encodeURIComponent(projectId)}/pipeline-stages/${encodeURIComponent(id)}`,
+        { method: "DELETE" },
+      ),
+    async onSuccess() {
+      await queryClient.invalidateQueries({
+        queryKey: projectPipelineStagesKey(tenantId, projectId),
+      });
+    },
+  });
+}
+
+export function useCreateModuleOwnPipelineStage(tenantId: string, moduleId: string) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (input: { value: string; sortOrder?: number }) =>
+      apiJson<ApiPipelineStage>(
+        `/api/v1/tenant/${encodeURIComponent(tenantId)}/modules/${encodeURIComponent(moduleId)}/pipeline-stages`,
+        { method: "POST", body: JSON.stringify(input) },
+      ),
+    async onSuccess() {
+      await queryClient.invalidateQueries({
+        queryKey: modulePipelineStagesKey(tenantId, moduleId),
+      });
+    },
+  });
+}
+
+export function useUpdateModuleOwnPipelineStage(tenantId: string, moduleId: string) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({
+      id,
+      input,
+    }: {
+      id: string;
+      input: { value?: string; sortOrder?: number };
+    }) =>
+      apiJson<ApiPipelineStage>(
+        `/api/v1/tenant/${encodeURIComponent(tenantId)}/modules/${encodeURIComponent(moduleId)}/pipeline-stages/${encodeURIComponent(id)}`,
+        { method: "PATCH", body: JSON.stringify(input) },
+      ),
+    async onSuccess() {
+      await queryClient.invalidateQueries({
+        queryKey: modulePipelineStagesKey(tenantId, moduleId),
+      });
+    },
+  });
+}
+
+export function useDeleteModuleOwnPipelineStage(tenantId: string, moduleId: string) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (id: string) =>
+      apiJson<ApiPipelineStage>(
+        `/api/v1/tenant/${encodeURIComponent(tenantId)}/modules/${encodeURIComponent(moduleId)}/pipeline-stages/${encodeURIComponent(id)}`,
+        { method: "DELETE" },
+      ),
+    async onSuccess() {
+      await queryClient.invalidateQueries({
+        queryKey: modulePipelineStagesKey(tenantId, moduleId),
+      });
+    },
+  });
+}
+
 export function useCreatePipelineStage(tenantId: string) {
   const queryClient = useQueryClient();
   return useMutation({
@@ -1493,6 +1653,59 @@ export function useDeletePipelineStage(tenantId: string) {
       ),
     async onSuccess() {
       await queryClient.invalidateQueries({ queryKey: pipelineStagesKey });
+    },
+  });
+}
+
+export function useCreateModulePipelineStage(tenantId: string) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async (input: { value: string; sortOrder?: number }) =>
+      responseData<ApiPipelineStage>(
+        await apiClient.POST("/api/v1/tenant/{tenantId}/module-pipeline-stages", {
+          params: { path: { tenantId } },
+          body: input,
+        }),
+      ),
+    async onSuccess() {
+      await queryClient.invalidateQueries({ queryKey: modulePipelineStagePoolKey });
+    },
+  });
+}
+
+export function useUpdateModulePipelineStage(tenantId: string) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async ({
+      id,
+      input,
+    }: {
+      id: string;
+      input: { value?: string; sortOrder?: number };
+    }) =>
+      responseData<ApiPipelineStage>(
+        await apiClient.PATCH("/api/v1/tenant/{tenantId}/module-pipeline-stages/{id}", {
+          params: { path: { tenantId, id } },
+          body: input,
+        }),
+      ),
+    async onSuccess() {
+      await queryClient.invalidateQueries({ queryKey: modulePipelineStagePoolKey });
+    },
+  });
+}
+
+export function useDeleteModulePipelineStage(tenantId: string) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async (id: string) =>
+      responseData<ApiPipelineStage>(
+        await apiClient.DELETE("/api/v1/tenant/{tenantId}/module-pipeline-stages/{id}", {
+          params: { path: { tenantId, id } },
+        }),
+      ),
+    async onSuccess() {
+      await queryClient.invalidateQueries({ queryKey: modulePipelineStagePoolKey });
     },
   });
 }

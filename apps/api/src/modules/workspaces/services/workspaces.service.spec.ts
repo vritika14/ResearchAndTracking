@@ -10,6 +10,7 @@ describe('WorkspacesService', () => {
     findCurrentByUserId: jest.Mock;
     findWorkspaceForMember: jest.Mock;
     setCurrentWorkspace: jest.Mock;
+    deleteById: jest.Mock;
   };
   let drizzle: { db: { insert: jest.Mock } };
 
@@ -19,6 +20,7 @@ describe('WorkspacesService', () => {
       findCurrentByUserId: jest.fn(),
       findWorkspaceForMember: jest.fn(),
       setCurrentWorkspace: jest.fn(),
+      deleteById: jest.fn(),
     };
     drizzle = { db: { insert: jest.fn() } };
     service = new WorkspacesService(
@@ -109,5 +111,23 @@ describe('WorkspacesService', () => {
       service.switchCurrentWorkspace('user-1', 'tenant-other'),
     ).rejects.toThrow(NotFoundException);
     expect(repository.setCurrentWorkspace).not.toHaveBeenCalled();
+  });
+
+  it('deletes a workspace owned by the caller', async () => {
+    const deleted = { id: 'tenant-1', name: 'Gone' };
+    repository.deleteById.mockResolvedValue(deleted);
+
+    await expect(
+      service.deleteWorkspace('user-1', 'tenant-1'),
+    ).resolves.toBe(deleted);
+    expect(repository.deleteById).toHaveBeenCalledWith('tenant-1', 'user-1');
+  });
+
+  it('rejects deleting a workspace the caller does not own', async () => {
+    repository.deleteById.mockResolvedValue(undefined);
+
+    await expect(
+      service.deleteWorkspace('user-1', 'tenant-2'),
+    ).rejects.toThrow(NotFoundException);
   });
 });

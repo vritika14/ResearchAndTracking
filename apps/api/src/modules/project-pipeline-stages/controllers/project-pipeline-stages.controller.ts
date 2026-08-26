@@ -68,7 +68,7 @@ export class ProjectPipelineStagesController {
     @Param('tenantId') tenantId: string,
     @Param('projectId') projectId: string,
   ) {
-    return this.service.list(projectId);
+    return this.service.list(projectId, tenantId);
   }
 
   @ApiOperation({

@@ -6,11 +6,11 @@ import { apiClient } from "@/api/client";
 import {
   useCreateTask,
   useCurrentWorkspace,
-  useDeleteMyTask,
+  useDeleteTask,
   useModules,
-  useMyTasks,
+  useTasks,
   useProjects,
-  useUpdateMyTask,
+  useUpdateTask,
   type ApiTask,
 } from "@/api/hooks";
 import { ColumnVisibilityMenu } from "@/components/dashboard/column-visibility-menu";
@@ -126,10 +126,7 @@ export default function TasksPage() {
   const workspace = useCurrentWorkspace();
   const tenantId = workspace.data?.id ?? "";
 
-  // Tasks are tenant-agnostic — a task shared with the caller from another
-  // workspace must still show up here, since task visibility never depended
-  // on workspace membership (see MyTasksController on the backend).
-  const tasksQuery = useMyTasks();
+  const tasksQuery = useTasks(tenantId);
   const projectsQuery = useProjects(tenantId);
   const modulesQuery = useModules(tenantId);
 
@@ -137,8 +134,8 @@ export default function TasksPage() {
   const [editingTask, setEditingTask] = useState<ApiTask | null>(null);
 
   const createTask = useCreateTask(tenantId);
-  const updateTask = useUpdateMyTask();
-  const deleteTask = useDeleteMyTask();
+  const updateTask = useUpdateTask(tenantId);
+  const deleteTask = useDeleteTask(tenantId);
 
   const [search, setSearch] = useState("");
   const [status, setStatus] = useState<StatusFilter>("All");

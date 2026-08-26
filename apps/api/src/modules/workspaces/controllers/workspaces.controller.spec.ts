@@ -11,6 +11,7 @@ describe('WorkspacesController', () => {
     listWorkspaces: jest.Mock;
     getCurrentWorkspace: jest.Mock;
     switchCurrentWorkspace: jest.Mock;
+    deleteWorkspace: jest.Mock;
   };
   let usersService: { findOrProvisionFromAccessToken: jest.Mock };
 
@@ -20,6 +21,7 @@ describe('WorkspacesController', () => {
       listWorkspaces: jest.fn(),
       getCurrentWorkspace: jest.fn(),
       switchCurrentWorkspace: jest.fn(),
+      deleteWorkspace: jest.fn(),
     };
     usersService = {
       findOrProvisionFromAccessToken: jest.fn(),
@@ -150,6 +152,40 @@ describe('WorkspacesController', () => {
         'user-1',
         'tenant-2',
       );
+    });
+  });
+
+  describe('remove', () => {
+    it('resolves the caller and delegates to the service', async () => {
+      usersService.findOrProvisionFromAccessToken.mockResolvedValue({
+        id: 'user-1',
+      });
+      workspacesService.deleteWorkspace.mockResolvedValue({ id: 'tenant-1' });
+
+      const req = {
+        user: { sub: 'cognito-sub-1', accessToken: 'token-1' },
+      } as any;
+
+      await expect(controller.remove(req, 'tenant-1')).resolves.toEqual({
+        id: 'tenant-1',
+      });
+      expect(workspacesService.deleteWorkspace).toHaveBeenCalledWith(
+        'user-1',
+        'tenant-1',
+      );
+    });
+
+    it('throws NotFoundException if the user could not be found or provisioned', async () => {
+      usersService.findOrProvisionFromAccessToken.mockResolvedValue(undefined);
+
+      const req = {
+        user: { sub: 'cognito-sub-2', accessToken: 'token-2' },
+      } as any;
+
+      await expect(controller.remove(req, 'tenant-1')).rejects.toThrow(
+        NotFoundException,
+      );
+      expect(workspacesService.deleteWorkspace).not.toHaveBeenCalled();
     });
   });
 });

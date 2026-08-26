@@ -35,6 +35,22 @@ type ProjectFixture = {
   role: string | null;
 };
 
+type ModuleFixture = {
+  id: string;
+  displayId: string | null;
+  tenantId: string;
+  projectId: string | null;
+  title: string;
+  description: string | null;
+  tag: string | null;
+  status: string | null;
+  pipelineStage: string | null;
+  assignedToUserId: string | null;
+  archivedAt: string | null;
+  createdAt: string;
+  updatedAt: string;
+};
+
 // Mirrors react-query's cache-subscription behaviour so hand-written mocks
 // still trigger a re-render when the underlying fixture data changes.
 const projects = vi.hoisted(() => {
@@ -69,6 +85,38 @@ const stages = vi.hoisted(() => {
   };
 });
 
+const modules = vi.hoisted(() => {
+  let items: ModuleFixture[] = [];
+  const listeners = new Set<() => void>();
+  return {
+    get: () => items,
+    set: (next: ModuleFixture[]) => {
+      items = next;
+      listeners.forEach((listener) => listener());
+    },
+    subscribe: (listener: () => void) => {
+      listeners.add(listener);
+      return () => listeners.delete(listener);
+    },
+  };
+});
+
+const moduleStages = vi.hoisted(() => {
+  let items: StageFixture[] = [];
+  const listeners = new Set<() => void>();
+  return {
+    get: () => items,
+    set: (next: StageFixture[]) => {
+      items = next;
+      listeners.forEach((listener) => listener());
+    },
+    subscribe: (listener: () => void) => {
+      listeners.add(listener);
+      return () => listeners.delete(listener);
+    },
+  };
+});
+
 const fixtures = vi.hoisted(() => ({ tenantId: "workspace-1" }));
 
 vi.mock("@/api/hooks", async () => {
@@ -84,8 +132,34 @@ vi.mock("@/api/hooks", async () => {
       refetch: vi.fn(),
     }),
     useTasks: () => ({ data: [] }),
+    useMembers: () => ({ data: [] }),
+    useModules: () => ({
+      data: useSyncExternalStore(modules.subscribe, modules.get),
+      isPending: false,
+      isError: false,
+      error: undefined,
+      refetch: vi.fn(),
+    }),
     usePipelineStages: () => ({
       data: useSyncExternalStore(stages.subscribe, stages.get),
+      isPending: false,
+    }),
+    useModulePipelineStagePool: () => ({
+      data: useSyncExternalStore(moduleStages.subscribe, moduleStages.get),
+      isPending: false,
+    }),
+    useProjectPipelineStages: (_tenantId: string, projectId: string, enabled: boolean) => ({
+      data: enabled
+        ? stages.get().filter((stage) => (stage as StageFixture & { projectId?: string }).projectId === projectId)
+        : undefined,
+      isPending: false,
+    }),
+    useModulePipelineStages: (_tenantId: string, moduleId: string, enabled: boolean) => ({
+      data: enabled
+        ? moduleStages
+            .get()
+            .filter((stage) => (stage as StageFixture & { moduleId?: string }).moduleId === moduleId)
+        : undefined,
       isPending: false,
     }),
     useUpdateProject: () => ({
@@ -93,6 +167,15 @@ vi.mock("@/api/hooks", async () => {
         async ({ projectId, input }: { projectId: string; input: Record<string, unknown> }) => {
           projects.set(
             projects.get().map((item) => (item.id === projectId ? { ...item, ...input } : item)),
+          );
+        },
+      ),
+    }),
+    useUpdateModule: () => ({
+      mutateAsync: vi.fn(
+        async ({ moduleId, input }: { moduleId: string; input: Record<string, unknown> }) => {
+          modules.set(
+            modules.get().map((item) => (item.id === moduleId ? { ...item, ...input } : item)),
           );
         },
       ),
@@ -118,6 +201,31 @@ vi.mock("@/api/hooks", async () => {
         stages.set(stages.get().filter((item) => item.id !== id));
       }),
     }),
+    useCreateModulePipelineStage: () => ({
+      mutateAsync: vi.fn(async (input: { value: string; sortOrder?: number }) => {
+        const current = moduleStages.get();
+        const stage: StageFixture = {
+          id: `mstage-${current.length + 1}`,
+          tenantId: fixtures.tenantId,
+          category: "module_pipeline_stage",
+          value: input.value,
+          sortOrder: input.sortOrder ?? current.length + 1,
+          createdAt: "2026-01-01T00:00:00.000Z",
+          updatedAt: "2026-01-01T00:00:00.000Z",
+        };
+        moduleStages.set([...current, stage]);
+        return stage;
+      }),
+    }),
+    useDeleteModulePipelineStage: () => ({
+      mutateAsync: vi.fn(async (id: string) => {
+        moduleStages.set(moduleStages.get().filter((item) => item.id !== id));
+      }),
+    }),
+    useCreateProjectPipelineStage: () => ({ mutateAsync: vi.fn() }),
+    useDeleteProjectPipelineStage: () => ({ mutateAsync: vi.fn() }),
+    useCreateModuleOwnPipelineStage: () => ({ mutateAsync: vi.fn() }),
+    useDeleteModuleOwnPipelineStage: () => ({ mutateAsync: vi.fn() }),
   };
 });
 
@@ -178,10 +286,55 @@ function baseProjects(): ProjectFixture[] {
   ];
 }
 
+function baseModules(): ModuleFixture[] {
+  return [
+    {
+      id: "MOD-201",
+      displayId: "MOD-201",
+      tenantId: "workspace-1",
+      projectId: null,
+      title: "Sample Preparation Protocol",
+      description: null,
+      tag: null,
+      status: "Active",
+      pipelineStage: "Backlog",
+      assignedToUserId: null,
+      archivedAt: null,
+      createdAt: "2026-01-01T00:00:00.000Z",
+      updatedAt: "2026-01-01T00:00:00.000Z",
+    },
+  ];
+}
+
+function baseModuleStages(): StageFixture[] {
+  return [
+    {
+      id: "mstage-1",
+      tenantId: "workspace-1",
+      category: "module_pipeline_stage",
+      value: "Backlog",
+      sortOrder: 1,
+      createdAt: "2026-01-01T00:00:00.000Z",
+      updatedAt: "2026-01-01T00:00:00.000Z",
+    },
+    {
+      id: "mstage-2",
+      tenantId: "workspace-1",
+      category: "module_pipeline_stage",
+      value: "In progress",
+      sortOrder: 2,
+      createdAt: "2026-01-01T00:00:00.000Z",
+      updatedAt: "2026-01-01T00:00:00.000Z",
+    },
+  ];
+}
+
 describe("PipelinePage", () => {
   beforeEach(() => {
     projects.set(baseProjects());
     stages.set(baseStages());
+    modules.set(baseModules());
+    moduleStages.set(baseModuleStages());
   });
 
   it("provides project edit actions in flow and column views", () => {
@@ -299,5 +452,103 @@ describe("PipelinePage", () => {
     expect(
       screen.getByText(/project without a pipeline stage/),
     ).toBeInTheDocument();
+  });
+
+  it("switches to the module pipeline and shows modules grouped by the module stage pool", () => {
+    render(
+      <MemoryRouter>
+        <PipelinePage />
+      </MemoryRouter>,
+    );
+
+    fireEvent.click(screen.getByRole("button", { name: "Module pipeline" }));
+
+    expect(
+      screen.getByRole("group", { name: "Backlog stage drop zone" }),
+    ).toBeInTheDocument();
+    expect(screen.getByText("Sample Preparation Protocol")).toBeInTheDocument();
+    expect(
+      screen.getByRole("link", { name: "Edit Sample Preparation Protocol" }),
+    ).toHaveAttribute("href", "/modules/MOD-201?edit=true&from=pipeline");
+  });
+
+  it("filtering to one project shows only that project, positioned in its own stage list", () => {
+    stages.set([
+      ...baseStages(),
+      {
+        id: "stage-own-1",
+        tenantId: null,
+        projectId: "PRJ-101",
+        category: "project_pipeline_stage",
+        value: "Custom Kickoff",
+        sortOrder: 1,
+        createdAt: "2026-01-01T00:00:00.000Z",
+        updatedAt: "2026-01-01T00:00:00.000Z",
+      },
+    ] as StageFixture[]);
+
+    render(
+      <MemoryRouter>
+        <PipelinePage />
+      </MemoryRouter>,
+    );
+
+    fireEvent.click(screen.getByRole("combobox", { name: "Filter by project" }));
+    fireEvent.click(
+      screen.getByRole("option", {
+        name: "Enzyme Kinetics Inhibition Study Across Temperature Gradients",
+      }),
+    );
+
+    expect(
+      screen.getByRole("group", { name: "Custom Kickoff stage drop zone" }),
+    ).toBeInTheDocument();
+    expect(
+      screen.queryByRole("group", { name: "Literature Review stage drop zone" }),
+    ).not.toBeInTheDocument();
+  });
+
+  it("filtering the module pipeline by project shows only modules linked to that project", () => {
+    modules.set([
+      ...baseModules(),
+      {
+        id: "MOD-202",
+        displayId: "MOD-202",
+        tenantId: "workspace-1",
+        projectId: "PRJ-101",
+        title: "Reagent Calibration",
+        description: null,
+        tag: null,
+        status: "Active",
+        pipelineStage: "Backlog",
+        assignedToUserId: null,
+        archivedAt: null,
+        createdAt: "2026-01-01T00:00:00.000Z",
+        updatedAt: "2026-01-01T00:00:00.000Z",
+      },
+    ]);
+
+    render(
+      <MemoryRouter>
+        <PipelinePage />
+      </MemoryRouter>,
+    );
+
+    fireEvent.click(screen.getByRole("button", { name: "Module pipeline" }));
+
+    expect(screen.getByText("Sample Preparation Protocol")).toBeInTheDocument();
+    expect(screen.getByText("Reagent Calibration")).toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole("combobox", { name: "Filter by project" }));
+    fireEvent.click(
+      screen.getByRole("option", {
+        name: "Enzyme Kinetics Inhibition Study Across Temperature Gradients",
+      }),
+    );
+
+    expect(screen.getByText("Reagent Calibration")).toBeInTheDocument();
+    expect(
+      screen.queryByText("Sample Preparation Protocol"),
+    ).not.toBeInTheDocument();
   });
 });

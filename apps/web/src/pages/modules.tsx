@@ -3,13 +3,13 @@ import { Archive, Boxes, Pencil, UserPlus } from "lucide-react";
 import { Link } from "react-router-dom";
 
 import {
-  useArchiveMyModule,
+  useArchiveModule,
   useCreateModule,
   useCurrentWorkspace,
   useMembers,
-  useMyModules,
+  useModules,
   useProjects,
-  useUpdateMyModule,
+  useUpdateModule,
   type ApiModule,
 } from "@/api/hooks";
 import { ColumnVisibilityMenu } from "@/components/dashboard/column-visibility-menu";
@@ -67,10 +67,7 @@ export default function ModulesPage() {
   const workspace = useCurrentWorkspace();
   const tenantId = workspace.data?.id ?? "";
 
-  // Modules are tenant-agnostic — a module the caller collaborates on
-  // (directly, or via its linked project) must still show up here, even
-  // from another workspace (see MyModulesController on the backend).
-  const modulesQuery = useMyModules();
+  const modulesQuery = useModules(tenantId);
   const projectsQuery = useProjects(tenantId);
   const [isNewModuleOpen, setIsNewModuleOpen] = useState(false);
   const [editingModule, setEditingModule] = useState<ApiModule | null>(null);
@@ -81,8 +78,8 @@ export default function ModulesPage() {
   );
 
   const createModule = useCreateModule(tenantId);
-  const updateModule = useUpdateMyModule();
-  const archiveModule = useArchiveMyModule();
+  const updateModule = useUpdateModule(tenantId);
+  const archiveModule = useArchiveModule(tenantId);
 
   const [search, setSearch] = useState("");
   const [status, setStatus] = useState<StatusFilter>("All");

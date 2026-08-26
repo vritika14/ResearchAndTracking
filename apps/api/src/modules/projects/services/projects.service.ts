@@ -83,6 +83,15 @@ export class ProjectsService {
     },
   ) {
     const pipelineStages = normalizePipelineStages(input.pipelineStages);
+    if (pipelineStages.length) {
+      // So a brand-new stage typed at creation time shows up in the
+      // tenant-wide Pipeline view too, not just this project's own pipeline.
+      await this.enumRepository.ensureTenantPipelineStages(
+        tenantId,
+        'project_pipeline_stage',
+        pipelineStages,
+      );
+    }
     const [statusId, pipelineStageId, importanceId, ownerRoleId, displayId] =
       await Promise.all([
         this.resolveEnum('project_status', input.status),
@@ -158,7 +167,7 @@ export class ProjectsService {
         ? this.resolveEnum('project_status', input.status)
         : undefined,
       input.pipelineStage
-        ? this.resolveProjectPipelineStage(projectId, input.pipelineStage)
+        ? this.resolveProjectPipelineStage(projectId, input.pipelineStage, tenantId)
         : undefined,
       input.importance
         ? this.resolveEnum('importance', input.importance)
@@ -302,10 +311,15 @@ export class ProjectsService {
     return match.id;
   }
 
-  private async resolveProjectPipelineStage(projectId: string, value: string) {
+  private async resolveProjectPipelineStage(
+    projectId: string,
+    value: string,
+    tenantId?: string,
+  ) {
     const match = await this.enumRepository.findPipelineStageForProjectByValue(
       projectId,
       value,
+      tenantId,
     );
     if (!match) {
       throw new NotFoundException(

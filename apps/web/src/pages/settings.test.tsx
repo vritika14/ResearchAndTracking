@@ -21,6 +21,7 @@ const mockMe = {
 
 const mockSwitchWorkspace = vi.fn();
 const mockCreateWorkspace = vi.fn();
+const mockDeleteWorkspace = vi.fn();
 
 vi.mock("@/api/hooks", () => ({
   useMe: () => ({
@@ -58,6 +59,12 @@ vi.mock("@/api/hooks", () => ({
     mutateAsync: mockCreateWorkspace,
     isPending: false,
     isError: false,
+  }),
+  useDeleteWorkspace: () => ({
+    mutateAsync: mockDeleteWorkspace,
+    isPending: false,
+    isError: false,
+    variables: undefined,
   }),
   useUpdateMe: () => ({
     mutate: mockMutate,
@@ -100,6 +107,7 @@ describe("SettingsPage", () => {
     mockSetColorTheme.mockClear();
     mockSwitchWorkspace.mockReset().mockResolvedValue({ id: "workspace-1" });
     mockCreateWorkspace.mockReset().mockResolvedValue({ id: "workspace-2" });
+    mockDeleteWorkspace.mockReset().mockResolvedValue({ id: "workspace-1" });
   });
 
   it("reminds an incomplete user and saves their professional profile", () => {
@@ -178,5 +186,34 @@ describe("SettingsPage", () => {
     fireEvent.click(screen.getByRole("button", { name: "Create workspace" }));
 
     await waitFor(() => expect(mockCreateWorkspace).toHaveBeenCalledWith("New Lab"));
+  });
+
+  it("deletes a workspace after the user confirms", async () => {
+    vi.spyOn(window, "confirm").mockReturnValue(true);
+    render(
+      <MemoryRouter>
+        <SettingsPage />
+      </MemoryRouter>,
+    );
+
+    fireEvent.click(screen.getByRole("button", { name: /Delete workspace/ }));
+
+    expect(window.confirm).toHaveBeenCalledWith(
+      expect.stringContaining("Research Operations"),
+    );
+    await waitFor(() => expect(mockDeleteWorkspace).toHaveBeenCalledWith("workspace-1"));
+  });
+
+  it("does not delete a workspace when the user cancels the confirmation", () => {
+    vi.spyOn(window, "confirm").mockReturnValue(false);
+    render(
+      <MemoryRouter>
+        <SettingsPage />
+      </MemoryRouter>,
+    );
+
+    fireEvent.click(screen.getByRole("button", { name: /Delete workspace/ }));
+
+    expect(mockDeleteWorkspace).not.toHaveBeenCalled();
   });
 });
