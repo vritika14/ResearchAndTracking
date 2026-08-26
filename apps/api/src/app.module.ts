@@ -23,6 +23,8 @@ import { NoteMembersModule } from './modules/note-members/note-members.module';
 import { TenantContextMiddleware } from './db/tenant-context.middleware';
 import { ProjectPipelineStagesModule } from './modules/project-pipeline-stages/project-pipeline-stages.module';
 import { ModulePipelineStagesModule } from './modules/module-pipeline-stages/module-pipeline-stages.module';
+import { PipelineStagesModule } from './modules/pipeline-stages/pipeline-stages.module';
+import { ModulePipelineStagesPoolModule } from './modules/module-pipeline-stages-pool/module-pipeline-stages-pool.module';
 import { ProjectInvitationsModule } from './modules/project-invitations/project-invitations.module';
 
 @Module({
@@ -77,6 +79,8 @@ import { ProjectInvitationsModule } from './modules/project-invitations/project-
     NoteMembersModule,
     ProjectPipelineStagesModule,
     ModulePipelineStagesModule,
+    PipelineStagesModule,
+    ModulePipelineStagesPoolModule,
     ProjectInvitationsModule,
   ],
   controllers: [AppController],

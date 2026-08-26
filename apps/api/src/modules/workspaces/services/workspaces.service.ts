@@ -98,4 +98,14 @@ export class WorkspacesService {
     await this.repository.setCurrentWorkspace(userId, tenantId);
     return workspace;
   }
+
+  async deleteWorkspace(userId: string, tenantId: string) {
+    const deleted = await this.repository.deleteById(tenantId, userId);
+    if (!deleted) {
+      throw new NotFoundException(
+        'Workspace not found, or you are not its owner',
+      );
+    }
+    return deleted;
+  }
 }

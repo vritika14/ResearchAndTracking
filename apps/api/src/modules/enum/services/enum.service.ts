@@ -5,8 +5,8 @@ import { EnumRepository } from '../repositories/enum.repository';
 export class EnumService {
   constructor(private readonly repository: EnumRepository) {}
 
-  async listByCategory(category: string) {
-    const results = await this.repository.findByCategory(category);
+  async listByCategory(category: string, tenantId?: string) {
+    const results = await this.repository.findByCategory(category, tenantId);
 
     if (results.length === 0) {
       throw new NotFoundException(

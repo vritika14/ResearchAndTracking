@@ -119,6 +119,15 @@ export class ProjectModulesService {
     const tagId = await this.resolveEnum('module_type', input.tag);
     const statusId = await this.resolveEnum('project_status', input.status);
     const pipelineStages = normalizePipelineStages(input.pipelineStages);
+    if (pipelineStages.length) {
+      // So a brand-new stage typed at creation time shows up in the
+      // tenant-wide Pipeline view too, not just this module's own pipeline.
+      await this.enumRepository.ensureTenantPipelineStages(
+        tenantId,
+        'module_pipeline_stage',
+        pipelineStages,
+      );
+    }
     const pipelineStageId = pipelineStages.length
       ? undefined
       : await this.resolveEnum('module_pipeline_stage', input.pipelineStage);
@@ -187,7 +196,7 @@ export class ProjectModulesService {
         ? this.resolveEnum('project_status', input.status)
         : undefined,
       input.pipelineStage
-        ? this.resolveModulePipelineStage(moduleId, input.pipelineStage)
+        ? this.resolveModulePipelineStage(moduleId, input.pipelineStage, tenantId)
         : undefined,
     ]);
 
@@ -299,10 +308,15 @@ export class ProjectModulesService {
     return match.id;
   }
 
-  private async resolveModulePipelineStage(moduleId: string, value: string) {
+  private async resolveModulePipelineStage(
+    moduleId: string,
+    value: string,
+    tenantId?: string,
+  ) {
     const match = await this.enumRepository.findPipelineStageForModuleByValue(
       moduleId,
       value,
+      tenantId,
     );
     if (!match) {
       throw new NotFoundException(

@@ -87,7 +87,7 @@ vi.mock("@/api/hooks", async () => {
         : [],
       isPending: false,
     }),
-    useMyNotes: () => ({
+    useNotes: () => ({
       data: useSyncExternalStore(store.subscribe, store.getNotes),
       isPending: false,
       isError: false,
@@ -114,7 +114,7 @@ vi.mock("@/api/hooks", async () => {
         return note;
       }),
     }),
-    useUpdateMyNote: () => ({
+    useUpdateNote: () => ({
       mutateAsync: vi.fn(
         async ({ noteId, input }: { noteId: string; input: Record<string, unknown> }) => {
           const updated = store.getNotes().map((item) =>
@@ -134,7 +134,7 @@ vi.mock("@/api/hooks", async () => {
         },
       ),
     }),
-    useDeleteMyNote: () => ({
+    useDeleteNote: () => ({
       mutateAsync: vi.fn(async (noteId: string) => {
         store.setNotes(store.getNotes().filter((item) => item.id !== noteId));
       }),

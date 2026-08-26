@@ -9,8 +9,8 @@ import { EnumRepository } from '../../enum/repositories/enum.repository';
 export class ModulePipelineStagesService {
   constructor(private readonly repository: EnumRepository) {}
 
-  async list(moduleId: string) {
-    return this.repository.findPipelineStagesForModule(moduleId);
+  async list(moduleId: string, tenantId?: string) {
+    return this.repository.findPipelineStagesForModule(moduleId, tenantId);
   }
 
   async create(moduleId: string, value: string, sortOrder: number) {

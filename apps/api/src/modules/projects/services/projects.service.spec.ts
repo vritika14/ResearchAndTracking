@@ -20,6 +20,7 @@ describe('ProjectsService', () => {
     findByCategoryAndValue: jest.Mock;
     findPipelineStageForProjectByValue: jest.Mock;
     findValuesByIds: jest.Mock;
+    ensureTenantPipelineStages: jest.Mock;
   };
   let collaboratorsRepository: {
     findByProjectAndUser: jest.Mock;
@@ -45,6 +46,7 @@ describe('ProjectsService', () => {
         .mockImplementation((ids: string[]) =>
           Promise.resolve(new Map(ids.map((id) => [id, id]))),
         ),
+      ensureTenantPipelineStages: jest.fn().mockResolvedValue(undefined),
     };
     collaboratorsRepository = {
       findByProjectAndUser: jest.fn().mockResolvedValue(undefined),
@@ -359,6 +361,11 @@ describe('ProjectsService', () => {
       expect(enumRepository.findByCategoryAndValue).not.toHaveBeenCalledWith(
         'project_pipeline_stage',
         expect.any(String),
+      );
+      expect(enumRepository.ensureTenantPipelineStages).toHaveBeenCalledWith(
+        'tenant-1',
+        'project_pipeline_stage',
+        ['Concept', 'Analysis', 'Publication'],
       );
     });
 

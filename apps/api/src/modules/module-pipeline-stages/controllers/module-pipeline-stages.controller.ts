@@ -80,7 +80,7 @@ export class ModulePipelineStagesController {
     @Param('tenantId') tenantId: string,
     @Param('moduleId') moduleId: string,
   ) {
-    return this.service.list(moduleId);
+    return this.service.list(moduleId, tenantId);
   }
 
   @ApiOperation({

@@ -13,6 +13,7 @@ import {
   Save,
   Settings as SettingsIcon,
   ShieldCheck,
+  Trash2,
   UserRound,
 } from "lucide-react";
 import { z } from "zod";
@@ -20,6 +21,7 @@ import { z } from "zod";
 import {
   useCreateWorkspace,
   useCurrentWorkspace,
+  useDeleteWorkspace,
   useMe,
   useSwitchWorkspace,
   useUpdateMe,
@@ -63,6 +65,7 @@ export default function SettingsPage() {
   const workspaces = useWorkspaces();
   const switchWorkspace = useSwitchWorkspace();
   const createWorkspaceMutation = useCreateWorkspace();
+  const deleteWorkspaceMutation = useDeleteWorkspace();
   const workspaceForm = useForm<WorkspaceForm>({ defaultValues: { name: "" } });
   const designTheme = useDesignTheme();
   const colorTheme = useColorTheme();
@@ -108,6 +111,14 @@ export default function SettingsPage() {
 
   async function switchToWorkspace(workspaceId: string) {
     await switchWorkspace.mutateAsync(workspaceId);
+  }
+
+  async function deleteWorkspace(workspaceId: string, name: string) {
+    const confirmed = window.confirm(
+      `Permanently delete "${name}"? This deletes every project, module, task, and note in it. This cannot be undone.`,
+    );
+    if (!confirmed) return;
+    await deleteWorkspaceMutation.mutateAsync(workspaceId).catch(() => undefined);
   }
 
   if (me.isPending || workspace.isPending) {
@@ -460,6 +471,9 @@ export default function SettingsPage() {
                     const isCurrent = option.id === workspace.data?.id;
                     const isSwitching =
                       switchWorkspace.isPending && switchWorkspace.variables === option.id;
+                    const isDeleting =
+                      deleteWorkspaceMutation.isPending &&
+                      deleteWorkspaceMutation.variables === option.id;
 
                     return (
                       <Card
@@ -493,7 +507,9 @@ export default function SettingsPage() {
                           <Button
                             className="w-full"
                             variant={isCurrent ? "outline" : "default"}
-                            disabled={isCurrent || switchWorkspace.isPending}
+                            disabled={
+                              isCurrent || switchWorkspace.isPending || deleteWorkspaceMutation.isPending
+                            }
                             onClick={() => void switchToWorkspace(option.id)}
                           >
                             {isCurrent
@@ -503,6 +519,15 @@ export default function SettingsPage() {
                                 : "Switch workspace"}
                             {!isCurrent && !isSwitching ? <ArrowRight className="h-4 w-4" /> : null}
                           </Button>
+                          <Button
+                            className="mt-2 w-full text-destructive hover:bg-destructive/10 hover:text-destructive"
+                            variant="ghost"
+                            disabled={switchWorkspace.isPending || deleteWorkspaceMutation.isPending}
+                            onClick={() => void deleteWorkspace(option.id, option.name)}
+                          >
+                            <Trash2 className="h-4 w-4" />
+                            {isDeleting ? "Deleting…" : "Delete workspace"}
+                          </Button>
                         </CardContent>
                       </Card>
                     );
@@ -511,6 +536,11 @@ export default function SettingsPage() {
                 {switchWorkspace.isError ? (
                   <p role="alert" className="text-sm text-destructive">
                     {switchWorkspace.error.message}
+                  </p>
+                ) : null}
+                {deleteWorkspaceMutation.isError ? (
+                  <p role="alert" className="text-sm text-destructive">
+                    {deleteWorkspaceMutation.error.message}
                   </p>
                 ) : null}
 

@@ -14,6 +14,6 @@ export class EnumController {
   @UseGuards(JwtAuthGuard)
   @Get()
   async list(@Query() query: EnumQueryDto) {
-    return this.enumService.listByCategory(query.category);
+    return this.enumService.listByCategory(query.category, query.tenantId);
   }
 }

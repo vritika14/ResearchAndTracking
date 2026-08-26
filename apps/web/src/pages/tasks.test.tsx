@@ -86,7 +86,7 @@ vi.mock("@/api/hooks", async () => {
         : [],
       isPending: false,
     }),
-    useMyTasks: () => ({
+    useTasks: () => ({
       data: useSyncExternalStore(store.subscribe, store.getTasks),
       isPending: false,
       isError: false,
@@ -118,7 +118,7 @@ vi.mock("@/api/hooks", async () => {
         return task;
       }),
     }),
-    useUpdateMyTask: () => ({
+    useUpdateTask: () => ({
       mutateAsync: vi.fn(
         async ({ taskId, input }: { taskId: string; input: Record<string, unknown> }) => {
           const updated = store.getTasks().map((item) =>
@@ -129,7 +129,7 @@ vi.mock("@/api/hooks", async () => {
         },
       ),
     }),
-    useDeleteMyTask: () => ({
+    useDeleteTask: () => ({
       mutateAsync: vi.fn(async (taskId: string) => {
         store.setTasks(store.getTasks().filter((item) => item.id !== taskId));
       }),

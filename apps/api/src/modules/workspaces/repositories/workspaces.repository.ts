@@ -100,4 +100,18 @@ export class WorkspacesRepository {
         set: { tenantId, updatedAt: new Date() },
       });
   }
+
+  /**
+   * Only deletes when `ownerUserId` actually owns the tenant. Every other
+   * table keyed on tenantId (projects, modules, tasks, notes, enum,
+   * memberships, workspace_contexts, ...) cascades on delete, so this alone
+   * removes the workspace and everything in it.
+   */
+  async deleteById(tenantId: string, ownerUserId: string) {
+    const [row] = await this.drizzle.db
+      .delete(tenants)
+      .where(and(eq(tenants.id, tenantId), eq(tenants.ownerUserId, ownerUserId)))
+      .returning();
+    return row;
+  }
 }

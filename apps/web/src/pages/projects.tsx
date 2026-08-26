@@ -3,12 +3,12 @@ import { ChevronRight, FolderKanban, Pencil, Trash2, UserPlus } from "lucide-rea
 import { Link } from "react-router-dom";
 
 import {
-  useArchiveMyProject,
+  useArchiveProject,
   useCurrentWorkspace,
   useMe,
   useMembers,
   useModules,
-  useMyProjects,
+  useProjects,
   useNotes,
   usePipelineStages,
   useCreateProject,
@@ -201,12 +201,7 @@ export default function ProjectsPage() {
   const workspace = useCurrentWorkspace();
   const tenantId = workspace.data?.id ?? "";
 
-  // Projects are tenant-agnostic — a project shared with the caller from
-  // another workspace must still show up here (see MyProjectsController on
-  // the backend). Linked module/task/note counts below remain scoped to the
-  // caller's current workspace, so they may read incomplete for a project
-  // that lives in a different tenant.
-  const projectsQuery = useMyProjects();
+  const projectsQuery = useProjects(tenantId);
   const modulesQuery = useModules(tenantId);
   const tasksQuery = useTasks(tenantId);
   const notesQuery = useNotes(tenantId);
@@ -221,7 +216,7 @@ export default function ProjectsPage() {
   }, [pipelineStagesQuery.data]);
 
   const createProject = useCreateProject(tenantId);
-  const archiveProject = useArchiveMyProject();
+  const archiveProject = useArchiveProject(tenantId);
 
   const [isNewProjectOpen, setIsNewProjectOpen] = useState(false);
   const [sharingProject, setSharingProject] = useState<ApiProject | null>(null);

@@ -61,7 +61,7 @@ export function ManageStagesDialog({
           {stages.map((stage) => {
             const isVisible = visibleStages.has(stage.value);
             const isLastVisible = isVisible && visibleStages.size === 1;
-            const isCustom = stage.tenantId !== null;
+            const isCustom = stage.tenantId !== null || Boolean(stage.projectId) || Boolean(stage.moduleId);
             return (
               <div key={stage.id} className="flex items-start gap-3 rounded-lg border p-3">
                 <label className="flex min-w-0 flex-1 cursor-pointer items-start gap-3">

@@ -123,6 +123,25 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/workspaces/{workspaceId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                workspaceId: string;
+            };
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /** Permanently delete a workspace owned by the authenticated user, and everything in it */
+        delete: operations["WorkspacesController_remove"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/enum": {
         parameters: {
             query?: never;
@@ -625,6 +644,42 @@ export interface paths {
         head?: never;
         /** Rename or reorder a custom pipeline stage (owner only) */
         patch: operations["PipelineStagesController_update"];
+        trace?: never;
+    };
+    "/api/v1/tenant/{tenantId}/module-pipeline-stages": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List module pipeline stages available to this workspace (base + custom) */
+        get: operations["ModulePipelineStagesPoolController_list"];
+        put?: never;
+        /** Create a custom module pipeline stage for this workspace (owner only) */
+        post: operations["ModulePipelineStagesPoolController_create"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/tenant/{tenantId}/module-pipeline-stages/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /** Remove a custom module pipeline stage (owner only) */
+        delete: operations["ModulePipelineStagesPoolController_remove"];
+        options?: never;
+        head?: never;
+        /** Rename or reorder a custom module pipeline stage (owner only) */
+        patch: operations["ModulePipelineStagesPoolController_update"];
         trace?: never;
     };
 }
@@ -1211,10 +1266,30 @@ export interface operations {
             };
         };
     };
+    WorkspacesController_remove: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                workspaceId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
     EnumController_list: {
         parameters: {
             query: {
                 category: string;
+                tenantId?: string;
             };
             header?: never;
             path?: never;
@@ -2364,6 +2439,92 @@ export interface operations {
         };
     };
     PipelineStagesController_update: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                tenantId: string;
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["UpdatePipelineStageDto"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    ModulePipelineStagesPoolController_list: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                tenantId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    ModulePipelineStagesPoolController_create: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                tenantId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CreatePipelineStageDto"];
+            };
+        };
+        responses: {
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    ModulePipelineStagesPoolController_remove: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                tenantId: string;
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    ModulePipelineStagesPoolController_update: {
         parameters: {
             query?: never;
             header?: never;
