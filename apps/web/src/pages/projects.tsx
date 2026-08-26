@@ -1,10 +1,12 @@
 import { useMemo, useState } from "react";
-import { ChevronRight, FolderKanban, Pencil, Trash2 } from "lucide-react";
+import { ChevronRight, FolderKanban, Pencil, Trash2, UserPlus } from "lucide-react";
 import { Link } from "react-router-dom";
 
 import {
   useArchiveMyProject,
   useCurrentWorkspace,
+  useMe,
+  useMembers,
   useModules,
   useMyProjects,
   useNotes,
@@ -21,8 +23,16 @@ import {
   NewProjectDialog,
   type NewProjectInput,
 } from "@/components/projects/new-project-dialog";
+import { ProjectCollaborators } from "@/components/projects/project-collaborators";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import {
   Select,
@@ -201,6 +211,7 @@ export default function ProjectsPage() {
   const tasksQuery = useTasks(tenantId);
   const notesQuery = useNotes(tenantId);
   const pipelineStagesQuery = usePipelineStages(tenantId);
+  const me = useMe();
   const stageOrder = useMemo(() => {
     const map = new Map<string, number>();
     for (const stage of pipelineStagesQuery.data ?? []) {
@@ -213,6 +224,8 @@ export default function ProjectsPage() {
   const archiveProject = useArchiveMyProject();
 
   const [isNewProjectOpen, setIsNewProjectOpen] = useState(false);
+  const [sharingProject, setSharingProject] = useState<ApiProject | null>(null);
+  const membersQuery = useMembers(tenantId, sharingProject !== null);
   const [search, setSearch] = useState("");
   const [status, setStatus] = useState<StatusFilter>("All");
   const [role, setRole] = useState<RoleFilter>("All roles");
@@ -355,6 +368,31 @@ export default function ProjectsPage() {
         onCreate={(input) => void handleCreateProject(input)}
         pipelineStages={pipelineStagesQuery.data ?? []}
       />
+      <Dialog
+        open={sharingProject !== null}
+        onOpenChange={(open) => {
+          if (!open) setSharingProject(null);
+        }}
+      >
+        <DialogContent className="max-h-[85vh] overflow-y-auto sm:max-w-xl">
+          <DialogHeader>
+            <DialogTitle>Project collaborators</DialogTitle>
+            <DialogDescription>
+              Invite collaborators to {sharingProject?.title ?? "this project"} by email and manage pending access.
+            </DialogDescription>
+          </DialogHeader>
+          {sharingProject ? (
+            <ProjectCollaborators
+              tenantId={tenantId}
+              projectId={sharingProject.id}
+              ownerUserId={sharingProject.userId}
+              members={membersQuery.data ?? []}
+              entityTitle={sharingProject.title}
+              canManage={me.data?.id === sharingProject.userId}
+            />
+          ) : null}
+        </DialogContent>
+      </Dialog>
 
       <div className="surface-toolbar flex flex-col gap-4 border-blue-200/60 bg-blue-50/40 lg:flex-row lg:items-start lg:justify-between dark:border-blue-900/50 dark:bg-blue-950/10">
         <div className="flex flex-1 flex-wrap items-center gap-3">
@@ -490,6 +528,20 @@ export default function ProjectsPage() {
                             >
                               {project.title}
                             </Link>
+                            {project.tenantId === tenantId ? (
+                              <button
+                                type="button"
+                                onClick={(event) => {
+                                  event.stopPropagation();
+                                  setSharingProject(project);
+                                }}
+                                aria-label={`Manage collaborators for ${project.title}`}
+                                title="Manage collaborators"
+                                className="inline-flex h-6 w-6 shrink-0 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-accent hover:text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                              >
+                                <UserPlus className="h-3.5 w-3.5" />
+                              </button>
+                            ) : null}
                             <Link
                               to={`/projects/${project.id}?edit=true`}
                               onClick={(event) => event.stopPropagation()}

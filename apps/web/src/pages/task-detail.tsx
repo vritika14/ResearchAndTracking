@@ -4,7 +4,6 @@ import { Link, useParams } from "react-router-dom";
 
 import {
   useCurrentWorkspace,
-  useMembers,
   useModules,
   useMyTask,
   useProject,
@@ -78,7 +77,6 @@ export default function TaskDetailPage() {
   const taskQuery = useMyTask(taskId);
   const projectsQuery = useProjects(tenantId);
   const modulesQuery = useModules(tenantId);
-  const membersQuery = useMembers(tenantId);
   const updateTask = useUpdateMyTask();
 
   const task = taskQuery.data;
@@ -174,8 +172,6 @@ export default function TaskDetailPage() {
         tenantId={tenantId}
         projects={projectsQuery.data ?? []}
         modules={modulesQuery.data ?? []}
-        members={membersQuery.data ?? []}
-        membersLoading={membersQuery.isPending}
         task={task}
         onSave={(input) => void handleSave(input)}
       />
@@ -225,8 +221,6 @@ export default function TaskDetailPage() {
               <TaskMembersManager
                 tenantId={tenantId}
                 taskId={task.id}
-                members={membersQuery.data ?? []}
-                membersLoading={membersQuery.isPending}
               />
             ) : task.visibility === "Shared" ? (
               <p className="text-sm text-muted-foreground">

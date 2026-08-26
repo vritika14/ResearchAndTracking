@@ -7,7 +7,6 @@ import {
   useCreateTask,
   useCurrentWorkspace,
   useDeleteMyTask,
-  useMembers,
   useModules,
   useMyTasks,
   useProjects,
@@ -136,7 +135,6 @@ export default function TasksPage() {
 
   const [isNewTaskOpen, setIsNewTaskOpen] = useState(false);
   const [editingTask, setEditingTask] = useState<ApiTask | null>(null);
-  const membersQuery = useMembers(tenantId, isNewTaskOpen || editingTask !== null);
 
   const createTask = useCreateTask(tenantId);
   const updateTask = useUpdateMyTask();
@@ -317,8 +315,6 @@ export default function TasksPage() {
         tenantId={tenantId}
         projects={projectsQuery.data ?? []}
         modules={modulesQuery.data ?? []}
-        members={membersQuery.data ?? []}
-        membersLoading={membersQuery.isPending}
         onSave={(input) => void handleCreateTask(input)}
       />
 
@@ -329,8 +325,6 @@ export default function TasksPage() {
           tenantId={tenantId}
           projects={projectsQuery.data ?? []}
           modules={modulesQuery.data ?? []}
-          members={membersQuery.data ?? []}
-          membersLoading={membersQuery.isPending}
           task={editingTask}
           onOpenChange={(open) => {
             if (!open) setEditingTask(null);

@@ -19,7 +19,6 @@ import FutureFeaturePage from "@/pages/future-feature";
 import SignInPage from "@/pages/sign-in";
 import AuthCallbackPage from "@/pages/auth-callback";
 import WorkspaceOnboardingPage from "@/pages/workspace-onboarding";
-import WorkspacesPage from "@/pages/workspaces";
 import SessionExpiredPage from "@/pages/session-expired";
 import AccessDeniedPage from "@/pages/access-denied";
 import MembershipStatusPage from "@/pages/membership-status";
@@ -60,7 +59,6 @@ export default function App() {
               <Route path="daily-notes/:noteId" element={<DailyNotesPage />} />
               <Route path="pipeline" element={<PipelinePage />} />
               <Route path="settings" element={<SettingsPage />} />
-              <Route path="workspaces" element={<WorkspacesPage />} />
               <Route
                 path="settings/account-audit"
                 element={<AccountAuditPage />}

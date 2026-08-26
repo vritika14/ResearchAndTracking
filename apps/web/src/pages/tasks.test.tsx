@@ -61,6 +61,10 @@ const fixtures = vi.hoisted(() => ({
   ],
 }));
 
+const sharingMutations = vi.hoisted(() => ({
+  addTaskMember: vi.fn(),
+}));
+
 vi.mock("@/api/client", () => ({
   apiClient: {
     POST: vi.fn().mockResolvedValue({ data: {}, error: undefined, response: new Response() }),
@@ -131,13 +135,14 @@ vi.mock("@/api/hooks", async () => {
       }),
     }),
     useTaskMembers: () => ({ data: [], isPending: false }),
-    useAddTaskMember: () => ({ mutate: vi.fn() }),
+    useAddTaskMember: () => ({ mutate: sharingMutations.addTaskMember }),
     useRemoveTaskMember: () => ({ mutate: vi.fn() }),
   };
 });
 
 describe("TasksPage", () => {
   beforeEach(() => {
+    sharingMutations.addTaskMember.mockClear();
     store.setTasks([
       {
         id: "task-1",
@@ -196,6 +201,27 @@ describe("TasksPage", () => {
     expect(screen.getByText("Jamie Outsider")).toBeInTheDocument();
     fireEvent.click(screen.getByRole("option", { name: /Jamie Outsider/ }));
     expect(screen.getByLabelText("Selected task members")).toHaveTextContent("Jamie Outsider");
+  });
+
+  it("directly assigns any platform user when a private task is changed to shared", () => {
+    render(
+      <MemoryRouter>
+        <TasksPage />
+      </MemoryRouter>,
+    );
+
+    fireEvent.click(
+      screen.getByRole("button", { name: "Edit Submit interim safety report to IRB" }),
+    );
+    fireEvent.click(screen.getByRole("combobox", { name: "Visibility" }));
+    fireEvent.click(screen.getByRole("option", { name: "Shared" }));
+
+    const search = screen.getByPlaceholderText("Type a name or email to search all users");
+    fireEvent.change(search, { target: { value: "Jamie" } });
+    fireEvent.click(screen.getByRole("option", { name: /Jamie Outsider/ }));
+
+    expect(sharingMutations.addTaskMember).toHaveBeenCalledWith("user-outside-workspace");
+    expect(screen.getByText(/No email invitation is sent/)).toBeInTheDocument();
   });
 
   it("edits an existing task from its table row", async () => {

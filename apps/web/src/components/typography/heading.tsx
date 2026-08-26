@@ -100,6 +100,12 @@ const PageHeading = React.forwardRef<HTMLDivElement, PageHeadingProps>(
       {...props}
     >
       <div aria-hidden="true" className={cn("pointer-events-none absolute inset-y-0 right-0 w-2/5 bg-gradient-to-l to-transparent", pageHeadingTones[tone].glow)} />
+      {Icon ? (
+        <Icon
+          aria-hidden="true"
+          className="pointer-events-none absolute -bottom-6 -right-6 h-32 w-32 rotate-12 text-foreground/[0.05] sm:h-36 sm:w-36"
+        />
+      ) : null}
       <div className="relative flex items-start gap-4">
         {Icon ? (
           <span className={cn("flex h-11 w-11 shrink-0 items-center justify-center rounded-xl shadow-sm ring-4", pageHeadingTones[tone].icon)}>

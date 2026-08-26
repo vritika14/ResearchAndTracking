@@ -1,5 +1,13 @@
 import { Columns3 } from "lucide-react";
 
+import { Button } from "@/components/ui/button";
+import {
+  DropdownMenu,
+  DropdownMenuCheckboxItem,
+  DropdownMenuContent,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+
 interface ColumnOption<T extends string> {
   id: T;
   label: string;
@@ -19,34 +27,31 @@ export function ColumnVisibilityMenu<T extends string>({
   triggerLabel = "Columns",
 }: ColumnVisibilityMenuProps<T>) {
   return (
-    <details className="relative">
-      <summary className="flex h-9 cursor-pointer list-none items-center gap-2 rounded-md border border-input bg-background px-3 text-sm font-medium shadow-sm transition-colors hover:bg-accent hover:text-accent-foreground [&::-webkit-details-marker]:hidden">
-        <Columns3 className="h-4 w-4" />
-        {triggerLabel}
-      </summary>
-      <fieldset className="absolute right-0 z-20 mt-2 min-w-48 rounded-md border border-border bg-popover p-2 text-popover-foreground shadow-md">
-        <legend className="sr-only">Visible {triggerLabel.toLowerCase()}</legend>
+    <DropdownMenu>
+      <DropdownMenuTrigger asChild>
+        <Button type="button" variant="outline" size="sm" className="gap-2">
+          <Columns3 className="h-4 w-4" />
+          {triggerLabel}
+        </Button>
+      </DropdownMenuTrigger>
+      <DropdownMenuContent align="end" className="min-w-48">
         {columns.map((column) => {
           const isVisible = visibleColumns.has(column.id);
           const isLastVisible = isVisible && visibleColumns.size === 1;
 
           return (
-            <label
+            <DropdownMenuCheckboxItem
               key={column.id}
-              className="flex cursor-pointer items-center gap-2 rounded-sm px-2 py-1.5 text-sm hover:bg-accent"
+              checked={isVisible}
+              disabled={isLastVisible}
+              onSelect={(event) => event.preventDefault()}
+              onCheckedChange={() => onToggle(column.id)}
             >
-              <input
-                type="checkbox"
-                checked={isVisible}
-                disabled={isLastVisible}
-                onChange={() => onToggle(column.id)}
-                className="h-4 w-4 accent-primary"
-              />
               {column.label}
-            </label>
+            </DropdownMenuCheckboxItem>
           );
         })}
-      </fieldset>
-    </details>
+      </DropdownMenuContent>
+    </DropdownMenu>
   );
 }

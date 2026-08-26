@@ -1,18 +1,30 @@
 import { useEffect, useState, type FormEvent } from "react";
+import { useForm } from "react-hook-form";
 import {
   AlertTriangle,
+  ArrowRight,
   Building2,
   CheckCircle2,
+  Crown,
   LayoutTemplate,
   Mail,
   Palette,
+  Plus,
   Save,
   Settings as SettingsIcon,
   ShieldCheck,
   UserRound,
 } from "lucide-react";
+import { z } from "zod";
 
-import { useCurrentWorkspace, useMe, useUpdateMe } from "@/api/hooks";
+import {
+  useCreateWorkspace,
+  useCurrentWorkspace,
+  useMe,
+  useSwitchWorkspace,
+  useUpdateMe,
+  useWorkspaces,
+} from "@/api/hooks";
 import { WorkspaceMembers } from "@/components/settings/workspace-members";
 import { ErrorState } from "@/components/shared/error-state";
 import { LoadingState } from "@/components/shared/loading-state";
@@ -39,9 +51,19 @@ import { cn } from "@/lib/utils";
 import { COLOR_THEMES, type ColorTheme, useColorTheme } from "@/theme/color-theme";
 import { DESIGN_THEMES, useDesignTheme } from "@/theme/design-theme";
 
+const workspaceSchema = z.object({
+  name: z.string().trim().min(2, "Use at least 2 characters.").max(100),
+});
+
+type WorkspaceForm = z.infer<typeof workspaceSchema>;
+
 export default function SettingsPage() {
   const me = useMe();
   const workspace = useCurrentWorkspace();
+  const workspaces = useWorkspaces();
+  const switchWorkspace = useSwitchWorkspace();
+  const createWorkspaceMutation = useCreateWorkspace();
+  const workspaceForm = useForm<WorkspaceForm>({ defaultValues: { name: "" } });
   const designTheme = useDesignTheme();
   const colorTheme = useColorTheme();
   const updateProfile = useUpdateMe();
@@ -69,6 +91,23 @@ export default function SettingsPage() {
   function saveProfile(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     updateProfile.mutate(profile);
+  }
+
+  async function submitCreateWorkspace(values: WorkspaceForm) {
+    const parsed = workspaceSchema.safeParse(values);
+    if (!parsed.success) {
+      workspaceForm.setError("name", { message: parsed.error.issues[0]?.message });
+      return;
+    }
+
+    await createWorkspaceMutation
+      .mutateAsync(parsed.data.name)
+      .then(() => workspaceForm.reset())
+      .catch(() => undefined);
+  }
+
+  async function switchToWorkspace(workspaceId: string) {
+    await switchWorkspace.mutateAsync(workspaceId);
   }
 
   if (me.isPending || workspace.isPending) {
@@ -381,26 +420,141 @@ export default function SettingsPage() {
             </CardContent>
           </Card>
 
-          {workspace.data ? (
-            <Card>
-              <CardHeader>
+        </div>
+      </div>
+
+      <div className="mx-auto mt-7 w-full max-w-5xl">
+        <Card>
+          <CardHeader>
+            <div className="flex flex-wrap items-start justify-between gap-3">
+              <div>
                 <CardTitle className="flex items-center gap-2">
                   <Building2 className="h-5 w-5 text-primary" />
-                  Active workspace
+                  Workspaces
                 </CardTitle>
-                <CardDescription>{workspace.data.name}</CardDescription>
-              </CardHeader>
-              <CardContent className="flex items-center justify-between gap-3">
-                <Badge variant="outline" className="capitalize">
-                  {workspace.data.membershipRole.replace("_", " ")}
+                <CardDescription>
+                  Every research workspace you can access, and switching between them.
+                </CardDescription>
+              </div>
+              {workspaces.data ? (
+                <Badge variant="outline" className="w-fit px-3 py-1">
+                  {workspaces.data.length}{" "}
+                  {workspaces.data.length === 1 ? "workspace" : "workspaces"}
                 </Badge>
-                <span className="truncate text-xs text-muted-foreground">
-                  {workspace.data.slug}
-                </span>
-              </CardContent>
-            </Card>
-          ) : null}
-        </div>
+              ) : null}
+            </div>
+          </CardHeader>
+          <CardContent className="grid gap-6">
+            {workspaces.isPending ? (
+              <LoadingState title="Loading your workspaces" className="min-h-[30vh]" />
+            ) : workspaces.isError ? (
+              <ErrorState
+                title="Your workspaces could not be loaded"
+                description={workspaces.error.message}
+                onRetry={() => void workspaces.refetch()}
+              />
+            ) : (
+              <>
+                <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+                  {workspaces.data.map((option) => {
+                    const isCurrent = option.id === workspace.data?.id;
+                    const isSwitching =
+                      switchWorkspace.isPending && switchWorkspace.variables === option.id;
+
+                    return (
+                      <Card
+                        key={option.id}
+                        className={
+                          isCurrent
+                            ? "border-primary/40 bg-primary/[0.025] shadow-md"
+                            : "transition-all hover:-translate-y-0.5 hover:border-primary/20 hover:shadow-md"
+                        }
+                      >
+                        <CardHeader>
+                          <div className="flex items-start justify-between gap-4">
+                            <span className="rounded-xl bg-primary/10 p-3 text-primary">
+                              <Building2 className="h-5 w-5" />
+                            </span>
+                            {isCurrent ? (
+                              <Badge className="gap-1">
+                                <CheckCircle2 className="h-3.5 w-3.5" />
+                                Current
+                              </Badge>
+                            ) : null}
+                          </div>
+                          <CardTitle className="pt-2">{option.name}</CardTitle>
+                          <CardDescription className="truncate">{option.slug}</CardDescription>
+                        </CardHeader>
+                        <CardContent>
+                          <div className="mb-5 flex items-center gap-2 text-sm text-muted-foreground">
+                            <Crown className="h-4 w-4 text-amber-500" />
+                            <span>Owner</span>
+                          </div>
+                          <Button
+                            className="w-full"
+                            variant={isCurrent ? "outline" : "default"}
+                            disabled={isCurrent || switchWorkspace.isPending}
+                            onClick={() => void switchToWorkspace(option.id)}
+                          >
+                            {isCurrent
+                              ? "Active workspace"
+                              : isSwitching
+                                ? "Switching…"
+                                : "Switch workspace"}
+                            {!isCurrent && !isSwitching ? <ArrowRight className="h-4 w-4" /> : null}
+                          </Button>
+                        </CardContent>
+                      </Card>
+                    );
+                  })}
+                </div>
+                {switchWorkspace.isError ? (
+                  <p role="alert" className="text-sm text-destructive">
+                    {switchWorkspace.error.message}
+                  </p>
+                ) : null}
+
+                <div className="border-t pt-6">
+                  <p className="flex items-center gap-2 text-sm font-semibold">
+                    <Plus className="h-4 w-4 text-primary" />
+                    Create another workspace
+                  </p>
+                  <p className="mt-1 text-sm text-muted-foreground">
+                    You will become the owner and the new workspace will become active.
+                  </p>
+                  <form
+                    className="mt-4 flex flex-col gap-3 sm:flex-row sm:items-start"
+                    onSubmit={workspaceForm.handleSubmit(submitCreateWorkspace)}
+                  >
+                    <div className="flex-1">
+                      <label htmlFor="new-workspace-name" className="sr-only">
+                        Workspace name
+                      </label>
+                      <Input
+                        id="new-workspace-name"
+                        placeholder="Workspace name"
+                        {...workspaceForm.register("name")}
+                      />
+                      {workspaceForm.formState.errors.name ? (
+                        <p role="alert" className="mt-1 text-xs text-destructive">
+                          {workspaceForm.formState.errors.name.message}
+                        </p>
+                      ) : null}
+                    </div>
+                    <Button type="submit" disabled={createWorkspaceMutation.isPending}>
+                      {createWorkspaceMutation.isPending ? "Creating…" : "Create workspace"}
+                    </Button>
+                  </form>
+                  {createWorkspaceMutation.isError ? (
+                    <p role="alert" className="mt-3 text-sm text-destructive">
+                      {createWorkspaceMutation.error.message}
+                    </p>
+                  ) : null}
+                </div>
+              </>
+            )}
+          </CardContent>
+        </Card>
       </div>
 
       <WorkspaceMembers />

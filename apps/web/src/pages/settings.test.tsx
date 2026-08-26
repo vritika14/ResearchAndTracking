@@ -1,4 +1,4 @@
-import { fireEvent, render, screen } from "@testing-library/react";
+import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { MemoryRouter } from "react-router-dom";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
@@ -19,6 +19,9 @@ const mockMe = {
   missingProfileFields: ["jobTitle", "institution", "department"],
 };
 
+const mockSwitchWorkspace = vi.fn();
+const mockCreateWorkspace = vi.fn();
+
 vi.mock("@/api/hooks", () => ({
   useMe: () => ({
     data: mockMe,
@@ -27,11 +30,34 @@ vi.mock("@/api/hooks", () => ({
   }),
   useCurrentWorkspace: () => ({
     data: {
+      id: "workspace-1",
       name: "Research Operations",
       slug: "research-operations",
       membershipRole: "owner",
     },
     isPending: false,
+  }),
+  useWorkspaces: () => ({
+    data: [
+      {
+        id: "workspace-1",
+        name: "Research Operations",
+        slug: "research-operations",
+        membershipRole: "owner",
+      },
+    ],
+    isPending: false,
+    isError: false,
+  }),
+  useSwitchWorkspace: () => ({
+    mutateAsync: mockSwitchWorkspace,
+    isPending: false,
+    isError: false,
+  }),
+  useCreateWorkspace: () => ({
+    mutateAsync: mockCreateWorkspace,
+    isPending: false,
+    isError: false,
   }),
   useUpdateMe: () => ({
     mutate: mockMutate,
@@ -72,6 +98,8 @@ describe("SettingsPage", () => {
     mockMutate.mockClear();
     mockSetTheme.mockClear();
     mockSetColorTheme.mockClear();
+    mockSwitchWorkspace.mockReset().mockResolvedValue({ id: "workspace-1" });
+    mockCreateWorkspace.mockReset().mockResolvedValue({ id: "workspace-2" });
   });
 
   it("reminds an incomplete user and saves their professional profile", () => {
@@ -131,5 +159,24 @@ describe("SettingsPage", () => {
     fireEvent.click(screen.getByRole("option", { name: "Violet" }));
 
     expect(mockSetColorTheme).toHaveBeenCalledWith("violet");
+  });
+
+  it("shows the workspace list and creates a new workspace, all from Settings", async () => {
+    render(
+      <MemoryRouter>
+        <SettingsPage />
+      </MemoryRouter>,
+    );
+
+    expect(screen.getByRole("heading", { name: "Workspaces" })).toBeInTheDocument();
+    expect(screen.getByText("Research Operations")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /Active workspace/ })).toBeDisabled();
+
+    fireEvent.change(screen.getByPlaceholderText("Workspace name"), {
+      target: { value: "New Lab" },
+    });
+    fireEvent.click(screen.getByRole("button", { name: "Create workspace" }));
+
+    await waitFor(() => expect(mockCreateWorkspace).toHaveBeenCalledWith("New Lab"));
   });
 });

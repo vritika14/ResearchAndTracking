@@ -1,6 +1,6 @@
 // apps/api/src/modules/task-members/repositories/task-members.repository.ts
 import { Injectable } from '@nestjs/common';
-import { taskMembers } from '@research-tracker/migrations';
+import { taskMembers, users } from '@research-tracker/migrations';
 import { and, eq } from 'drizzle-orm';
 import { DrizzleService } from '../../../db/drizzle.service';
 
@@ -10,8 +10,17 @@ export class TaskMembersRepository {
 
   async findByTask(tenantId: string, taskId: string) {
     return this.drizzle.db
-      .select()
+      .select({
+        id: taskMembers.id,
+        tenantId: taskMembers.tenantId,
+        taskId: taskMembers.taskId,
+        userId: taskMembers.userId,
+        displayName: users.displayName,
+        email: users.email,
+        createdAt: taskMembers.createdAt,
+      })
       .from(taskMembers)
+      .innerJoin(users, eq(taskMembers.userId, users.id))
       .where(
         and(eq(taskMembers.tenantId, tenantId), eq(taskMembers.taskId, taskId)),
       );

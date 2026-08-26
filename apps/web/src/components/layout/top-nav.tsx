@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { ChevronDown, Menu } from "lucide-react";
+import { BookOpen, ChevronDown, GraduationCap, Menu } from "lucide-react";
 import { Link, NavLink } from "react-router-dom";
 
 import { navGroups } from "@/config/nav-items";
@@ -36,8 +36,16 @@ export function TopNav() {
   const [mobileOpen, setMobileOpen] = useState(false);
 
   return (
-    <header className="sticky top-0 z-40 border-b border-blue-200/70 bg-gradient-to-r from-blue-50/95 via-card/95 to-violet-50/95 shadow-sm backdrop-blur-xl dark:border-blue-900/50 dark:from-blue-950/80 dark:via-card/90 dark:to-violet-950/70">
-      <div className="container flex h-16 items-center gap-6">
+    <header className="sticky top-0 isolate z-40 overflow-hidden border-b border-blue-300/70 bg-gradient-to-r from-blue-100/95 via-card/95 to-violet-100/95 shadow-sm backdrop-blur-xl dark:border-blue-900/50 dark:from-blue-950/80 dark:via-card/90 dark:to-violet-950/70">
+      <BookOpen
+        aria-hidden="true"
+        className="pointer-events-none absolute -left-6 -top-8 h-24 w-24 -rotate-12 text-primary/[0.08]"
+      />
+      <GraduationCap
+        aria-hidden="true"
+        className="pointer-events-none absolute -right-6 -top-8 h-24 w-24 rotate-12 text-violet-600/[0.08]"
+      />
+      <div className="container relative z-10 flex h-16 items-center gap-6">
         <Wordmark />
 
         <nav className="hidden flex-1 items-center gap-1 md:flex">

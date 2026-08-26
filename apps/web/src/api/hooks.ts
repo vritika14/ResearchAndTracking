@@ -142,6 +142,8 @@ export interface ApiMember {
   id: string;
   tenantId: string;
   userId: string;
+  displayName?: string | null;
+  email?: string | null;
   createdAt: string;
 }
 

@@ -5,7 +5,7 @@ import {
   useAddTaskMember,
   useTaskMembers,
   useRemoveTaskMember,
-  type Membership,
+  useUserSearch,
 } from "@/api/hooks";
 import { LoadingState } from "@/components/shared/loading-state";
 import { Input } from "@/components/ui/input";
@@ -13,15 +13,11 @@ import { Input } from "@/components/ui/input";
 interface TaskMembersManagerProps {
   tenantId: string;
   taskId: string;
-  members: Membership[];
-  membersLoading: boolean;
 }
 
 export function TaskMembersManager({
   tenantId,
   taskId,
-  members,
-  membersLoading,
 }: TaskMembersManagerProps) {
   const taskMembersQuery = useTaskMembers(tenantId, taskId);
   const addMember = useAddTaskMember(tenantId, taskId);
@@ -29,29 +25,16 @@ export function TaskMembersManager({
   const [search, setSearch] = useState("");
   const [pickerOpen, setPickerOpen] = useState(false);
 
-  const memberByUserId = useMemo(() => {
-    const map = new Map<string, Membership>();
-    for (const member of members) map.set(member.userId, member);
-    return map;
-  }, [members]);
-
   const taskMemberUserIds = useMemo(
     () => new Set((taskMembersQuery.data ?? []).map((member) => member.userId)),
     [taskMembersQuery.data],
   );
 
-  const matchingMembers = useMemo(() => {
-    const query = search.trim().toLowerCase();
-    return members
-      .filter((member) => !taskMemberUserIds.has(member.userId))
-      .filter(
-        (member) =>
-          !query ||
-          member.displayName.toLowerCase().includes(query) ||
-          member.email.toLowerCase().includes(query),
-      )
-      .slice(0, 8);
-  }, [members, taskMemberUserIds, search]);
+  const userSearchQuery = useUserSearch(search, pickerOpen);
+  const matchingMembers = useMemo(
+    () => (userSearchQuery.data ?? []).filter((user) => !taskMemberUserIds.has(user.id)),
+    [taskMemberUserIds, userSearchQuery.data],
+  );
 
   if (taskMembersQuery.isPending) {
     return <LoadingState title="Loading members" className="min-h-32" />;
@@ -61,7 +44,7 @@ export function TaskMembersManager({
     <div className="flex flex-col gap-3">
       <div className="flex flex-col gap-2">
         {(taskMembersQuery.data ?? []).map((member) => {
-          const workspaceMember = memberByUserId.get(member.userId);
+          const displayName = member.displayName ?? "Unknown user";
           return (
             <div
               key={member.id}
@@ -69,17 +52,17 @@ export function TaskMembersManager({
             >
               <span className="min-w-0">
                 <span className="block truncate text-sm font-medium">
-                  {workspaceMember?.displayName ?? member.userId}
+                  {displayName}
                 </span>
-                {workspaceMember ? (
+                {member.email ? (
                   <span className="block truncate text-xs text-muted-foreground">
-                    {workspaceMember.email}
+                    {member.email}
                   </span>
                 ) : null}
               </span>
               <button
                 type="button"
-                aria-label={`Remove ${workspaceMember?.displayName ?? "member"}`}
+                aria-label={`Remove ${displayName}`}
                 onClick={() => removeMember.mutate(member.userId)}
                 className="rounded-full p-1 text-muted-foreground hover:text-destructive focus:outline-none focus:ring-1 focus:ring-ring"
               >
@@ -111,18 +94,18 @@ export function TaskMembersManager({
             setSearch(event.target.value);
             setPickerOpen(true);
           }}
-          placeholder="Add a workspace member"
+          placeholder="Type a name or email to search all users"
           className="pl-9"
           autoComplete="off"
         />
-        {pickerOpen ? (
+        {pickerOpen && search.trim() ? (
           <div
             id="task-member-options"
             role="listbox"
             className="absolute z-50 mt-1 max-h-56 w-full overflow-y-auto rounded-md border bg-popover p-1 text-popover-foreground shadow-lg"
           >
-            {membersLoading ? (
-              <p className="px-3 py-2 text-sm text-muted-foreground">Loading workspace members…</p>
+            {userSearchQuery.isPending ? (
+              <p className="px-3 py-2 text-sm text-muted-foreground">Searching…</p>
             ) : matchingMembers.length ? (
               matchingMembers.map((member) => (
                 <button
@@ -132,7 +115,7 @@ export function TaskMembersManager({
                   aria-selected="false"
                   className="flex w-full items-center justify-between gap-3 rounded-sm px-3 py-2 text-left hover:bg-accent focus:bg-accent focus:outline-none"
                   onClick={() => {
-                    addMember.mutate(member.userId);
+                    addMember.mutate(member.id);
                     setSearch("");
                   }}
                 >
@@ -143,11 +126,14 @@ export function TaskMembersManager({
                 </button>
               ))
             ) : (
-              <p className="px-3 py-2 text-sm text-muted-foreground">No matching workspace members.</p>
+              <p className="px-3 py-2 text-sm text-muted-foreground">No matching users.</p>
             )}
           </div>
         ) : null}
       </div>
+      <p className="text-xs text-muted-foreground">
+        Selecting a user grants access immediately. No email invitation is sent.
+      </p>
     </div>
   );
 }

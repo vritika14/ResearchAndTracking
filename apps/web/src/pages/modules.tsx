@@ -17,8 +17,8 @@ import { ModuleDialog, type ModuleFormInput } from "@/components/modules/module-
 import { ModuleCollaboratorsManager } from "@/components/modules/module-collaborators";
 import { ErrorState } from "@/components/shared/error-state";
 import { LoadingState } from "@/components/shared/loading-state";
-import { StatusBadge } from "@/components/shared/status-badge";
 import { PageHeading } from "@/components/typography/heading";
+import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -35,21 +35,33 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { useColumnVisibility } from "@/hooks/use-column-visibility";
 
 const STATUS_FILTERS = ["All", "Active", "Review", "Stalled", "Complete"] as const;
 const MODULE_COLUMNS = [
-  { id: "module", label: "Module" },
-  { id: "project", label: "Project" },
-  { id: "status", label: "Status" },
-  { id: "stage", label: "Stage" },
-  { id: "type", label: "Type" },
-  { id: "assignee", label: "Assigned To" },
-  { id: "actions", label: "Actions" },
+  { id: "module", label: "Module", width: "minmax(280px,2fr)" },
+  { id: "project", label: "Project", width: "180px" },
+  { id: "status", label: "Status", width: "110px" },
+  { id: "stage", label: "Stage", width: "170px" },
+  { id: "type", label: "Type", width: "140px" },
+  { id: "assignee", label: "Assigned To", width: "150px" },
 ] as const;
 
 type StatusFilter = (typeof STATUS_FILTERS)[number];
+
+function statusPillClass(status: string | null) {
+  switch (status) {
+    case "Active":
+    case "Complete":
+      return "border-emerald-300 text-emerald-700 dark:border-emerald-800 dark:text-emerald-400";
+    case "Review":
+      return "border-orange-300 text-orange-700 dark:border-orange-800 dark:text-orange-400";
+    case "Stalled":
+      return "border-red-300 text-red-700 dark:border-red-800 dark:text-red-400";
+    default:
+      return "border-border text-muted-foreground";
+  }
+}
 
 export default function ModulesPage() {
   const workspace = useCurrentWorkspace();
@@ -75,6 +87,11 @@ export default function ModulesPage() {
   const [search, setSearch] = useState("");
   const [status, setStatus] = useState<StatusFilter>("All");
   const columns = useColumnVisibility(MODULE_COLUMNS.map((column) => column.id));
+  const gridTemplate = MODULE_COLUMNS.filter((column) =>
+    columns.visibleColumns.has(column.id),
+  )
+    .map((column) => column.width)
+    .join(" ");
 
   const projectById = useMemo(() => {
     const map = new Map<string, string>();
@@ -257,115 +274,112 @@ export default function ModulesPage() {
         ) : null}
       </div>
 
-      <div className="overflow-x-auto rounded-xl border border-violet-200/50 bg-card/90 shadow-sm dark:border-violet-900/40">
-        <Table className="min-w-[900px]">
-          <TableHeader>
-            <TableRow>
-              {columns.isColumnVisible("module") ? <TableHead>Module</TableHead> : null}
-              {columns.isColumnVisible("project") ? <TableHead>Project</TableHead> : null}
-              {columns.isColumnVisible("status") ? <TableHead>Status</TableHead> : null}
-              {columns.isColumnVisible("stage") ? <TableHead>Stage</TableHead> : null}
-              {columns.isColumnVisible("type") ? <TableHead>Type</TableHead> : null}
-              {columns.isColumnVisible("assignee") ? <TableHead>Assigned To</TableHead> : null}
-              {columns.isColumnVisible("actions") ? <TableHead className="text-right">Actions</TableHead> : null}
-            </TableRow>
-          </TableHeader>
-          <TableBody>
+      <div className="overflow-x-auto rounded-xl border border-border/70 bg-muted/20 p-3 shadow-sm sm:p-4">
+        <div className="min-w-[860px]">
+          <div
+            className="mb-3 grid gap-4 rounded-lg border border-violet-200/70 bg-violet-100/65 px-4 py-3 text-[11px] font-bold uppercase tracking-[0.08em] text-violet-950 dark:border-violet-900/50 dark:bg-violet-950/35 dark:text-violet-200"
+            style={{ gridTemplateColumns: gridTemplate }}
+          >
+            {MODULE_COLUMNS.filter((column) =>
+              columns.visibleColumns.has(column.id),
+            ).map((column) => (
+              <span key={column.id}>{column.label}</span>
+            ))}
+          </div>
+
+          <div className="flex flex-col gap-3">
             {visibleModules.length === 0 ? (
-              <TableRow>
-                <TableCell colSpan={columns.visibleColumns.size} className="h-24 text-center text-muted-foreground">
-                  No modules match the current filters.
-                </TableCell>
-              </TableRow>
+              <div className="rounded-lg border border-dashed p-8 text-center text-sm text-muted-foreground">
+                No modules match the current filters.
+              </div>
             ) : (
               visibleModules.map((module) => (
-                <TableRow key={module.id}>
+                <div
+                  key={module.id}
+                  className="grid items-center gap-4 rounded-xl border border-violet-200/70 bg-gradient-to-r from-violet-50/55 via-card to-card px-4 py-4 shadow-sm transition-all hover:border-violet-300 hover:shadow-md dark:border-violet-900/50 dark:from-violet-950/15"
+                  style={{ gridTemplateColumns: gridTemplate }}
+                >
                   {columns.isColumnVisible("module") ? (
-                    <TableCell>
+                    <div className="flex items-start gap-2">
                       <div className="flex flex-col gap-0.5">
                         {module.displayId ? (
                           <span className="font-mono text-[11px] text-muted-foreground">{module.displayId}</span>
                         ) : null}
-                        <Link
-                          to={`/modules/${module.id}`}
-                          className="font-semibold leading-tight text-foreground transition-colors hover:text-primary hover:underline"
-                        >
-                          {module.title}
-                        </Link>
+                        <div className="flex items-start gap-2">
+                          <Link
+                            to={`/modules/${module.id}`}
+                            className="font-semibold leading-tight text-foreground transition-colors hover:text-primary hover:underline"
+                          >
+                            {module.title}
+                          </Link>
+                          {module.tenantId === tenantId ? (
+                            <button
+                              type="button"
+                              aria-label={`Manage collaborators for ${module.title}`}
+                              title="Manage collaborators"
+                              onClick={() => setSharingModule(module)}
+                              className="inline-flex h-6 w-6 shrink-0 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-accent hover:text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                            >
+                              <UserPlus className="h-3.5 w-3.5" />
+                            </button>
+                          ) : null}
+                          <button
+                            type="button"
+                            aria-label={`Edit ${module.title}`}
+                            title="Edit module"
+                            onClick={() => setEditingModule(module)}
+                            className="inline-flex h-6 w-6 shrink-0 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-accent hover:text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                          >
+                            <Pencil className="h-3.5 w-3.5" />
+                          </button>
+                          <button
+                            type="button"
+                            aria-label={`Archive ${module.title}`}
+                            title="Archive module"
+                            onClick={() => void archive(module)}
+                            className="inline-flex h-6 w-6 shrink-0 items-center justify-center rounded-md text-destructive transition-colors hover:bg-destructive/10 hover:text-destructive focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                          >
+                            <Archive className="h-3.5 w-3.5" />
+                          </button>
+                        </div>
                         <span className="max-w-md text-xs text-muted-foreground">
                           {module.description || "No description"}
                         </span>
                       </div>
-                    </TableCell>
+                    </div>
                   ) : null}
                   {columns.isColumnVisible("project") ? (
-                    <TableCell className="max-w-56 text-sm text-muted-foreground">
+                    <span className="max-w-56 text-sm text-muted-foreground">
                       {projectName(module.projectId)}
-                    </TableCell>
+                    </span>
                   ) : null}
                   {columns.isColumnVisible("status") ? (
-                    <TableCell>
-                      <StatusBadge status={module.status ?? "—"} />
-                    </TableCell>
+                    <Badge variant="outline" className={statusPillClass(module.status)}>
+                      {module.status ?? "—"}
+                    </Badge>
                   ) : null}
                   {columns.isColumnVisible("stage") ? (
-                    <TableCell className="text-sm font-medium text-violet-700 dark:text-violet-300">
+                    <span className="text-sm text-muted-foreground">
                       {module.pipelineStage ?? "Unassigned"}
-                    </TableCell>
+                    </span>
                   ) : null}
                   {columns.isColumnVisible("type") ? (
-                    <TableCell className="text-sm text-muted-foreground">
+                    <span className="text-sm text-muted-foreground">
                       {module.tag ?? "—"}
-                    </TableCell>
+                    </span>
                   ) : null}
                   {columns.isColumnVisible("assignee") ? (
-                    <TableCell className="text-sm text-muted-foreground">
+                    <span className="text-sm text-muted-foreground">
                       {module.assignedToUserId
                         ? (memberById.get(module.assignedToUserId) ?? "Unknown member")
                         : "Unassigned"}
-                    </TableCell>
+                    </span>
                   ) : null}
-                  {columns.isColumnVisible("actions") ? (
-                    <TableCell>
-                      <div className="flex justify-end gap-1">
-                        {module.tenantId === tenantId ? (
-                          <Button
-                            type="button"
-                            variant="ghost"
-                            size="icon"
-                            aria-label={`Manage collaborators for ${module.title}`}
-                            onClick={() => setSharingModule(module)}
-                          >
-                            <UserPlus />
-                          </Button>
-                        ) : null}
-                        <Button
-                          type="button"
-                          variant="ghost"
-                          size="icon"
-                          aria-label={`Edit ${module.title}`}
-                          onClick={() => setEditingModule(module)}
-                        >
-                          <Pencil />
-                        </Button>
-                        <Button
-                          type="button"
-                          variant="ghost"
-                          size="icon"
-                          className="text-destructive hover:bg-destructive/10 hover:text-destructive"
-                          aria-label={`Archive ${module.title}`}
-                          onClick={() => void archive(module)}
-                        >
-                          <Archive />
-                        </Button>
-                      </div>
-                    </TableCell>
-                  ) : null}
-                </TableRow>
+                </div>
               ))
             )}
-          </TableBody>
-        </Table>
+          </div>
+        </div>
       </div>
     </div>
   );
