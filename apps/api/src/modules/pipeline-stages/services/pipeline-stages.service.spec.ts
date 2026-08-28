@@ -68,8 +68,8 @@ describe('PipelineStagesService', () => {
   it('throws when deleting a stage that is not owned by this tenant', async () => {
     repository.deleteTenantPipelineStage.mockResolvedValue(undefined);
 
-    await expect(service.remove('tenant-1', 'default-stage-id')).rejects.toThrow(
-      NotFoundException,
-    );
+    await expect(
+      service.remove('tenant-1', 'default-stage-id'),
+    ).rejects.toThrow(NotFoundException);
   });
 });

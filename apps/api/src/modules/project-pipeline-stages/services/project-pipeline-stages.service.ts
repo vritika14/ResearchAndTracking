@@ -1,3 +1,4 @@
+// apps/api/src/modules/project-pipeline-stages/services/project-pipeline-stages.service.ts
 import {
   ConflictException,
   Injectable,
@@ -9,8 +10,10 @@ import { EnumRepository } from '../../enum/repositories/enum.repository';
 export class ProjectPipelineStagesService {
   constructor(private readonly repository: EnumRepository) {}
 
-  async list(projectId: string, tenantId?: string) {
-    return this.repository.findPipelineStagesForProject(projectId, tenantId);
+  async list(projectId: string) {
+    const { baseStages, customStages } =
+      await this.repository.findPipelineStagesForProject(projectId);
+    return [...baseStages, ...customStages];
   }
 
   async create(projectId: string, value: string, sortOrder: number) {

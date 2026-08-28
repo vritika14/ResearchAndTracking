@@ -44,11 +44,13 @@ export class ModuleCollaboratorsService {
     if (!ownerRole) return undefined;
 
     const callerOwnsModule = module.projectId
-      ? (await this.projectCollaboratorsRepository.findByProjectAndUser(
-          tenantId,
-          module.projectId,
-          callerUserId,
-        ))?.roleId === ownerRole.id
+      ? (
+          await this.projectCollaboratorsRepository.findByProjectAndUser(
+            tenantId,
+            module.projectId,
+            callerUserId,
+          )
+        )?.roleId === ownerRole.id
       : false;
 
     const tenantMembership = module.projectId
@@ -58,7 +60,8 @@ export class ModuleCollaboratorsService {
           callerUserId,
         );
     const callerOwnsTenant =
-      tenantMembership?.status === 'active' && tenantMembership.role === 'owner';
+      tenantMembership?.status === 'active' &&
+      tenantMembership.role === 'owner';
 
     if (!callerOwnsModule && !callerOwnsTenant) return undefined;
 
@@ -180,9 +183,9 @@ export class ModuleCollaboratorsService {
     return match.id;
   }
 
-  private async withDisplayValues<
-    T extends { roleId: string; userId: string },
-  >(rows: T[]) {
+  private async withDisplayValues<T extends { roleId: string; userId: string }>(
+    rows: T[],
+  ) {
     const [valuesById, users] = await Promise.all([
       this.enumRepository.findValuesByIds(rows.map((row) => row.roleId)),
       this.usersService.findSummariesByIds(rows.map((row) => row.userId)),

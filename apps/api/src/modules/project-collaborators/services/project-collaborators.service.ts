@@ -90,9 +90,9 @@ export class ProjectCollaboratorsService {
     return row;
   }
 
-  private async withDisplayValues<
-    T extends { roleId: string; userId: string },
-  >(rows: T[]) {
+  private async withDisplayValues<T extends { roleId: string; userId: string }>(
+    rows: T[],
+  ) {
     const roleIds = rows.map((r) => r.roleId);
     const [valuesById, users] = await Promise.all([
       this.enumRepository.findValuesByIds(roleIds),

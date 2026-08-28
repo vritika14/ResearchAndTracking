@@ -43,7 +43,9 @@ describe('ModulePipelineStagesPoolController', () => {
   it('updates a stage', async () => {
     service.update.mockResolvedValue({ id: 's1', value: 'Renamed' });
 
-    const result = await controller.update('tenant-1', 's1', { value: 'Renamed' });
+    const result = await controller.update('tenant-1', 's1', {
+      value: 'Renamed',
+    });
 
     expect(service.update).toHaveBeenCalledWith('tenant-1', 's1', {
       value: 'Renamed',

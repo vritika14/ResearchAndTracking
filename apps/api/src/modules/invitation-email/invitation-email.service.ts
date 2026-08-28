@@ -41,10 +41,9 @@ export class InvitationEmailService {
       );
     }
 
-    const appUrl = this.configService.getOrThrow<string>('APP_URL').replace(
-      /\/$/,
-      '',
-    );
+    const appUrl = this.configService
+      .getOrThrow<string>('APP_URL')
+      .replace(/\/$/, '');
     const acceptanceUrl = `${appUrl}/invitations/${encodeURIComponent(input.acceptanceToken)}`;
     const targetLabel = input.targetType === 'project' ? 'project' : 'module';
     const subject = `Invitation to collaborate on ${input.targetTitle}`;

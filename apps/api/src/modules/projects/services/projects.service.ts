@@ -167,7 +167,7 @@ export class ProjectsService {
         ? this.resolveEnum('project_status', input.status)
         : undefined,
       input.pipelineStage
-        ? this.resolveProjectPipelineStage(projectId, input.pipelineStage, tenantId)
+        ? this.resolveProjectPipelineStage(projectId, input.pipelineStage)
         : undefined,
       input.importance
         ? this.resolveEnum('importance', input.importance)
@@ -311,20 +311,13 @@ export class ProjectsService {
     return match.id;
   }
 
-  private async resolveProjectPipelineStage(
-    projectId: string,
-    value: string,
-    tenantId?: string,
-  ) {
+  private async resolveProjectPipelineStage(projectId: string, value: string) {
     const match = await this.enumRepository.findPipelineStageForProjectByValue(
       projectId,
       value,
-      tenantId,
     );
     if (!match) {
-      throw new NotFoundException(
-        `Unknown project_pipeline_stage value: "${value}"`,
-      );
+      throw new NotFoundException(`Unknown project pipeline stage: "${value}"`);
     }
     return match.id;
   }

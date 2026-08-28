@@ -110,7 +110,9 @@ export class WorkspacesRepository {
   async deleteById(tenantId: string, ownerUserId: string) {
     const [row] = await this.drizzle.db
       .delete(tenants)
-      .where(and(eq(tenants.id, tenantId), eq(tenants.ownerUserId, ownerUserId)))
+      .where(
+        and(eq(tenants.id, tenantId), eq(tenants.ownerUserId, ownerUserId)),
+      )
       .returning();
     return row;
   }

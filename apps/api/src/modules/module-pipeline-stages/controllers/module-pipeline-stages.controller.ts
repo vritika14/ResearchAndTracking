@@ -26,7 +26,7 @@ import { ModuleCollaboratorsRepository } from '../../module-collaborators/reposi
 import { EnumRepository } from '../../enum/repositories/enum.repository';
 import { CreatePipelineStageDto } from '../dto/create-pipeline-stage.dto';
 import { UpdatePipelineStageDto } from '../dto/update-pipeline-stage.dto';
-import { ModulePipelineStagesService } from '../services/module-pipeline-stage.service';
+import { ModulePipelineStagesService } from '../services/module-pipeline-stages.service';
 
 interface AuthenticatedRequest extends Request {
   user: AuthenticatedPrincipal;
@@ -80,7 +80,7 @@ export class ModulePipelineStagesController {
     @Param('tenantId') tenantId: string,
     @Param('moduleId') moduleId: string,
   ) {
-    return this.service.list(moduleId, tenantId);
+    return this.service.list(moduleId);
   }
 
   @ApiOperation({

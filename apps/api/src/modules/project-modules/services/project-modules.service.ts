@@ -196,7 +196,7 @@ export class ProjectModulesService {
         ? this.resolveEnum('project_status', input.status)
         : undefined,
       input.pipelineStage
-        ? this.resolveModulePipelineStage(moduleId, input.pipelineStage, tenantId)
+        ? this.resolveModulePipelineStage(moduleId, input.pipelineStage)
         : undefined,
     ]);
 
@@ -308,15 +308,10 @@ export class ProjectModulesService {
     return match.id;
   }
 
-  private async resolveModulePipelineStage(
-    moduleId: string,
-    value: string,
-    tenantId?: string,
-  ) {
+  private async resolveModulePipelineStage(moduleId: string, value: string) {
     const match = await this.enumRepository.findPipelineStageForModuleByValue(
       moduleId,
       value,
-      tenantId,
     );
     if (!match) {
       throw new NotFoundException(
