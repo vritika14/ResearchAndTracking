@@ -52,8 +52,19 @@ export class EnumRepository {
   // Project-scoped pipeline stages
   // ============================================================
 
-  async findPipelineStagesForProject(projectId: string, tenantId?: string) {
-    const scopedStages = await this.drizzle.db
+  async findPipelineStagesForProject(projectId: string) {
+    const baseStages = await this.drizzle.db
+      .select()
+      .from(enumTable)
+      .where(
+        and(
+          eq(enumTable.category, 'project_pipeline_stage'),
+          isNull(enumTable.projectId),
+        ),
+      )
+      .orderBy(asc(enumTable.sortOrder));
+
+    const customStages = await this.drizzle.db
       .select()
       .from(enumTable)
       .where(
@@ -63,17 +74,16 @@ export class EnumRepository {
         ),
       )
       .orderBy(asc(enumTable.sortOrder));
-    if (scopedStages.length) return scopedStages;
-    return this.findByCategory('project_pipeline_stage', tenantId);
+
+    return { baseStages, customStages };
   }
 
-  async findPipelineStageForProjectByValue(
-    projectId: string,
-    value: string,
-    tenantId?: string,
-  ) {
-    const stages = await this.findPipelineStagesForProject(projectId, tenantId);
-    return stages.find((stage) => stage.value === value);
+  async findPipelineStageForProjectByValue(projectId: string, value: string) {
+    const { baseStages, customStages } =
+      await this.findPipelineStagesForProject(projectId);
+    return [...baseStages, ...customStages].find(
+      (stage) => stage.value === value,
+    );
   }
 
   async createProjectPipelineStage(
@@ -130,8 +140,19 @@ export class EnumRepository {
   // Module-scoped pipeline stages
   // ============================================================
 
-  async findPipelineStagesForModule(moduleId: string, tenantId?: string) {
-    const scopedStages = await this.drizzle.db
+  async findPipelineStagesForModule(moduleId: string) {
+    const baseStages = await this.drizzle.db
+      .select()
+      .from(enumTable)
+      .where(
+        and(
+          eq(enumTable.category, 'module_pipeline_stage'),
+          isNull(enumTable.moduleId),
+        ),
+      )
+      .orderBy(asc(enumTable.sortOrder));
+
+    const customStages = await this.drizzle.db
       .select()
       .from(enumTable)
       .where(
@@ -141,17 +162,16 @@ export class EnumRepository {
         ),
       )
       .orderBy(asc(enumTable.sortOrder));
-    if (scopedStages.length) return scopedStages;
-    return this.findByCategory('module_pipeline_stage', tenantId);
+
+    return { baseStages, customStages };
   }
 
-  async findPipelineStageForModuleByValue(
-    moduleId: string,
-    value: string,
-    tenantId?: string,
-  ) {
-    const stages = await this.findPipelineStagesForModule(moduleId, tenantId);
-    return stages.find((stage) => stage.value === value);
+  async findPipelineStageForModuleByValue(moduleId: string, value: string) {
+    const { baseStages, customStages } =
+      await this.findPipelineStagesForModule(moduleId);
+    return [...baseStages, ...customStages].find(
+      (stage) => stage.value === value,
+    );
   }
 
   async createModulePipelineStage(
@@ -239,7 +259,12 @@ export class EnumRepository {
     let nextSortOrder =
       existing.reduce((max, stage) => Math.max(max, stage.sortOrder), 0) + 1;
     for (const value of missing) {
-      await this.createTenantPipelineStage(tenantId, category, value, nextSortOrder);
+      await this.createTenantPipelineStage(
+        tenantId,
+        category,
+        value,
+        nextSortOrder,
+      );
       nextSortOrder += 1;
     }
   }
@@ -265,7 +290,11 @@ export class EnumRepository {
     return row;
   }
 
-  async deleteTenantPipelineStage(tenantId: string, category: string, id: string) {
+  async deleteTenantPipelineStage(
+    tenantId: string,
+    category: string,
+    id: string,
+  ) {
     const [row] = await this.drizzle.db
       .delete(enumTable)
       .where(

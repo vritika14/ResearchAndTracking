@@ -1,4 +1,3 @@
-// apps/api/src/modules/project-pipeline-stages/project-pipeline-stages.module.ts
 import { Module } from '@nestjs/common';
 import { EnumModule } from '../enum/enum.module';
 import { MembershipsModule } from '../memberships/memberships.module';

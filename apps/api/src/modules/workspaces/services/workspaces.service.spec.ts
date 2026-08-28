@@ -48,7 +48,7 @@ describe('WorkspacesService', () => {
         }),
       };
     });
-  
+
     await expect(
       service.createWorkspace('user-1', 'My Workspace'),
     ).resolves.toEqual({ ...tenant, membershipRole: 'owner' });
@@ -117,17 +117,17 @@ describe('WorkspacesService', () => {
     const deleted = { id: 'tenant-1', name: 'Gone' };
     repository.deleteById.mockResolvedValue(deleted);
 
-    await expect(
-      service.deleteWorkspace('user-1', 'tenant-1'),
-    ).resolves.toBe(deleted);
+    await expect(service.deleteWorkspace('user-1', 'tenant-1')).resolves.toBe(
+      deleted,
+    );
     expect(repository.deleteById).toHaveBeenCalledWith('tenant-1', 'user-1');
   });
 
   it('rejects deleting a workspace the caller does not own', async () => {
     repository.deleteById.mockResolvedValue(undefined);
 
-    await expect(
-      service.deleteWorkspace('user-1', 'tenant-2'),
-    ).rejects.toThrow(NotFoundException);
+    await expect(service.deleteWorkspace('user-1', 'tenant-2')).rejects.toThrow(
+      NotFoundException,
+    );
   });
 });

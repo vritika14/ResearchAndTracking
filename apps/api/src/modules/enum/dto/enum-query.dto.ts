@@ -8,7 +8,7 @@ export class EnumQueryDto {
 
   @ApiPropertyOptional({
     description:
-      'Scopes the pool to shared defaults plus this tenant\'s own custom additions. Omit to get defaults only.',
+      "Scopes the pool to shared defaults plus this tenant's own custom additions. Omit to get defaults only.",
   })
   @IsOptional()
   @IsString()
