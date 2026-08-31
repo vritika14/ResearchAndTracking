@@ -19,3 +19,4 @@ export * from "./project-pipeline-selections";
 export * from "./module-pipeline-selections";
 export * from './conferences';
 export * from './conference-projects';
+export * from './feedback';
