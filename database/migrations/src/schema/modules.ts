@@ -1,4 +1,4 @@
-import { pgTable, uuid, text, timestamp, uniqueIndex, AnyPgColumn } from 'drizzle-orm/pg-core';
+import { pgTable, uuid, text, timestamp, uniqueIndex, AnyPgColumn, date } from 'drizzle-orm/pg-core';
 import { projects } from './projects';
 import { tenants } from './tenants';
 import { users } from './users';
@@ -20,6 +20,7 @@ export const modules = pgTable(
     statusId: uuid('status_id').references((): AnyPgColumn => enumTable.id),
     pipelineStageId: uuid('pipeline_stage_id').references((): AnyPgColumn => enumTable.id),
     assignedToUserId: uuid('assigned_to_user_id').references(() => users.id),
+    dueDate: date('due_date'),
     archivedAt: timestamp('archived_at', { withTimezone: true }),
     createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
     updatedAt: timestamp('updated_at', { withTimezone: true }).defaultNow().notNull(),

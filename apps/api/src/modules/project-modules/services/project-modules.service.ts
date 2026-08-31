@@ -114,6 +114,7 @@ export class ProjectModulesService {
       pipelineStage?: string;
       pipelineStages?: string[];
       assignedToUserId?: string;
+      dueDate?: string;
     },
   ) {
     const tagId = await this.resolveEnum('module_type', input.tag);
@@ -143,6 +144,7 @@ export class ProjectModulesService {
       statusId,
       pipelineStageId,
       assignedToUserId: input.assignedToUserId,
+      dueDate: input.dueDate,
       displayId,
     };
     const module = pipelineStages.length
@@ -186,6 +188,7 @@ export class ProjectModulesService {
       status: string;
       pipelineStage: string;
       assignedToUserId: string;
+      dueDate: string;
     }>,
   ) {
     await this.findOne(tenantId, moduleId, callerUserId);
@@ -207,6 +210,7 @@ export class ProjectModulesService {
       statusId,
       pipelineStageId,
       assignedToUserId: input.assignedToUserId,
+      dueDate: input.dueDate,
     });
 
     if (!module) {

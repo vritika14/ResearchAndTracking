@@ -5,6 +5,7 @@ import {
   ArrayMinSize,
   ArrayUnique,
   IsArray,
+  IsDateString,
   IsOptional,
   IsString,
   IsUUID,
@@ -27,17 +28,26 @@ export class CreateModuleDto {
   @IsUUID()
   projectId?: string;
 
-  @ApiProperty({ required: false, example: 'Research Paper' })
+  @ApiProperty({
+    required: false,
+    example: 'Research Paper',
+  })
   @IsOptional()
   @IsString()
   tag?: string;
 
-  @ApiProperty({ required: false, example: 'Active' })
+  @ApiProperty({
+    required: false,
+    example: 'Active',
+  })
   @IsOptional()
   @IsString()
   status?: string;
 
-  @ApiProperty({ required: false, example: 'Concept & Ideation' })
+  @ApiProperty({
+    required: false,
+    example: 'Concept & Ideation',
+  })
   @IsOptional()
   @IsString()
   pipelineStage?: string;
@@ -61,4 +71,13 @@ export class CreateModuleDto {
   @IsOptional()
   @IsUUID()
   assignedToUserId?: string;
+
+  @ApiProperty({
+    required: false,
+    example: '2027-06-01',
+    description: 'Module due date in ISO date format',
+  })
+  @IsOptional()
+  @IsDateString()
+  dueDate?: string;
 }

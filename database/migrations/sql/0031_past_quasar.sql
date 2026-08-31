@@ -1,0 +1,1 @@
+ALTER TABLE "modules" ADD COLUMN "due_date" date;

@@ -63,6 +63,7 @@ export class ProjectModulesRepository {
       statusId?: string;
       pipelineStageId?: string;
       assignedToUserId?: string;
+      dueDate?: string;
       displayId?: string;
     },
     pipelineStages?: string[],
@@ -111,6 +112,7 @@ export class ProjectModulesRepository {
       statusId: string;
       pipelineStageId: string;
       assignedToUserId: string;
+      dueDate: string;
     }>,
   ) {
     const [module] = await this.drizzle.db
