@@ -44,6 +44,7 @@ const MODULE_COLUMNS = [
   { id: "status", label: "Status", width: "110px" },
   { id: "stage", label: "Stage", width: "170px" },
   { id: "type", label: "Type", width: "140px" },
+  { id: "due", label: "Due Date", width: "110px" },
   { id: "assignee", label: "Assigned To", width: "150px" },
 ] as const;
 
@@ -61,6 +62,12 @@ function statusPillClass(status: string | null) {
     default:
       return "border-border text-muted-foreground";
   }
+}
+
+function formatDate(iso: string | null) {
+  if (!iso) return "—";
+  const [year, month, day] = iso.split("-");
+  return `${day}/${month}/${year}`;
 }
 
 export default function ModulesPage() {
@@ -132,6 +139,7 @@ export default function ModulesPage() {
       pipelineStage: input.pipelineStage,
       pipelineStages: input.pipelineStages,
       tag: input.tag || undefined,
+      dueDate: input.dueDate || undefined,
       assignedToUserId: input.assignedToUserId ?? undefined,
     });
 
@@ -147,6 +155,7 @@ export default function ModulesPage() {
         status: input.status,
         pipelineStage: input.pipelineStage,
         tag: input.tag || undefined,
+        dueDate: input.dueDate || undefined,
         assignedToUserId: input.assignedToUserId ?? undefined,
       },
     });
@@ -272,7 +281,7 @@ export default function ModulesPage() {
       </div>
 
       <div className="overflow-x-auto rounded-xl border border-border/70 bg-muted/20 p-3 shadow-sm sm:p-4">
-        <div className="min-w-[860px]">
+        <div className="min-w-[970px]">
           <div
             className="mb-3 grid gap-4 rounded-lg border border-violet-200/70 bg-violet-100/65 px-4 py-3 text-[11px] font-bold uppercase tracking-[0.08em] text-violet-950 dark:border-violet-900/50 dark:bg-violet-950/35 dark:text-violet-200"
             style={{ gridTemplateColumns: gridTemplate }}
@@ -363,6 +372,11 @@ export default function ModulesPage() {
                   {columns.isColumnVisible("type") ? (
                     <span className="text-sm text-muted-foreground">
                       {module.tag ?? "—"}
+                    </span>
+                  ) : null}
+                  {columns.isColumnVisible("due") ? (
+                    <span className="text-sm tabular-nums text-muted-foreground">
+                      {formatDate(module.dueDate)}
                     </span>
                   ) : null}
                   {columns.isColumnVisible("assignee") ? (

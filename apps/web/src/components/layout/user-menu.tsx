@@ -1,9 +1,10 @@
-import { Building2, Check, ChevronsUpDown, LogOut, Users } from "lucide-react";
+import { Building2, Check, ChevronsUpDown, LogOut, Moon, Sun, Users } from "lucide-react";
 import { useAuth } from "react-oidc-context";
 import { Link } from "react-router-dom";
 
 import { useCurrentWorkspace, useMe, useSwitchWorkspace, useWorkspaces } from "@/api/hooks";
 import { useSignOut } from "@/auth/sign-out";
+import { useAppearanceTheme } from "@/theme/appearance-theme";
 import { Avatar } from "@/components/ui/avatar";
 import {
   DropdownMenu,
@@ -27,6 +28,7 @@ export function UserMenu({ compact = false }: UserMenuProps) {
   const workspaces = useWorkspaces();
   const switchWorkspace = useSwitchWorkspace();
   const signOut = useSignOut();
+  const appearance = useAppearanceTheme();
 
   if (!auth.isAuthenticated) {
     return null;
@@ -91,6 +93,16 @@ export function UserMenu({ compact = false }: UserMenuProps) {
             <Users className="h-4 w-4 shrink-0 text-muted-foreground" />
             Manage workspaces
           </Link>
+        </DropdownMenuItem>
+        <DropdownMenuSeparator />
+        <DropdownMenuItem
+          onSelect={(event) => {
+            event.preventDefault();
+            appearance.toggleTheme();
+          }}
+        >
+          {appearance.theme === "dark" ? <Sun className="h-4 w-4 shrink-0 text-muted-foreground" /> : <Moon className="h-4 w-4 shrink-0 text-muted-foreground" />}
+          {appearance.theme === "dark" ? "Use light theme" : "Use dark theme"}
         </DropdownMenuItem>
         <DropdownMenuSeparator />
         <DropdownMenuItem onSelect={() => void signOut()}>

@@ -171,6 +171,7 @@ export default function ModuleDetailPage() {
         status: input.status,
         pipelineStage: input.pipelineStage,
         tag: input.tag || undefined,
+        dueDate: input.dueDate || undefined,
         assignedToUserId: input.assignedToUserId ?? undefined,
       },
     });
@@ -234,6 +235,7 @@ export default function ModuleDetailPage() {
             <DetailItem label="Type">{module.tag ?? "—"}</DetailItem>
             <DetailItem label="Status">{module.status ?? "—"}</DetailItem>
             <DetailItem label="Pipeline stage">{module.pipelineStage ?? "Unassigned"}</DetailItem>
+            <DetailItem label="Due date">{formatDate(module.dueDate)}</DetailItem>
             <DetailItem label="Assigned to">{assignee?.displayName ?? "Unassigned"}</DetailItem>
             <DetailItem label="Description" className="sm:col-span-2">
               <span className="font-normal text-muted-foreground">

@@ -8,11 +8,14 @@ import {
   Crown,
   LayoutTemplate,
   Mail,
+  Moon,
   Palette,
   Plus,
   Save,
   Settings as SettingsIcon,
   ShieldCheck,
+  Sun,
+  Type as TextSizeIcon,
   Trash2,
   UserRound,
 } from "lucide-react";
@@ -51,7 +54,9 @@ import {
 } from "@/components/ui/select";
 import { cn } from "@/lib/utils";
 import { COLOR_THEMES, type ColorTheme, useColorTheme } from "@/theme/color-theme";
+import { APPEARANCE_THEMES, useAppearanceTheme } from "@/theme/appearance-theme";
 import { DESIGN_THEMES, useDesignTheme } from "@/theme/design-theme";
+import { TEXT_SIZES, useTextSize } from "@/theme/text-size";
 
 const workspaceSchema = z.object({
   name: z.string().trim().min(2, "Use at least 2 characters.").max(100),
@@ -69,6 +74,8 @@ export default function SettingsPage() {
   const workspaceForm = useForm<WorkspaceForm>({ defaultValues: { name: "" } });
   const designTheme = useDesignTheme();
   const colorTheme = useColorTheme();
+  const appearanceTheme = useAppearanceTheme();
+  const textSize = useTextSize();
   const updateProfile = useUpdateMe();
   const [profile, setProfile] = useState({
     displayName: "",
@@ -299,6 +306,70 @@ export default function SettingsPage() {
         </Card>
 
         <div className="grid gap-6">
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                {appearanceTheme.theme === "dark" ? <Moon className="h-5 w-5 text-primary" /> : <Sun className="h-5 w-5 text-primary" />}
+                Appearance
+              </CardTitle>
+              <CardDescription>
+                Choose a light or dark interface. This does not change your layout or accent color.
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="grid grid-cols-2 gap-3">
+              {APPEARANCE_THEMES.map((option) => {
+                const isSelected = appearanceTheme.theme === option.value;
+                const Icon = option.value === "light" ? Sun : Moon;
+                return (
+                  <button
+                    key={option.value}
+                    type="button"
+                    onClick={() => appearanceTheme.setTheme(option.value)}
+                    aria-pressed={isSelected}
+                    className={cn(
+                      "flex flex-col items-center gap-2 rounded-xl border p-4 text-sm font-medium transition-colors hover:bg-accent/50",
+                      isSelected && "border-primary bg-primary/5 ring-1 ring-primary",
+                    )}
+                  >
+                    <Icon className="h-5 w-5" />
+                    {option.label}
+                  </button>
+                );
+              })}
+              <p className="col-span-2 text-xs leading-5 text-muted-foreground">
+                This preference is saved in this browser and applied immediately.
+              </p>
+              <div className="col-span-2 mt-2 border-t border-border pt-4">
+                <div className="mb-3 flex items-center gap-2">
+                  <TextSizeIcon className="h-4 w-4 text-primary" />
+                  <span className="text-sm font-medium">Text size</span>
+                </div>
+                <div className="grid grid-cols-3 gap-2">
+                  {TEXT_SIZES.map((option) => {
+                    const isSelected = textSize.size === option.value;
+                    return (
+                      <button
+                        key={option.value}
+                        type="button"
+                        onClick={() => textSize.setSize(option.value)}
+                        aria-pressed={isSelected}
+                        className={cn(
+                          "rounded-lg border px-2 py-2.5 text-center font-medium transition-colors hover:bg-accent/50",
+                          option.value === "small" && "text-xs",
+                          option.value === "default" && "text-sm",
+                          option.value === "large" && "text-base",
+                          isSelected && "border-primary bg-primary/5 ring-1 ring-primary",
+                        )}
+                      >
+                        {option.label}
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
           <Card>
             <CardHeader>
               <CardTitle className="flex items-center gap-2">

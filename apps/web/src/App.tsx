@@ -10,6 +10,9 @@ import ModulesPage from "@/pages/modules";
 import ModuleDetailPage from "@/pages/module-detail";
 import ProjectDetailPage from "@/pages/project-detail";
 import TasksPage from "@/pages/tasks";
+import CalendarPage from "@/pages/calendar";
+import ConferencesPage from "@/pages/conferences";
+import ConferenceDetailPage from "@/pages/conference-detail";
 import TaskDetailPage from "@/pages/task-detail";
 import DailyNotesPage from "@/pages/daily-notes";
 import PipelinePage from "@/pages/pipeline";
@@ -54,6 +57,9 @@ export default function App() {
                 element={<ProjectDetailPage />}
               />
               <Route path="tasks" element={<TasksPage />} />
+              <Route path="calendar" element={<CalendarPage />} />
+              <Route path="conferences" element={<ConferencesPage />} />
+              <Route path="conferences/:conferenceId" element={<ConferenceDetailPage />} />
               <Route path="tasks/:taskId" element={<TaskDetailPage />} />
               <Route path="daily-notes" element={<DailyNotesPage />} />
               <Route path="daily-notes/:noteId" element={<DailyNotesPage />} />

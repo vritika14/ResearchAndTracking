@@ -10,6 +10,7 @@ import {
 import { ModuleCollaboratorsManager } from "@/components/modules/module-collaborators";
 import { StageListBuilder } from "@/components/pipeline/stage-list-builder";
 import { Button } from "@/components/ui/button";
+import { DatePickerInput } from "@/components/ui/date-picker-input";
 import {
   Dialog,
   DialogClose,
@@ -40,6 +41,7 @@ export interface ModuleFormInput {
   pipelineStage: string;
   pipelineStages: string[];
   tag: string;
+  dueDate: string;
   assignedToUserId: string | null;
 }
 
@@ -61,6 +63,7 @@ const INITIAL_FORM: ModuleFormInput = {
   pipelineStage: "",
   pipelineStages: [],
   tag: "",
+  dueDate: "",
   assignedToUserId: null,
 };
 
@@ -113,6 +116,7 @@ export function ModuleDialog({
         pipelineStage: module.pipelineStage ?? "",
         pipelineStages: [],
         tag: module.tag ?? "",
+        dueDate: module.dueDate ?? "",
         assignedToUserId: module.assignedToUserId,
       });
       setIsIndependent(module.projectId === null);
@@ -248,6 +252,17 @@ export function ModuleDialog({
                   ))}
                 </SelectContent>
               </Select>
+            </FormField>
+
+            <FormField label="Due date" htmlFor="module-due-date">
+              <DatePickerInput
+                id="module-due-date"
+                label="Due date"
+                value={form.dueDate}
+                onChange={(value) =>
+                  setForm((current) => ({ ...current, dueDate: value }))
+                }
+              />
             </FormField>
 
             {isEditing ? (

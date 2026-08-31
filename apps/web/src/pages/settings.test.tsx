@@ -80,6 +80,8 @@ vi.mock("@/components/settings/workspace-members", () => ({
 
 const mockSetTheme = vi.hoisted(() => vi.fn());
 const mockSetColorTheme = vi.hoisted(() => vi.fn());
+const mockSetAppearanceTheme = vi.hoisted(() => vi.fn());
+const mockSetTextSize = vi.hoisted(() => vi.fn());
 
 vi.mock("@/theme/design-theme", () => ({
   DESIGN_THEMES: [
@@ -100,11 +102,34 @@ vi.mock("@/theme/color-theme", () => ({
   useColorTheme: () => ({ theme: "ocean", setTheme: mockSetColorTheme }),
 }));
 
+vi.mock("@/theme/appearance-theme", () => ({
+  APPEARANCE_THEMES: [
+    { value: "light", label: "Light" },
+    { value: "dark", label: "Dark" },
+  ],
+  useAppearanceTheme: () => ({
+    theme: "light",
+    setTheme: mockSetAppearanceTheme,
+    toggleTheme: vi.fn(),
+  }),
+}));
+
+vi.mock("@/theme/text-size", () => ({
+  TEXT_SIZES: [
+    { value: "small", label: "Small" },
+    { value: "default", label: "Default" },
+    { value: "large", label: "Large" },
+  ],
+  useTextSize: () => ({ size: "default", setSize: mockSetTextSize }),
+}));
+
 describe("SettingsPage", () => {
   beforeEach(() => {
     mockMutate.mockClear();
     mockSetTheme.mockClear();
     mockSetColorTheme.mockClear();
+    mockSetAppearanceTheme.mockClear();
+    mockSetTextSize.mockClear();
     mockSwitchWorkspace.mockReset().mockResolvedValue({ id: "workspace-1" });
     mockCreateWorkspace.mockReset().mockResolvedValue({ id: "workspace-2" });
     mockDeleteWorkspace.mockReset().mockResolvedValue({ id: "workspace-1" });
@@ -154,6 +179,28 @@ describe("SettingsPage", () => {
     fireEvent.click(screen.getByRole("button", { name: /Executive/ }));
 
     expect(mockSetTheme).toHaveBeenCalledWith("executive");
+  });
+
+  it("selects dark appearance independently of design and color themes", () => {
+    render(
+      <MemoryRouter>
+        <SettingsPage />
+      </MemoryRouter>,
+    );
+
+    fireEvent.click(screen.getByRole("button", { name: "Dark" }));
+    expect(mockSetAppearanceTheme).toHaveBeenCalledWith("dark");
+  });
+
+  it("selects a larger text size", () => {
+    render(
+      <MemoryRouter>
+        <SettingsPage />
+      </MemoryRouter>,
+    );
+
+    fireEvent.click(screen.getByRole("button", { name: "Large" }));
+    expect(mockSetTextSize).toHaveBeenCalledWith("large");
   });
 
   it("selects a color theme independently of the design theme", () => {

@@ -49,6 +49,8 @@ export const navGroups: NavGroup[] = [
       { label: "Projects", to: "/projects", icon: FolderKanban },
       { label: "Modules", to: "/modules", icon: Boxes },
       { label: "Tasks and to do", to: "/tasks", icon: ClipboardList },
+      { label: "Calendar", to: "/calendar", icon: Calendar },
+      { label: "Conferences", to: "/conferences", icon: Presentation },
       { label: "Notes", to: "/daily-notes", icon: NotebookPen },
       { label: "Pipeline", to: "/pipeline", icon: Workflow },
     ],
@@ -67,9 +69,7 @@ export const navGroups: NavGroup[] = [
   {
     label: "Potential Future Features",
     items: [
-      { label: "Calendar", to: "/future/calendar", icon: Calendar },
       { label: "Collaborators", to: "/future/collaborators", icon: Users },
-      { label: "Conferences", to: "/future/conferences", icon: Presentation },
       { label: "CV Builder", to: "/future/cv-builder", icon: FileText },
       { label: "Dissemination", to: "/future/dissemination", icon: Megaphone },
       { label: "Documents", to: "/future/documents", icon: Files },
