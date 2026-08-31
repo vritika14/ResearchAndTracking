@@ -58,10 +58,7 @@ export class ConferencesRepository {
       .innerJoin(
         projectCollaborators,
         and(
-          eq(
-            projectCollaborators.projectId,
-            conferenceProjects.projectId,
-          ),
+          eq(projectCollaborators.projectId, conferenceProjects.projectId),
           eq(projectCollaborators.tenantId, tenantId),
           eq(projectCollaborators.userId, userId),
         ),
@@ -95,10 +92,7 @@ export class ConferencesRepository {
       .innerJoin(
         projectCollaborators,
         and(
-          eq(
-            projectCollaborators.projectId,
-            conferenceProjects.projectId,
-          ),
+          eq(projectCollaborators.projectId, conferenceProjects.projectId),
           eq(projectCollaborators.tenantId, tenantId),
           eq(projectCollaborators.userId, userId),
         ),
@@ -132,10 +126,7 @@ export class ConferencesRepository {
       })
       .from(projects)
       .where(
-        and(
-          eq(projects.tenantId, tenantId),
-          inArray(projects.id, projectIds),
-        ),
+        and(eq(projects.tenantId, tenantId), inArray(projects.id, projectIds)),
       );
   }
 
