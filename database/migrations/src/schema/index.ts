@@ -17,3 +17,5 @@ export * from "./project-invitations";
 export * from "./module-invitations";
 export * from "./project-pipeline-selections";
 export * from "./module-pipeline-selections";
+export * from './conferences';
+export * from './conference-projects';
