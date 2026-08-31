@@ -1,61 +1,37 @@
 import { useEffect, useState, type FormEvent, type ReactNode } from "react";
 
+import type { ApiConference, ApiProject, ConferenceInput } from "@/api/hooks";
 import { Button } from "@/components/ui/button";
+import { DatePickerInput } from "@/components/ui/date-picker-input";
 import {
-  Dialog,
-  DialogClose,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
+  Dialog, DialogClose, DialogContent, DialogDescription, DialogFooter,
+  DialogHeader, DialogTitle,
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
-import type { ConferenceSubmission, SubmissionType } from "@/data/conference-submissions";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
-export type ConferenceSubmissionInput = Omit<ConferenceSubmission, "id">;
+export type ConferenceSubmissionInput = ConferenceInput;
 
 interface ConferenceSubmissionDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  submission?: ConferenceSubmission | null;
-  onSave: (submission: ConferenceSubmissionInput) => void;
+  projects: ApiProject[];
+  conference?: ApiConference | null;
+  onSave: (input: ConferenceSubmissionInput) => Promise<void> | void;
 }
 
 const INITIAL_FORM: ConferenceSubmissionInput = {
-  acronym: "",
-  name: "",
-  location: "",
-  submissionDue: "",
-  daysRemaining: 1,
-  conferenceDates: "",
-  type: "Abstract",
-  linkedPapers: [],
+  acronym: "", name: "", location: "", submissionDue: "", startDate: "",
+  endDate: "", submissionType: "Abstract", projectIds: [],
 };
 
-function FormField({
-  label,
-  htmlFor,
-  required,
-  children,
-}: {
-  label: string;
-  htmlFor: string;
-  required?: boolean;
-  children: ReactNode;
+function FormField({ label, htmlFor, required, children }: {
+  label: string; htmlFor: string; required?: boolean; children: ReactNode;
 }) {
   return (
     <div className="flex flex-col gap-1.5">
       <label htmlFor={htmlFor} className="text-sm font-medium">
-        {label}
-        {required ? <span className="ml-1 text-destructive">*</span> : null}
+        {label}{required ? <span className="ml-1 text-destructive">*</span> : null}
       </label>
       {children}
     </div>
@@ -63,169 +39,159 @@ function FormField({
 }
 
 export function ConferenceSubmissionDialog({
-  open,
-  onOpenChange,
-  submission,
-  onSave,
+  open, onOpenChange, projects, conference, onSave,
 }: ConferenceSubmissionDialogProps) {
   const [form, setForm] = useState<ConferenceSubmissionInput>(INITIAL_FORM);
-  const [linkedPapers, setLinkedPapers] = useState("");
-  const isEditing = Boolean(submission);
+  const [formError, setFormError] = useState<string | null>(null);
+  const [isSaving, setIsSaving] = useState(false);
+  const isEditing = Boolean(conference);
 
   useEffect(() => {
     if (!open) return;
-    if (submission) {
-      setForm({
-        acronym: submission.acronym,
-        name: submission.name,
-        location: submission.location,
-        submissionDue: submission.submissionDue,
-        daysRemaining: submission.daysRemaining,
-        conferenceDates: submission.conferenceDates,
-        type: submission.type,
-        linkedPapers: submission.linkedPapers,
-      });
-      setLinkedPapers(submission.linkedPapers.join(", "));
-    } else {
-      setForm(INITIAL_FORM);
-      setLinkedPapers("");
-    }
-  }, [open, submission]);
+    setFormError(null);
+    setForm(conference ? {
+      acronym: conference.acronym,
+      name: conference.name,
+      location: conference.location,
+      submissionDue: conference.submissionDue,
+      startDate: conference.startDate,
+      endDate: conference.endDate,
+      submissionType: conference.submissionType ?? "Abstract",
+      projectIds: conference.projects.map((project) => project.id),
+    } : INITIAL_FORM);
+  }, [conference, open]);
 
-  function handleSubmit(event: FormEvent<HTMLFormElement>) {
+  function toggleProject(projectId: string) {
+    setForm((current) => ({
+      ...current,
+      projectIds: current.projectIds.includes(projectId)
+        ? current.projectIds.filter((id) => id !== projectId)
+        : [...current.projectIds, projectId],
+    }));
+  }
+
+  async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    onSave({
-      ...form,
-      acronym: form.acronym.trim().toUpperCase(),
-      name: form.name.trim(),
-      location: form.location.trim(),
-      submissionDue: form.submissionDue.trim(),
-      conferenceDates: form.conferenceDates.trim(),
-      linkedPapers: linkedPapers
-        .split(",")
-        .map((paper) => paper.trim())
-        .filter(Boolean),
-    });
-    onOpenChange(false);
+    if (!form.submissionDue || !form.startDate || !form.endDate) {
+      setFormError("Enter the submission, start, and end dates.");
+      return;
+    }
+    if (form.projectIds.length === 0) {
+      setFormError("Select at least one project.");
+      return;
+    }
+    if (form.endDate < form.startDate) {
+      setFormError("The conference end date cannot be before its start date.");
+      return;
+    }
+
+    setIsSaving(true);
+    setFormError(null);
+    try {
+      await onSave({
+        ...form,
+        acronym: form.acronym.trim().toUpperCase(),
+        name: form.name.trim(),
+        location: form.location.trim(),
+        submissionType: form.submissionType?.trim() || undefined,
+      });
+      onOpenChange(false);
+    } catch (error) {
+      setFormError(error instanceof Error ? error.message : "The conference could not be saved.");
+    } finally {
+      setIsSaving(false);
+    }
   }
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent>
+      <DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-2xl">
         <DialogHeader>
           <DialogTitle>{isEditing ? "Edit conference" : "Add a conference"}</DialogTitle>
           <DialogDescription>
-            Track the submission deadline, conference dates, and any linked papers.
+            Track submission and event dates, then link the conference to one or more projects you own.
           </DialogDescription>
         </DialogHeader>
 
         <form onSubmit={handleSubmit} className="grid gap-5">
-          <div className="grid gap-4 sm:grid-cols-[8rem_1fr]">
+          <div className="grid gap-4 sm:grid-cols-[9rem_1fr]">
             <FormField label="Acronym" htmlFor="conference-acronym" required>
-              <Input
-                id="conference-acronym"
-                value={form.acronym}
-                onChange={(event) =>
-                  setForm((current) => ({ ...current, acronym: event.target.value }))
-                }
-                placeholder="ASM"
-                maxLength={8}
-                autoFocus
-                required
-              />
+              <Input id="conference-acronym" value={form.acronym} maxLength={20} autoFocus required
+                onChange={(event) => setForm((current) => ({ ...current, acronym: event.target.value }))}
+                placeholder="ASM" />
             </FormField>
             <FormField label="Conference name" htmlFor="conference-name" required>
-              <Input
-                id="conference-name"
-                value={form.name}
-                onChange={(event) =>
-                  setForm((current) => ({ ...current, name: event.target.value }))
-                }
-                placeholder="Conference name and year"
-                required
-              />
+              <Input id="conference-name" value={form.name} required
+                onChange={(event) => setForm((current) => ({ ...current, name: event.target.value }))}
+                placeholder="Conference name and year" />
             </FormField>
           </div>
 
           <FormField label="Location" htmlFor="conference-location" required>
-            <Input
-              id="conference-location"
-              value={form.location}
-              onChange={(event) =>
-                setForm((current) => ({ ...current, location: event.target.value }))
-              }
-              placeholder="City, country"
-              required
-            />
+            <Input id="conference-location" value={form.location} required
+              onChange={(event) => setForm((current) => ({ ...current, location: event.target.value }))}
+              placeholder="City, country" />
           </FormField>
 
-          <div className="grid gap-4 sm:grid-cols-2">
+          <div className="grid gap-4 sm:grid-cols-3">
             <FormField label="Submission due" htmlFor="conference-submission-due" required>
-              <Input
-                id="conference-submission-due"
+              <DatePickerInput id="conference-submission-due" label="Submission due"
                 value={form.submissionDue}
-                onChange={(event) =>
-                  setForm((current) => ({ ...current, submissionDue: event.target.value }))
-                }
-                placeholder="Aug 1, 2026"
-                required
-              />
+                onChange={(value) => setForm((current) => ({ ...current, submissionDue: value }))} />
             </FormField>
-            <FormField label="Days remaining" htmlFor="conference-days-remaining" required>
-              <Input
-                id="conference-days-remaining"
-                type="number"
-                min="0"
-                value={form.daysRemaining}
-                onChange={(event) =>
-                  setForm((current) => ({
-                    ...current,
-                    daysRemaining: Math.max(0, Number(event.target.value)),
-                  }))
-                }
-                required
-              />
+            <FormField label="Starts" htmlFor="conference-start-date" required>
+              <DatePickerInput id="conference-start-date" label="Conference start date"
+                value={form.startDate}
+                onChange={(value) => setForm((current) => ({ ...current, startDate: value }))} />
             </FormField>
-            <FormField label="Conference dates" htmlFor="conference-dates" required>
-              <Input
-                id="conference-dates"
-                value={form.conferenceDates}
-                onChange={(event) =>
-                  setForm((current) => ({ ...current, conferenceDates: event.target.value }))
-                }
-                placeholder="Jun 4–8, 2027"
-                required
-              />
-            </FormField>
-            <FormField label="Submission type" htmlFor="conference-type">
-              <Select
-                value={form.type}
-                onValueChange={(value) =>
-                  setForm((current) => ({ ...current, type: value as SubmissionType }))
-                }
-              >
-                <SelectTrigger id="conference-type"><SelectValue /></SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="Abstract">Abstract</SelectItem>
-                  <SelectItem value="Full paper">Full paper</SelectItem>
-                </SelectContent>
-              </Select>
+            <FormField label="Ends" htmlFor="conference-end-date" required>
+              <DatePickerInput id="conference-end-date" label="Conference end date"
+                value={form.endDate}
+                onChange={(value) => setForm((current) => ({ ...current, endDate: value }))} />
             </FormField>
           </div>
 
-          <FormField label="Linked papers" htmlFor="conference-linked-papers">
-            <Input
-              id="conference-linked-papers"
-              value={linkedPapers}
-              onChange={(event) => setLinkedPapers(event.target.value)}
-              placeholder="PRJ-101, PRJ-105"
-            />
-            <span className="text-xs text-muted-foreground">Separate multiple paper IDs with commas.</span>
+          <FormField label="Submission type" htmlFor="conference-type">
+            <Select value={form.submissionType}
+              onValueChange={(value) => setForm((current) => ({ ...current, submissionType: value }))}>
+              <SelectTrigger id="conference-type"><SelectValue /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="Abstract">Abstract</SelectItem>
+                <SelectItem value="Full paper">Full paper</SelectItem>
+                <SelectItem value="Poster">Poster</SelectItem>
+              </SelectContent>
+            </Select>
           </FormField>
+
+          <fieldset className="grid gap-2">
+            <legend className="text-sm font-medium">Linked projects <span className="text-destructive">*</span></legend>
+            {projects.length === 0 ? (
+              <p className="rounded-lg border border-dashed p-3 text-sm text-muted-foreground">
+                You need to own at least one project before creating a conference.
+              </p>
+            ) : (
+              <div className="grid max-h-40 gap-2 overflow-y-auto rounded-lg border border-border p-3 sm:grid-cols-2">
+                {projects.map((project) => (
+                  <label key={project.id} className="flex cursor-pointer items-start gap-2 rounded-md p-2 hover:bg-accent">
+                    <input type="checkbox" checked={form.projectIds.includes(project.id)}
+                      onChange={() => toggleProject(project.id)} className="mt-0.5 h-4 w-4 accent-primary" />
+                    <span className="text-sm">
+                      <span className="block font-medium">{project.title}</span>
+                      {project.displayId ? <span className="font-mono text-xs text-muted-foreground">{project.displayId}</span> : null}
+                    </span>
+                  </label>
+                ))}
+              </div>
+            )}
+          </fieldset>
+
+          {formError ? <p role="alert" className="rounded-lg border border-destructive/30 bg-destructive/5 p-3 text-sm text-destructive">{formError}</p> : null}
 
           <DialogFooter className="border-t pt-4">
             <DialogClose asChild><Button type="button" variant="outline">Cancel</Button></DialogClose>
-            <Button type="submit">{isEditing ? "Save Changes" : "Add Conference"}</Button>
+            <Button type="submit" disabled={isSaving || projects.length === 0}>
+              {isSaving ? "Saving…" : isEditing ? "Save Changes" : "Add Conference"}
+            </Button>
           </DialogFooter>
         </form>
       </DialogContent>

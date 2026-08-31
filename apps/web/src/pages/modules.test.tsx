@@ -14,6 +14,7 @@ type ModuleFixture = {
   tag: string | null;
   status: string | null;
   pipelineStage: string | null;
+  dueDate: string | null;
   assignedToUserId: string | null;
   archivedAt: string | null;
   createdAt: string;
@@ -106,6 +107,7 @@ vi.mock("@/api/hooks", async () => {
           tag: (input.tag as string | undefined) ?? null,
           status: (input.status as string | undefined) ?? "Active",
           pipelineStage: (input.pipelineStage as string | undefined) ?? null,
+          dueDate: (input.dueDate as string | undefined) ?? null,
           assignedToUserId: (input.assignedToUserId as string | undefined) ?? null,
           archivedAt: null,
           createdAt: "2026-01-01T00:00:00.000Z",
@@ -166,6 +168,7 @@ describe("ModulesPage", () => {
         tag: null,
         status: "Active",
         pipelineStage: "Concept & Ideation",
+        dueDate: "2026-09-15",
         assignedToUserId: null,
         archivedAt: null,
         createdAt: "2026-01-01T00:00:00.000Z",
@@ -199,6 +202,19 @@ describe("ModulesPage", () => {
     );
     expect(screen.getAllByText("Independent module").length).toBeGreaterThan(0);
     expect(screen.getAllByText("Concept & Ideation").length).toBeGreaterThan(0);
+  });
+
+  it("includes an optional due date in the module form", () => {
+    render(
+      <MemoryRouter>
+        <ModulesPage />
+      </MemoryRouter>,
+    );
+
+    fireEvent.click(screen.getByRole("button", { name: "New Module" }));
+    const dueDate = screen.getByLabelText(/Due date/);
+    expect(dueDate).toHaveAttribute("placeholder", "DD/MM/YYYY");
+    expect(dueDate).not.toBeRequired();
   });
 
   it("edits an existing module", async () => {

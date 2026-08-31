@@ -99,6 +99,7 @@ export interface ApiModule {
   tag: string | null;
   status: string | null;
   pipelineStage: string | null;
+  dueDate: string | null;
   assignedToUserId: string | null;
   archivedAt: string | null;
   createdAt: string;
@@ -136,6 +137,40 @@ export interface ApiNote {
   visibility: string | null;
   createdAt: string;
   updatedAt: string;
+}
+
+export interface ApiConferenceProject {
+  id: string;
+  displayId: string | null;
+  title: string;
+}
+
+export interface ApiConference {
+  id: string;
+  tenantId: string;
+  ownerUserId: string;
+  acronym: string;
+  name: string;
+  location: string;
+  submissionDue: string;
+  startDate: string;
+  endDate: string;
+  submissionType: string | null;
+  daysRemaining: number;
+  projects: ApiConferenceProject[];
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface ConferenceInput {
+  acronym: string;
+  name: string;
+  location: string;
+  submissionDue: string;
+  startDate: string;
+  endDate: string;
+  submissionType?: string;
+  projectIds: string[];
 }
 
 export interface ApiMember {
@@ -209,6 +244,10 @@ export const apiKeys = {
     ["api", "tenant", tenantId, "notes", "detail", noteId] as const,
   noteMembers: (tenantId: string, noteId: string) =>
     ["api", "tenant", tenantId, "notes", noteId, "members"] as const,
+  conferences: (tenantId: string) =>
+    ["api", "tenant", tenantId, "conferences"] as const,
+  conference: (tenantId: string, conferenceId: string) =>
+    ["api", "tenant", tenantId, "conferences", conferenceId] as const,
 };
 
 export function useMe(enabled = true) {
@@ -598,6 +637,7 @@ export interface CreateModuleInput {
   status?: string;
   pipelineStage?: string;
   pipelineStages?: string[];
+  dueDate?: string;
   assignedToUserId?: string;
 }
 export type UpdateModuleInput = Partial<CreateModuleInput>;
@@ -1259,6 +1299,76 @@ export function useDeleteMyNote() {
       ),
     async onSuccess() {
       await queryClient.invalidateQueries({ queryKey: myNotesKey });
+    },
+  });
+}
+
+// ---------------------------------------------------------------------------
+// Conferences
+// ---------------------------------------------------------------------------
+
+export function useConferences(tenantId: string, enabled = true) {
+  return useQuery({
+    queryKey: apiKeys.conferences(tenantId),
+    enabled: Boolean(tenantId) && enabled,
+    queryFn: () =>
+      authenticatedJson<ApiConference[]>(
+        `/api/v1/tenant/${encodeURIComponent(tenantId)}/conferences`,
+      ),
+  });
+}
+
+export function useConference(tenantId: string, conferenceId: string, enabled = true) {
+  return useQuery({
+    queryKey: apiKeys.conference(tenantId, conferenceId),
+    enabled: Boolean(tenantId) && Boolean(conferenceId) && enabled,
+    queryFn: () =>
+      authenticatedJson<ApiConference>(
+        `/api/v1/tenant/${encodeURIComponent(tenantId)}/conferences/${encodeURIComponent(conferenceId)}`,
+      ),
+  });
+}
+
+export function useCreateConference(tenantId: string) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (input: ConferenceInput) =>
+      apiJson<ApiConference>(
+        `/api/v1/tenant/${encodeURIComponent(tenantId)}/conferences`,
+        { method: "POST", body: JSON.stringify(input) },
+      ),
+    async onSuccess() {
+      await queryClient.invalidateQueries({ queryKey: apiKeys.conferences(tenantId) });
+    },
+  });
+}
+
+export function useUpdateConference(tenantId: string) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({ conferenceId, input }: { conferenceId: string; input: ConferenceInput }) =>
+      apiJson<ApiConference>(
+        `/api/v1/tenant/${encodeURIComponent(tenantId)}/conferences/${encodeURIComponent(conferenceId)}`,
+        { method: "PATCH", body: JSON.stringify(input) },
+      ),
+    async onSuccess(conference) {
+      queryClient.setQueryData(apiKeys.conference(tenantId, conference.id), conference);
+      await queryClient.invalidateQueries({ queryKey: apiKeys.conferences(tenantId) });
+    },
+  });
+}
+
+export function useDeleteConference(tenantId: string) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (conferenceId: string) =>
+      apiJson<{ message: string; conference: ApiConference }>(
+        `/api/v1/tenant/${encodeURIComponent(tenantId)}/conferences/${encodeURIComponent(conferenceId)}`,
+        { method: "DELETE" },
+      ),
+    async onSuccess(_result, conferenceId) {
+      queryClient.removeQueries({ queryKey: apiKeys.conference(tenantId, conferenceId) });
+      await queryClient.invalidateQueries({ queryKey: apiKeys.conferences(tenantId) });
     },
   });
 }
