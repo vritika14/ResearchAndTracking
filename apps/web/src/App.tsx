@@ -1,76 +1,95 @@
+import { lazy, Suspense, type ReactNode } from "react";
 import { Route, Routes } from "react-router-dom";
 
 import { RequireAuth } from "@/auth/require-auth";
 import { RequireApiSession } from "@/auth/require-api-session";
 import { RequireWorkspace } from "@/auth/require-workspace";
 import { AppLayout } from "@/components/layout/app-layout";
-import DashboardPage from "@/pages/dashboard";
-import ProjectsPage from "@/pages/projects";
-import ModulesPage from "@/pages/modules";
-import ModuleDetailPage from "@/pages/module-detail";
-import ProjectDetailPage from "@/pages/project-detail";
-import TasksPage from "@/pages/tasks";
-import CalendarPage from "@/pages/calendar";
-import ConferencesPage from "@/pages/conferences";
-import ConferenceDetailPage from "@/pages/conference-detail";
-import TaskDetailPage from "@/pages/task-detail";
-import DailyNotesPage from "@/pages/daily-notes";
-import PipelinePage from "@/pages/pipeline";
-import AccountAuditPage from "@/pages/account-audit";
-import SettingsPage from "@/pages/settings";
-import FutureFeaturePage from "@/pages/future-feature";
-import SignInPage from "@/pages/sign-in";
-import AuthCallbackPage from "@/pages/auth-callback";
-import WorkspaceOnboardingPage from "@/pages/workspace-onboarding";
-import SessionExpiredPage from "@/pages/session-expired";
-import AccessDeniedPage from "@/pages/access-denied";
-import MembershipStatusPage from "@/pages/membership-status";
-import NotFoundPage from "@/pages/not-found";
-import InvitationPage from "@/pages/invitation";
+import { LoadingState } from "@/components/shared/loading-state";
+
+const DashboardPage = lazy(() => import("@/pages/dashboard"));
+const ProjectsPage = lazy(() => import("@/pages/projects"));
+const ModulesPage = lazy(() => import("@/pages/modules"));
+const ModuleDetailPage = lazy(() => import("@/pages/module-detail"));
+const ProjectDetailPage = lazy(() => import("@/pages/project-detail"));
+const TasksPage = lazy(() => import("@/pages/tasks"));
+const CalendarPage = lazy(() => import("@/pages/calendar"));
+const ConferencesPage = lazy(() => import("@/pages/conferences"));
+const ConferenceDetailPage = lazy(() => import("@/pages/conference-detail"));
+const TaskDetailPage = lazy(() => import("@/pages/task-detail"));
+const DailyNotesPage = lazy(() => import("@/pages/daily-notes"));
+const PipelinePage = lazy(() => import("@/pages/pipeline"));
+const AccountAuditPage = lazy(() => import("@/pages/account-audit"));
+const SettingsPage = lazy(() => import("@/pages/settings"));
+const FutureFeaturePage = lazy(() => import("@/pages/future-feature"));
+const SignInPage = lazy(() => import("@/pages/sign-in"));
+const AuthCallbackPage = lazy(() => import("@/pages/auth-callback"));
+const WorkspaceOnboardingPage = lazy(() => import("@/pages/workspace-onboarding"));
+const SessionExpiredPage = lazy(() => import("@/pages/session-expired"));
+const AccessDeniedPage = lazy(() => import("@/pages/access-denied"));
+const MembershipStatusPage = lazy(() => import("@/pages/membership-status"));
+const NotFoundPage = lazy(() => import("@/pages/not-found"));
+const InvitationPage = lazy(() => import("@/pages/invitation"));
+
+function routePage(page: ReactNode) {
+  return (
+    <Suspense
+      fallback={
+        <LoadingState
+          title="Loading page"
+          description="Please wait while this page is prepared."
+          className="min-h-[50vh]"
+        />
+      }
+    >
+      {page}
+    </Suspense>
+  );
+}
 
 export default function App() {
   return (
     <Routes>
-      <Route path="sign-in" element={<SignInPage />} />
-      <Route path="auth/callback" element={<AuthCallbackPage />} />
-      <Route path="session-expired" element={<SessionExpiredPage />} />
-      <Route path="access-denied" element={<AccessDeniedPage />} />
-      <Route path="invitations/:token" element={<InvitationPage />} />
+      <Route path="sign-in" element={routePage(<SignInPage />)} />
+      <Route path="auth/callback" element={routePage(<AuthCallbackPage />)} />
+      <Route path="session-expired" element={routePage(<SessionExpiredPage />)} />
+      <Route path="access-denied" element={routePage(<AccessDeniedPage />)} />
+      <Route path="invitations/:token" element={routePage(<InvitationPage />)} />
 
       <Route element={<RequireAuth />}>
         <Route element={<RequireApiSession />}>
           <Route
             path="membership-status/:status"
-            element={<MembershipStatusPage />}
+            element={routePage(<MembershipStatusPage />)}
           />
           <Route element={<RequireWorkspace shouldExist={false} />}>
-            <Route path="onboarding" element={<WorkspaceOnboardingPage />} />
+            <Route path="onboarding" element={routePage(<WorkspaceOnboardingPage />)} />
           </Route>
           <Route element={<RequireWorkspace shouldExist />}>
             <Route element={<AppLayout />}>
-              <Route index element={<DashboardPage />} />
-              <Route path="projects" element={<ProjectsPage />} />
-              <Route path="modules" element={<ModulesPage />} />
-              <Route path="modules/:moduleId" element={<ModuleDetailPage />} />
+              <Route index element={routePage(<DashboardPage />)} />
+              <Route path="projects" element={routePage(<ProjectsPage />)} />
+              <Route path="modules" element={routePage(<ModulesPage />)} />
+              <Route path="modules/:moduleId" element={routePage(<ModuleDetailPage />)} />
               <Route
                 path="projects/:projectId"
-                element={<ProjectDetailPage />}
+                element={routePage(<ProjectDetailPage />)}
               />
-              <Route path="tasks" element={<TasksPage />} />
-              <Route path="calendar" element={<CalendarPage />} />
-              <Route path="conferences" element={<ConferencesPage />} />
-              <Route path="conferences/:conferenceId" element={<ConferenceDetailPage />} />
-              <Route path="tasks/:taskId" element={<TaskDetailPage />} />
-              <Route path="daily-notes" element={<DailyNotesPage />} />
-              <Route path="daily-notes/:noteId" element={<DailyNotesPage />} />
-              <Route path="pipeline" element={<PipelinePage />} />
-              <Route path="settings" element={<SettingsPage />} />
+              <Route path="tasks" element={routePage(<TasksPage />)} />
+              <Route path="calendar" element={routePage(<CalendarPage />)} />
+              <Route path="conferences" element={routePage(<ConferencesPage />)} />
+              <Route path="conferences/:conferenceId" element={routePage(<ConferenceDetailPage />)} />
+              <Route path="tasks/:taskId" element={routePage(<TaskDetailPage />)} />
+              <Route path="daily-notes" element={routePage(<DailyNotesPage />)} />
+              <Route path="daily-notes/:noteId" element={routePage(<DailyNotesPage />)} />
+              <Route path="pipeline" element={routePage(<PipelinePage />)} />
+              <Route path="settings" element={routePage(<SettingsPage />)} />
               <Route
                 path="settings/account-audit"
-                element={<AccountAuditPage />}
+                element={routePage(<AccountAuditPage />)}
               />
-              <Route path="future/:feature" element={<FutureFeaturePage />} />
-              <Route path="*" element={<NotFoundPage />} />
+              <Route path="future/:feature" element={routePage(<FutureFeaturePage />)} />
+              <Route path="*" element={routePage(<NotFoundPage />)} />
             </Route>
           </Route>
         </Route>
