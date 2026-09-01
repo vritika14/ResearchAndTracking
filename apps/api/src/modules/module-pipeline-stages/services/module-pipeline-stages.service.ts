@@ -10,21 +10,32 @@ export class ModulePipelineStagesService {
   constructor(private readonly repository: EnumRepository) {}
 
   async list(moduleId: string) {
-    const { baseStages, customStages } =
-      await this.repository.findPipelineStagesForModule(moduleId);
-    return [...baseStages, ...customStages];
+    const { baseStages, customStages } = await this.repository.findPipelineStagesForModule(moduleId);
+    const customValues = new Set(customStages.map((s) => s.value));
+    const filteredBaseStages = baseStages.filter((s) => !customValues.has(s.value));
+    return [...filteredBaseStages, ...customStages];
   }
 
   async create(moduleId: string, value: string, sortOrder: number) {
-    const row = await this.repository.createModulePipelineStage(
-      moduleId,
-      value,
-      sortOrder,
-    );
-    if (!row) {
-      throw new ConflictException('Failed to create pipeline stage');
+    try {
+      const row = await this.repository.createModulePipelineStage(
+        moduleId,
+        value,
+        sortOrder,
+      );
+      if (!row) {
+        throw new ConflictException('Failed to create pipeline stage');
+      }
+      return row;
+    } catch (err) {
+      const causeMessage = err instanceof Error && 'cause' in err && err.cause instanceof Error
+        ? err.cause.message
+        : '';
+      if (causeMessage.includes('enum_module_category_value_key')) {
+        throw new ConflictException(`A pipeline stage named "${value}" already exists for this module`);
+      }
+      throw err;
     }
-    return row;
   }
 
   async update(
