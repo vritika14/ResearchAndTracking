@@ -217,22 +217,15 @@ describe("ModulesPage", () => {
     expect(dueDate).not.toBeRequired();
   });
 
-  it("edits an existing module", async () => {
+  it("routes editing to the module page", () => {
     render(
       <MemoryRouter>
         <ModulesPage />
       </MemoryRouter>,
     );
 
-    fireEvent.click(screen.getByRole("button", { name: "Edit Literature synthesis" }));
-    fireEvent.change(screen.getByRole("textbox", { name: /Module title/ }), {
-      target: { value: "Updated literature synthesis" },
-    });
-    fireEvent.click(screen.getByRole("button", { name: "Save Changes" }));
-
-    await waitFor(() =>
-      expect(screen.getByText("Updated literature synthesis")).toBeInTheDocument(),
-    );
+    expect(screen.getByRole("link", { name: "Edit Literature synthesis" }))
+      .toHaveAttribute("href", "/modules/module-1?edit=true");
   });
 
   it("archives a module", async () => {

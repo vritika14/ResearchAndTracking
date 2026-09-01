@@ -660,30 +660,29 @@ export default function DailyNotesPage() {
               <Heading level="h1">{selectedNote.title}</Heading>
 
               <div className="mt-3 flex flex-wrap items-center gap-x-3 gap-y-1.5 text-sm">
-                {selectedNote.projectId ? (
-                  <Link
-                    to={`/projects/${selectedNote.projectId}`}
-                    className="font-medium text-primary hover:underline"
-                  >
-                    {linkTargetLabel(selectedNote)}
-                  </Link>
-                ) : selectedNote.moduleId ? (
-                  <Link
-                    to={`/modules/${selectedNote.moduleId}`}
-                    className="font-medium text-primary hover:underline"
-                  >
-                    {linkTargetLabel(selectedNote)}
-                  </Link>
-                ) : (
-                  <span className="font-medium text-primary">{linkTargetLabel(selectedNote)}</span>
-                )}
-                <span className="text-muted-foreground">·</span>
                 <span className="text-muted-foreground">{formatDate(selectedNote.createdAt)}</span>
                 <span className="text-muted-foreground">·</span>
                 <span className="text-muted-foreground">{formatTime(selectedNote.createdAt)}</span>
                 <span className="text-muted-foreground">·</span>
                 <Badge variant="outline">{selectedNote.visibility ?? "Private"}</Badge>
               </div>
+
+              <section className="mt-8" aria-labelledby="note-linked-work">
+                <h2 id="note-linked-work" className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Linked work</h2>
+                {selectedNote.projectId ? (
+                  <Link to={`/projects/${selectedNote.projectId}`} className="mt-3 block max-w-md rounded-lg border border-border p-4 transition-colors hover:border-primary/40 hover:bg-muted/40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring">
+                    <span className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Project</span>
+                    <span className="mt-1 block font-semibold text-primary">{linkTargetLabel(selectedNote)}</span>
+                  </Link>
+                ) : selectedNote.moduleId ? (
+                  <Link to={`/modules/${selectedNote.moduleId}`} className="mt-3 block max-w-md rounded-lg border border-border p-4 transition-colors hover:border-primary/40 hover:bg-muted/40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring">
+                    <span className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Module</span>
+                    <span className="mt-1 block font-semibold text-primary">{linkTargetLabel(selectedNote)}</span>
+                  </Link>
+                ) : (
+                  <p className="mt-3 text-sm text-muted-foreground">This is a general note with no linked project or module.</p>
+                )}
+              </section>
 
               <p className="mt-8 whitespace-pre-wrap text-[15px] leading-7 text-foreground/90">
                 {selectedNote.content || "This note does not have any content yet."}

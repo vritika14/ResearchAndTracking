@@ -10,7 +10,6 @@ import {
   useModules,
   useTasks,
   useProjects,
-  useUpdateTask,
   type ApiTask,
 } from "@/api/hooks";
 import { ColumnVisibilityMenu } from "@/components/dashboard/column-visibility-menu";
@@ -131,10 +130,8 @@ export default function TasksPage() {
   const modulesQuery = useModules(tenantId);
 
   const [isNewTaskOpen, setIsNewTaskOpen] = useState(false);
-  const [editingTask, setEditingTask] = useState<ApiTask | null>(null);
 
   const createTask = useCreateTask(tenantId);
-  const updateTask = useUpdateTask(tenantId);
   const deleteTask = useDeleteTask(tenantId);
 
   const [search, setSearch] = useState("");
@@ -252,34 +249,11 @@ export default function TasksPage() {
     );
   }
 
-  async function handleUpdateTask(input: TaskFormInput) {
-    if (!editingTask) return;
-    await updateTask.mutateAsync({
-      taskId: editingTask.id,
-      input: {
-        title: input.title,
-        description: input.description || undefined,
-        status: input.status,
-        priority: input.priority,
-        visibility: input.visibility,
-        workingWith: input.workingWith || undefined,
-        estimatedHours: input.estimatedHours || undefined,
-        dueDate: input.dueDate || undefined,
-        projectId: input.linkTarget === "project" ? input.projectId : undefined,
-        // A task's link is cleared server-side only when this key is present
-        // and falsy — see TasksService.resolveLinkage's changesLinkage check.
-        moduleId: input.linkTarget === "module" ? input.moduleId : "",
-      },
-    });
-    setEditingTask(null);
-  }
-
   async function handleDeleteTask(task: ApiTask) {
     if (!window.confirm(`Delete "${task.title}"? This action cannot be undone.`)) {
       return;
     }
     await deleteTask.mutateAsync(task.id);
-    setEditingTask((current) => (current?.id === task.id ? null : current));
   }
 
   if (workspace.isPending || tasksQuery.isPending) {
@@ -314,21 +288,6 @@ export default function TasksPage() {
         modules={modulesQuery.data ?? []}
         onSave={(input) => void handleCreateTask(input)}
       />
-
-      {editingTask ? (
-        <TaskDialog
-          key={editingTask.id}
-          open
-          tenantId={tenantId}
-          projects={projectsQuery.data ?? []}
-          modules={modulesQuery.data ?? []}
-          task={editingTask}
-          onOpenChange={(open) => {
-            if (!open) setEditingTask(null);
-          }}
-          onSave={(input) => void handleUpdateTask(input)}
-        />
-      ) : null}
 
       <div className="surface-toolbar flex flex-wrap items-center gap-3 border-amber-200/70 bg-amber-50/40 dark:border-amber-900/50 dark:bg-amber-950/10">
         <Input
@@ -424,15 +383,14 @@ export default function TasksPage() {
                       >
                         {task.title}
                       </Link>
-                      <button
-                        type="button"
-                        onClick={() => setEditingTask(task)}
+                      <Link
+                        to={`/tasks/${task.id}?edit=true`}
                         aria-label={`Edit ${task.title}`}
                         title="Edit task"
                         className="inline-flex h-6 w-6 shrink-0 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-accent hover:text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
                       >
                         <Pencil className="h-3.5 w-3.5" />
-                      </button>
+                      </Link>
                       <button
                         type="button"
                         onClick={() => void handleDeleteTask(task)}
@@ -458,7 +416,16 @@ export default function TasksPage() {
                   ) : null}
 
                   {columns.isColumnVisible("project") ? (
-                  <span className="text-sm text-muted-foreground">{linkTargetLabel(task)}</span>
+                  task.projectId || task.moduleId ? (
+                    <Link
+                      to={task.projectId ? `/projects/${task.projectId}` : `/modules/${task.moduleId}`}
+                      className="text-sm font-medium text-primary hover:underline"
+                    >
+                      {linkTargetLabel(task)}
+                    </Link>
+                  ) : (
+                    <span className="text-sm text-muted-foreground">General</span>
+                  )
                   ) : null}
 
                   {columns.isColumnVisible("status") ? (
