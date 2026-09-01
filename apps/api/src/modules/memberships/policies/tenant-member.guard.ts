@@ -23,22 +23,17 @@ export class TenantMemberGuard implements CanActivate {
   async canActivate(context: ExecutionContext): Promise<boolean> {
     const req = context.switchToHttp().getRequest<AuthenticatedRequest>();
     const tenantId = req.params.tenantId;
-
     if (!tenantId) {
       throw new ForbiddenException('Tenant context is required');
     }
-
     const user = await this.usersService.findByExternalAuthId(req.user.sub);
-
     const membership = await this.repository.findMembershipByTenantAndUser(
       tenantId,
       user.id,
     );
-
     if (!membership || membership.status !== 'active') {
       throw new ForbiddenException('You are not a member of this tenant');
     }
-
     return true;
   }
 }

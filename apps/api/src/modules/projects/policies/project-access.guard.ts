@@ -30,8 +30,7 @@ export class ProjectAccessGuard implements CanActivate {
     }
 
     const user = await this.usersService.findByExternalAuthId(req.user.sub);
-    const collaborator = await this.repository.findByProjectAndUser(
-      tenantId,
+    const collaborator = await this.repository.checkAccessForGuard(
       projectId,
       user.id,
     );
