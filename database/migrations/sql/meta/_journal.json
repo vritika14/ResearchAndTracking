@@ -113,6 +113,13 @@
       "when": 1788241081086,
       "tag": "0015_module_access_guard_bypass",
       "breakpoints": true
+    },
+    {
+      "idx": 16,
+      "version": "7",
+      "when": 1788243228445,
+      "tag": "0016_fix_enum_duplicate_detection",
+      "breakpoints": true
     }
   ]
 }

@@ -60,10 +60,11 @@ export class EnumRepository {
         and(
           eq(enumTable.category, 'project_pipeline_stage'),
           isNull(enumTable.projectId),
+          isNull(enumTable.tenantId),
         ),
       )
       .orderBy(asc(enumTable.sortOrder));
-
+  
     const customStages = await this.drizzle.db
       .select()
       .from(enumTable)
@@ -74,7 +75,7 @@ export class EnumRepository {
         ),
       )
       .orderBy(asc(enumTable.sortOrder));
-
+  
     return { baseStages, customStages };
   }
 
@@ -148,6 +149,8 @@ export class EnumRepository {
         and(
           eq(enumTable.category, 'module_pipeline_stage'),
           isNull(enumTable.moduleId),
+          isNull(enumTable.tenantId),
+          isNull(enumTable.projectId),
         ),
       )
       .orderBy(asc(enumTable.sortOrder));
