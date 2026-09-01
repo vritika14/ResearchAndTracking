@@ -42,8 +42,7 @@ export class ModuleAccessGuard implements CanActivate {
 
     if (module.projectId) {
       const projectCollaborator =
-        await this.projectCollaboratorsRepository.findByProjectAndUser(
-          tenantId,
+        await this.projectCollaboratorsRepository.checkAccessForGuard(
           module.projectId,
           user.id,
         );
@@ -51,14 +50,13 @@ export class ModuleAccessGuard implements CanActivate {
         return true;
       }
     }
-
+    
     const moduleCollaborator =
-      await this.moduleCollaboratorsRepository.findByModuleAndUser(
-        tenantId,
+      await this.moduleCollaboratorsRepository.checkAccessForGuard(
         moduleId,
         user.id,
       );
-
+    
     if (!moduleCollaborator) {
       throw new ForbiddenException('You do not have access to this module');
     }

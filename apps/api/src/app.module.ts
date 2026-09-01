@@ -29,6 +29,8 @@ import { ConferencesModule } from './modules/conferences/conferences.module';
 import { FeedbackModule } from './modules/feedback/feedback.module';
 import { APP_INTERCEPTOR } from '@nestjs/core';
 import { RequestContextInterceptor } from './db/request-context.interceptor';
+import { ScheduleModule } from '@nestjs/schedule';
+import { ArchiveCleanupModule } from './modules/archive-cleanup/archive-cleanup.module';
 
 @Module({
   imports: [
@@ -37,6 +39,7 @@ import { RequestContextInterceptor } from './db/request-context.interceptor';
       envFilePath: [join(__dirname, '..', '..', '..', '.env')],
       validationSchema: envValidationSchema,
     }),
+    ScheduleModule.forRoot(),
     LoggerModule.forRoot({
       pinoHttp: {
         level: 'info',
@@ -87,6 +90,7 @@ import { RequestContextInterceptor } from './db/request-context.interceptor';
     ProjectInvitationsModule,
     ConferencesModule,
     FeedbackModule,
+    ArchiveCleanupModule
   ],
   controllers: [AppController],
   providers: [AppService,

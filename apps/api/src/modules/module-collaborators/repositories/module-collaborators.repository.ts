@@ -1,7 +1,7 @@
 // apps/api/src/modules/module-collaborators/repositories/module-collaborators.repository.ts
 import { Injectable } from '@nestjs/common';
 import { moduleCollaborators } from '@research-tracker/migrations';
-import { and, eq } from 'drizzle-orm';
+import { and, eq, sql } from 'drizzle-orm';
 import { DrizzleService } from '../../../db/drizzle.service';
 
 @Injectable()
@@ -94,4 +94,14 @@ export class ModuleCollaboratorsRepository {
       .returning();
     return row;
   }
+  /**
+ * Pre-context bypass, used only by guards that run before
+ * RequestContextInterceptor sets app.current_user_id.
+ */
+async checkAccessForGuard(moduleId: string, userId: string) {
+  const result = await this.drizzle.db.execute(
+    sql`SELECT * FROM check_module_collaborator(${moduleId}::uuid, ${userId}::uuid)`,
+  );
+  return result.rows[0] as { id: string; roleId: string } | undefined;
+}
 }

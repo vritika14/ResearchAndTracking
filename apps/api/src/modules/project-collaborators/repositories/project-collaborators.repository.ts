@@ -1,7 +1,7 @@
 // apps/api/src/modules/project-collaborators/repositories/project-collaborators.repository.ts
 import { Injectable } from '@nestjs/common';
 import { projectCollaborators } from '@research-tracker/migrations';
-import { and, eq } from 'drizzle-orm';
+import { and, eq, sql } from 'drizzle-orm';
 import { DrizzleService } from '../../../db/drizzle.service';
 
 @Injectable()
@@ -93,4 +93,18 @@ export class ProjectCollaboratorsRepository {
       .returning();
     return row;
   }
+  /**
+ * Pre-context bypass, used only by guards that run before
+ * RequestContextInterceptor sets app.current_user_id. Guards structurally
+ * run before interceptors in NestJS, so at this point in the request
+ * lifecycle, RLS-protected queries can't see any rows yet. This performs
+ * the exact same check as findByProjectAndUser, just without depending on
+ * session context that doesn't exist yet.
+ */
+async checkAccessForGuard(projectId: string, userId: string) {
+  const result = await this.drizzle.db.execute(
+    sql`SELECT * FROM check_project_collaborator(${projectId}::uuid, ${userId}::uuid)`,
+  );
+  return result.rows[0] as { id: string; roleId: string } | undefined;
+}
 }
