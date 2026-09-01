@@ -323,8 +323,8 @@ export default function ModuleDetailPage() {
           </div> : null}
         </section>
 
-        <section className="grid gap-6 lg:grid-cols-2" aria-label="Linked work">
-          <Card className="lg:col-span-2">
+        <section className="grid gap-6 lg:grid-cols-3" aria-label="Linked work">
+          <Card>
             <CardHeader><CardTitle>Linked project</CardTitle></CardHeader>
             <CardContent>
               {module.projectId ? (
