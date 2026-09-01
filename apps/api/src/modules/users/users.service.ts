@@ -7,7 +7,7 @@ import {
 } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { users } from '@research-tracker/migrations';
-import { and, eq, ilike, inArray, or } from 'drizzle-orm';
+import { and, eq, ilike, inArray, or, sql } from 'drizzle-orm';
 import { firstValueFrom } from 'rxjs';
 import { DrizzleService } from '../../db/drizzle.service';
 import type { UpdateProfileDto } from './dto/update-profile.dto';
@@ -155,6 +155,11 @@ export class UsersService {
       return linked;
     }
 
+    const debugCheck = await this.drizzle.db.execute(
+      sql`SELECT current_setting('app.current_user_id', true) as val, pg_backend_pid() as pid`,
+    );
+    console.log('DEBUG - users insert, session var:', debugCheck.rows[0]);
+    
     const [created] = await this.drizzle.db
       .insert(users)
       .values({

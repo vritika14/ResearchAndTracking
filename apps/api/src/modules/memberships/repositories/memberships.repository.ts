@@ -1,6 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { tenantMemberships, users } from '@research-tracker/migrations';
-import { and, eq } from 'drizzle-orm';
+import { and, eq, sql } from 'drizzle-orm';
 import { DrizzleService } from '../../../db/drizzle.service';
 
 @Injectable()
@@ -33,15 +33,9 @@ export class MembershipsRepository {
   }
 
   async findMembershipByTenantAndUser(tenantId: string, userId: string) {
-    const [membership] = await this.drizzle.db
-      .select()
-      .from(tenantMemberships)
-      .where(
-        and(
-          eq(tenantMemberships.tenantId, tenantId),
-          eq(tenantMemberships.userId, userId),
-        ),
-      );
-    return membership;
+    const result = await this.drizzle.db.execute(
+      sql`SELECT * FROM check_tenant_membership(${tenantId}::uuid, ${userId}::uuid)`,
+    );
+    return result.rows[0] as { id: string; role: string; status: string } | undefined;
   }
 }

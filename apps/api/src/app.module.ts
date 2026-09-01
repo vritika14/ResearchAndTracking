@@ -1,4 +1,4 @@
-import { Module, MiddlewareConsumer, NestModule } from '@nestjs/common';
+import { Module} from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
 import { join } from 'path';
 import { LoggerModule } from 'nestjs-pino';
@@ -20,7 +20,6 @@ import { ProjectCollaboratorsModule } from './modules/project-collaborators/proj
 import { ModuleCollaboratorsModule } from './modules/module-collaborators/module-collaborators.module';
 import { TaskMembersModule } from './modules/task-members/task-members.module';
 import { NoteMembersModule } from './modules/note-members/note-members.module';
-import { TenantContextMiddleware } from './db/tenant-context.middleware';
 import { ProjectPipelineStagesModule } from './modules/project-pipeline-stages/project-pipeline-stages.module';
 import { ModulePipelineStagesModule } from './modules/module-pipeline-stages/module-pipeline-stages.module';
 import { PipelineStagesModule } from './modules/pipeline-stages/pipeline-stages.module';
@@ -28,6 +27,8 @@ import { ModulePipelineStagesPoolModule } from './modules/module-pipeline-stages
 import { ProjectInvitationsModule } from './modules/project-invitations/project-invitations.module';
 import { ConferencesModule } from './modules/conferences/conferences.module';
 import { FeedbackModule } from './modules/feedback/feedback.module';
+import { APP_INTERCEPTOR } from '@nestjs/core';
+import { RequestContextInterceptor } from './db/request-context.interceptor';
 
 @Module({
   imports: [
@@ -88,10 +89,11 @@ import { FeedbackModule } from './modules/feedback/feedback.module';
     FeedbackModule,
   ],
   controllers: [AppController],
-  providers: [AppService],
+  providers: [AppService,
+    {
+      provide: APP_INTERCEPTOR,
+      useClass: RequestContextInterceptor,
+    },
+  ],
 })
-export class AppModule implements NestModule {
-  configure(consumer: MiddlewareConsumer) {
-    consumer.apply(TenantContextMiddleware).forRoutes('*');
-  }
-}
+export class AppModule{}
