@@ -115,6 +115,20 @@ run_test "Explicit member sees the shared note" "$COLLABORATOR_ID" "SELECT COUNT
 run_test "Unrelated user does NOT see the shared note (not a member)" "$UNRELATED_ID" "SELECT COUNT(*) FROM notes WHERE id = '${SHARED_NOTE_ID}';" "0"
 
 echo ""
+echo "--- Conferences & Feedback ---"
+
+CONFERENCE_ID="b8f87b4c-88a9-4068-84ae-55b56f223586"
+FEEDBACK_ID="5b472c46-0ddf-4fe9-9857-ff8ef87dcf36"
+CONFERENCE_OWNER="89c5462d-8e7f-4637-b33f-fa7a58b04281"
+
+run_test "Conference owner sees their own conference" "$CONFERENCE_OWNER" "SELECT COUNT(*) FROM conferences WHERE id = '${CONFERENCE_ID}';" "1"
+run_test "Unrelated user does not see the conference" "$UNRELATED_ID" "SELECT COUNT(*) FROM conferences WHERE id = '${CONFERENCE_ID}';" "0"
+
+run_test "Feedback owner sees their own feedback" "$CONFERENCE_OWNER" "SELECT COUNT(*) FROM feedback WHERE id = '${FEEDBACK_ID}';" "1"
+run_test "Unrelated user does NOT see someone else's feedback" "$UNRELATED_ID" "SELECT COUNT(*) FROM feedback WHERE id = '${FEEDBACK_ID}';" "0"
+run_test "Even the project owner does not see someone else's feedback" "$OWNER_ID" "SELECT COUNT(*) FROM feedback WHERE id = '${FEEDBACK_ID}';" "0"
+
+echo ""
 echo "--- No session context at all ---"
 result=$(PGPASSWORD="$PGPASSWORD" psql -h "$HOST" -p "$PORT" -U research_tracker_app -d "$DBNAME" -t -A -c "SELECT COUNT(*) FROM projects;" 2>&1 | tail -1)
 if [ "$result" == "0" ]; then

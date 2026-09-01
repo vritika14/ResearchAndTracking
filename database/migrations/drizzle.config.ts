@@ -1,4 +1,6 @@
 import { defineConfig } from 'drizzle-kit';
+import { readFileSync } from 'fs';
+import { join } from 'path';
 
 export default defineConfig({
   schema: './src/schema/index.ts',
@@ -10,6 +12,11 @@ export default defineConfig({
     user: process.env.POSTGRES_MIGRATION_USER!,
     password: process.env.POSTGRES_MIGRATION_PASSWORD!,
     database: process.env.POSTGRES_DB!,
-    ssl: process.env.POSTGRES_SSL === 'true',
+    ssl: process.env.POSTGRES_SSL === 'true'
+      ? {
+          rejectUnauthorized: true,
+          ca: readFileSync(join(__dirname, '../../apps/api/certs/rds-ca-bundle.pem'), 'utf-8'),
+        }
+      : false,
   },
 });
