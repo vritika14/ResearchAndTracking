@@ -1,6 +1,6 @@
-import { useState, type ReactNode } from "react";
-import { ArrowLeft, ListTodo, Pencil } from "lucide-react";
-import { Link, useParams } from "react-router-dom";
+import { useEffect, useState, type FormEvent, type ReactNode } from "react";
+import { ArrowLeft, ChevronDown, ChevronUp, ListTodo, Pencil, Save, X } from "lucide-react";
+import { Link, useParams, useSearchParams } from "react-router-dom";
 
 import {
   useCurrentWorkspace,
@@ -9,8 +9,9 @@ import {
   useProject,
   useProjects,
   useUpdateMyTask,
+  type ApiTask,
 } from "@/api/hooks";
-import { TaskDialog, type TaskFormInput } from "@/components/tasks/task-dialog";
+import type { TaskFormInput } from "@/components/tasks/task-dialog";
 import { TaskMembersManager } from "@/components/tasks/task-members";
 import { EmptyState } from "@/components/shared/empty-state";
 import { ErrorState } from "@/components/shared/error-state";
@@ -19,6 +20,20 @@ import { PageHeading } from "@/components/typography/heading";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { DatePickerInput } from "@/components/ui/date-picker-input";
+import { Input } from "@/components/ui/input";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Textarea } from "@/components/ui/textarea";
+import { resolveLinkTargetType, type LinkTargetType } from "@/lib/link-target";
+
+const TASK_STATUSES = ["To do", "Underway", "Waiting", "Complete"];
+const TASK_PRIORITIES = ["Low", "Medium", "High", "Critical"];
+const VISIBILITY_OPTIONS = ["Private", "Shared"];
+const LINK_TARGETS: Array<{ value: LinkTargetType; label: string }> = [
+  { value: "project", label: "Project" },
+  { value: "module", label: "Module" },
+  { value: "none", label: "General" },
+];
 
 function statusPillClass(status: string | null) {
   switch (status) {
@@ -69,8 +84,30 @@ function DetailItem({ label, children, className = "" }: {
   );
 }
 
+function formValues(task: ApiTask): TaskFormInput {
+  return {
+    title: task.title,
+    description: task.description ?? "",
+    linkTarget: resolveLinkTargetType(task),
+    projectId: task.projectId ?? "",
+    moduleId: task.moduleId ?? "",
+    status: task.status ?? "To do",
+    priority: task.priority ?? "Medium",
+    dueDate: task.dueDate ?? "",
+    estimatedHours: task.estimatedHours ?? "",
+    visibility: task.visibility ?? "Private",
+    workingWith: task.workingWith ?? "",
+    collaboratorUserIds: [],
+  };
+}
+
+function FormField({ label, htmlFor, children, className = "" }: { label: string; htmlFor: string; children: ReactNode; className?: string }) {
+  return <div className={`grid gap-1.5 ${className}`}><label htmlFor={htmlFor} className="text-sm font-medium">{label}</label>{children}</div>;
+}
+
 export default function TaskDetailPage() {
   const { taskId = "" } = useParams();
+  const [searchParams] = useSearchParams();
   const workspace = useCurrentWorkspace();
   const tenantId = workspace.data?.id ?? "";
 
@@ -82,7 +119,16 @@ export default function TaskDetailPage() {
   const task = taskQuery.data;
   const linkedProjectQuery = useProject(tenantId, task?.projectId ?? "", Boolean(task?.projectId));
   const sameTenant = Boolean(task && tenantId && task.tenantId === tenantId);
-  const [isEditing, setIsEditing] = useState(false);
+  const [form, setForm] = useState<TaskFormInput | null>(null);
+  const [openedRequestedEdit, setOpenedRequestedEdit] = useState(false);
+  const [isOverviewVisible, setIsOverviewVisible] = useState(true);
+
+  useEffect(() => {
+    if (!openedRequestedEdit && searchParams.get("edit") === "true" && task) {
+      setForm(formValues(task));
+      setOpenedRequestedEdit(true);
+    }
+  }, [openedRequestedEdit, searchParams, task]);
 
   if (workspace.isPending || taskQuery.isPending) {
     return <LoadingState title="Loading task" className="min-h-[50vh]" />;
@@ -112,23 +158,25 @@ export default function TaskDetailPage() {
     );
   }
 
-  async function handleSave(input: TaskFormInput) {
+  async function handleSave(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    if (!form) return;
     await updateTask.mutateAsync({
       taskId,
       input: {
-        title: input.title,
-        description: input.description || undefined,
-        status: input.status,
-        priority: input.priority,
-        visibility: input.visibility,
-        workingWith: input.workingWith || undefined,
-        estimatedHours: input.estimatedHours || undefined,
-        dueDate: input.dueDate || undefined,
-        projectId: input.linkTarget === "project" ? input.projectId : undefined,
-        moduleId: input.linkTarget === "module" ? input.moduleId : "",
+        title: form.title.trim(),
+        description: form.description.trim() || undefined,
+        status: form.status,
+        priority: form.priority,
+        visibility: form.visibility,
+        workingWith: form.workingWith.trim() || undefined,
+        estimatedHours: form.estimatedHours || undefined,
+        dueDate: form.dueDate || undefined,
+        projectId: form.linkTarget === "project" ? form.projectId : undefined,
+        moduleId: form.linkTarget === "module" ? form.moduleId : "",
       },
     });
-    setIsEditing(false);
+    setForm(null);
   }
 
   const linkedModule = task.moduleId
@@ -158,44 +206,59 @@ export default function TaskDetailPage() {
             <Badge variant="outline" className={priorityPillClass(task.priority)}>
               {task.priority ?? "—"}
             </Badge>
-            <Button type="button" onClick={() => setIsEditing(true)}>
-              <Pencil />
-              Edit Task
-            </Button>
+            {form ? <Button type="button" variant="outline" onClick={() => setForm(null)}><X /> Cancel Editing</Button>
+              : <Button type="button" onClick={() => setForm(formValues(task))}><Pencil /> Edit Task</Button>}
           </div>
         }
       />
 
-      <TaskDialog
-        open={isEditing}
-        onOpenChange={setIsEditing}
-        tenantId={tenantId}
-        projects={projectsQuery.data ?? []}
-        modules={modulesQuery.data ?? []}
-        task={task}
-        onSave={(input) => void handleSave(input)}
-      />
+      {form ? (
+        <Card>
+          <CardHeader><CardTitle>Edit task details</CardTitle></CardHeader>
+          <CardContent>
+            <form onSubmit={(event) => void handleSave(event)} className="grid gap-6">
+              <div className="grid gap-5 sm:grid-cols-2">
+                <FormField label="Task title" htmlFor="edit-task-title" className="sm:col-span-2">
+                  <Input id="edit-task-title" value={form.title} onChange={(event) => setForm({ ...form, title: event.target.value })} required autoFocus />
+                </FormField>
+                <FormField label="Description" htmlFor="edit-task-description" className="sm:col-span-2">
+                  <Textarea id="edit-task-description" value={form.description} onChange={(event) => setForm({ ...form, description: event.target.value })} rows={3} />
+                </FormField>
+                <FormField label="Link to" htmlFor="edit-task-link" className="sm:col-span-2">
+                  <div id="edit-task-link" className="flex flex-wrap gap-2">{LINK_TARGETS.map((option) => <button key={option.value} type="button" aria-pressed={form.linkTarget === option.value}
+                    onClick={() => setForm({ ...form, linkTarget: option.value, projectId: option.value === "project" ? form.projectId : "", moduleId: option.value === "module" ? form.moduleId : "" })}
+                    className={form.linkTarget === option.value ? "rounded-full border border-primary bg-primary px-3 py-1 text-xs font-medium text-primary-foreground" : "rounded-full border px-3 py-1 text-xs font-medium text-muted-foreground"}>{option.label}</button>)}</div>
+                </FormField>
+                {form.linkTarget === "project" ? <FormField label="Project" htmlFor="edit-task-project"><Select value={form.projectId} onValueChange={(value) => setForm({ ...form, projectId: value })}><SelectTrigger id="edit-task-project"><SelectValue placeholder="Select a project" /></SelectTrigger><SelectContent>{(projectsQuery.data ?? []).map((project) => <SelectItem key={project.id} value={project.id}>{project.title}</SelectItem>)}</SelectContent></Select></FormField> : null}
+                {form.linkTarget === "module" ? <FormField label="Module" htmlFor="edit-task-module"><Select value={form.moduleId} onValueChange={(value) => setForm({ ...form, moduleId: value })}><SelectTrigger id="edit-task-module"><SelectValue placeholder="Select a module" /></SelectTrigger><SelectContent>{(modulesQuery.data ?? []).map((module) => <SelectItem key={module.id} value={module.id}>{module.title}</SelectItem>)}</SelectContent></Select></FormField> : null}
+                <FormField label="Status" htmlFor="edit-task-status"><Select value={form.status} onValueChange={(value) => setForm({ ...form, status: value })}><SelectTrigger id="edit-task-status"><SelectValue /></SelectTrigger><SelectContent>{TASK_STATUSES.map((value) => <SelectItem key={value} value={value}>{value}</SelectItem>)}</SelectContent></Select></FormField>
+                <FormField label="Priority" htmlFor="edit-task-priority"><Select value={form.priority} onValueChange={(value) => setForm({ ...form, priority: value })}><SelectTrigger id="edit-task-priority"><SelectValue /></SelectTrigger><SelectContent>{TASK_PRIORITIES.map((value) => <SelectItem key={value} value={value}>{value}</SelectItem>)}</SelectContent></Select></FormField>
+                <FormField label="Due date" htmlFor="edit-task-due"><DatePickerInput id="edit-task-due" label="Due date" value={form.dueDate} onChange={(value) => setForm({ ...form, dueDate: value })} /></FormField>
+                <FormField label="Estimated hours" htmlFor="edit-task-hours"><Input id="edit-task-hours" type="number" min="0" step="0.5" value={form.estimatedHours} onChange={(event) => setForm({ ...form, estimatedHours: event.target.value })} /></FormField>
+                <FormField label="Visibility" htmlFor="edit-task-visibility"><Select value={form.visibility} onValueChange={(value) => setForm({ ...form, visibility: value })}><SelectTrigger id="edit-task-visibility"><SelectValue /></SelectTrigger><SelectContent>{VISIBILITY_OPTIONS.map((value) => <SelectItem key={value} value={value}>{value}</SelectItem>)}</SelectContent></Select></FormField>
+                {form.visibility === "Shared" ? <FormField label="Working with" htmlFor="edit-task-working"><Input id="edit-task-working" value={form.workingWith} onChange={(event) => setForm({ ...form, workingWith: event.target.value })} /></FormField> : null}
+              </div>
+              <div className="flex justify-end gap-3 border-t pt-5"><Button type="button" variant="outline" onClick={() => setForm(null)}>Cancel</Button><Button type="submit" disabled={updateTask.isPending}><Save /> Save Changes</Button></div>
+            </form>
+          </CardContent>
+        </Card>
+      ) : null}
 
-      <div className="grid gap-6 lg:grid-cols-[1.4fr_1fr]">
+      <div className="flex flex-col gap-6">
+        <section aria-labelledby="task-overview-heading">
+          <div className="mb-3 flex items-center justify-between gap-3">
+            <h2 id="task-overview-heading" className="text-lg font-semibold">Overview</h2>
+            <Button variant="outline" size="sm" aria-expanded={isOverviewVisible} aria-controls="task-overview-content" onClick={() => setIsOverviewVisible((visible) => !visible)}>
+              {isOverviewVisible ? <ChevronUp /> : <ChevronDown />}
+              {isOverviewVisible ? "Hide overview" : "Show overview"}
+            </Button>
+          </div>
+          {isOverviewVisible ? <div id="task-overview-content" className="grid gap-6 lg:grid-cols-[1.4fr_1fr]">
         <Card>
           <CardHeader>
             <CardTitle>Task overview</CardTitle>
           </CardHeader>
           <CardContent className="grid gap-5 text-sm sm:grid-cols-2">
-            <DetailItem label="Linked to">
-              {task.projectId ? (
-                <Link to={`/projects/${task.projectId}`} className="text-primary hover:underline">
-                  {linkedProjectQuery.data?.title ??
-                    (linkedProjectQuery.isError ? "Unknown project" : "Loading…")}
-                </Link>
-              ) : task.moduleId ? (
-                <Link to={`/modules/${task.moduleId}`} className="text-primary hover:underline">
-                  {linkedModule?.title ?? "Loading…"}
-                </Link>
-              ) : (
-                <span>General</span>
-              )}
-            </DetailItem>
             <DetailItem label="Estimated hours">
               {task.estimatedHours ? `${task.estimatedHours}h` : "—"}
             </DetailItem>
@@ -212,7 +275,7 @@ export default function TaskDetailPage() {
           </CardContent>
         </Card>
 
-        <Card className="lg:col-span-2">
+        <Card>
           <CardHeader>
             <CardTitle>Task members</CardTitle>
           </CardHeader>
@@ -232,6 +295,29 @@ export default function TaskDetailPage() {
                 This task is private — only you can see it. Switch its visibility to Shared to
                 add members.
               </p>
+            )}
+          </CardContent>
+        </Card>
+          </div> : null}
+        </section>
+
+        <Card>
+          <CardHeader><CardTitle>Linked work</CardTitle></CardHeader>
+          <CardContent>
+            {task.projectId ? (
+              <Link to={`/projects/${task.projectId}`} className="block rounded-md border border-border p-4 transition-colors hover:border-primary/40 hover:bg-muted/40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring">
+                <span className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Project</span>
+                <span className="mt-1 block font-semibold text-primary">
+                  {linkedProjectQuery.data?.title ?? (linkedProjectQuery.isError ? "Unknown project" : "Loading…")}
+                </span>
+              </Link>
+            ) : task.moduleId ? (
+              <Link to={`/modules/${task.moduleId}`} className="block rounded-md border border-border p-4 transition-colors hover:border-primary/40 hover:bg-muted/40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring">
+                <span className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Module</span>
+                <span className="mt-1 block font-semibold text-primary">{linkedModule?.title ?? "Loading…"}</span>
+              </Link>
+            ) : (
+              <p className="text-sm text-muted-foreground">This is a general task with no linked project or module.</p>
             )}
           </CardContent>
         </Card>

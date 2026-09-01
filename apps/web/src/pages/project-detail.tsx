@@ -1,5 +1,5 @@
 import { useEffect, useState, type FormEvent, type ReactNode } from "react";
-import { ArrowLeft, FolderKanban, Pencil, Save, Trash2, Users, X } from "lucide-react";
+import { ArrowLeft, ChevronDown, ChevronUp, FolderKanban, Pencil, Save, Trash2, Users, X } from "lucide-react";
 import { Link, useNavigate, useParams, useSearchParams } from "react-router-dom";
 
 import {
@@ -119,21 +119,18 @@ function FormField({ label, htmlFor, required, children, className = "" }: {
 
 function ProjectModulesDetails({ modules }: { modules: ApiModule[] }) {
   return (
-    <div className="flex flex-col gap-3 border-t border-border pt-4">
-      <div className="flex items-center justify-between gap-3">
-        <span className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-          Modules ({modules.length})
-        </span>
-        <Button asChild variant="ghost" size="sm">
-          <Link to="/modules">Manage modules</Link>
-        </Button>
-      </div>
-      {modules.length === 0 ? (
-        <p className="text-sm text-muted-foreground">No modules are linked to this project.</p>
-      ) : (
-        <div className="grid gap-2 lg:grid-cols-2">
-          {modules.map((module) => (
-            <div key={module.id} className="rounded-md border border-border bg-card p-3">
+    <Card>
+      <CardHeader className="flex-row items-center justify-between gap-3 space-y-0">
+        <CardTitle>Modules ({modules.length})</CardTitle>
+        <Button asChild variant="ghost" size="sm"><Link to="/modules">View all</Link></Button>
+      </CardHeader>
+      <CardContent>
+        {modules.length === 0 ? (
+          <p className="text-sm text-muted-foreground">No modules are linked to this project.</p>
+        ) : (
+          <div className="grid gap-2">
+            {modules.map((module) => (
+              <Link key={module.id} to={`/modules/${module.id}`} className="rounded-md border border-border bg-card p-3 transition-colors hover:border-primary/40 hover:bg-muted/40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring">
               <div className="flex flex-wrap items-start justify-between gap-2">
                 <div className="min-w-0">
                   {module.displayId ? (
@@ -145,31 +142,29 @@ function ProjectModulesDetails({ modules }: { modules: ApiModule[] }) {
                 </div>
                 <StatusBadge status={module.status ?? "—"} />
               </div>
-            </div>
-          ))}
-        </div>
-      )}
-    </div>
+              </Link>
+            ))}
+          </div>
+        )}
+      </CardContent>
+    </Card>
   );
 }
 
 function ProjectTasksDetails({ tasks }: { tasks: ApiTask[] }) {
   return (
-    <div className="flex flex-col gap-3 border-t border-border pt-4">
-      <div className="flex items-center justify-between gap-3">
-        <span className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-          Tasks ({tasks.length})
-        </span>
-        <Button asChild variant="ghost" size="sm">
-          <Link to="/tasks">Manage tasks</Link>
-        </Button>
-      </div>
-      {tasks.length === 0 ? (
-        <p className="text-sm text-muted-foreground">No tasks are linked to this project.</p>
-      ) : (
-        <div className="grid gap-2 lg:grid-cols-2">
-          {tasks.map((task) => (
-            <div key={task.id} className="rounded-md border border-border bg-card p-3">
+    <Card>
+      <CardHeader className="flex-row items-center justify-between gap-3 space-y-0">
+        <CardTitle>Tasks ({tasks.length})</CardTitle>
+        <Button asChild variant="ghost" size="sm"><Link to="/tasks">View all</Link></Button>
+      </CardHeader>
+      <CardContent>
+        {tasks.length === 0 ? (
+          <p className="text-sm text-muted-foreground">No tasks are linked to this project.</p>
+        ) : (
+          <div className="grid gap-2">
+            {tasks.map((task) => (
+              <Link key={task.id} to={`/tasks/${task.id}`} className="rounded-md border border-border bg-card p-3 transition-colors hover:border-primary/40 hover:bg-muted/40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring">
               <div className="flex flex-wrap items-start justify-between gap-2">
                 <div className="min-w-0">
                   {task.displayId ? (
@@ -187,40 +182,39 @@ function ProjectTasksDetails({ tasks }: { tasks: ApiTask[] }) {
               <div className="mt-2 flex flex-wrap gap-x-4 gap-y-1 text-xs text-muted-foreground">
                 <span>Due {formatDate(task.dueDate)}</span>
               </div>
-            </div>
-          ))}
-        </div>
-      )}
-    </div>
+              </Link>
+            ))}
+          </div>
+        )}
+      </CardContent>
+    </Card>
   );
 }
 
 function ProjectNotesDetails({ notes }: { notes: ApiNote[] }) {
   return (
-    <div className="flex flex-col gap-3 border-t border-border pt-4">
-      <div className="flex items-center justify-between gap-3">
-        <span className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-          Notes ({notes.length})
-        </span>
-        <Button asChild variant="ghost" size="sm">
-          <Link to="/daily-notes">Manage notes</Link>
-        </Button>
-      </div>
-      {notes.length === 0 ? (
-        <p className="text-sm text-muted-foreground">No notes are linked to this project.</p>
-      ) : (
-        <div className="grid gap-2 lg:grid-cols-2">
-          {notes.map((note) => (
-            <div key={note.id} className="rounded-md border border-border bg-card p-3">
+    <Card>
+      <CardHeader className="flex-row items-center justify-between gap-3 space-y-0">
+        <CardTitle>Notes ({notes.length})</CardTitle>
+        <Button asChild variant="ghost" size="sm"><Link to="/daily-notes">View all</Link></Button>
+      </CardHeader>
+      <CardContent>
+        {notes.length === 0 ? (
+          <p className="text-sm text-muted-foreground">No notes are linked to this project.</p>
+        ) : (
+          <div className="grid gap-2">
+            {notes.map((note) => (
+              <Link key={note.id} to={`/daily-notes/${note.id}`} className="rounded-md border border-border bg-card p-3 transition-colors hover:border-primary/40 hover:bg-muted/40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring">
               <span className="text-sm font-semibold">{note.title}</span>
               {note.content ? (
                 <p className="mt-1 line-clamp-2 text-xs text-muted-foreground">{note.content}</p>
               ) : null}
-            </div>
-          ))}
-        </div>
-      )}
-    </div>
+              </Link>
+            ))}
+          </div>
+        )}
+      </CardContent>
+    </Card>
   );
 }
 
@@ -242,6 +236,7 @@ export default function ProjectDetailPage() {
   const me = useMe();
   const updateProject = useUpdateMyProject();
   const archiveProject = useArchiveMyProject();
+  const [isOverviewVisible, setIsOverviewVisible] = useState(true);
 
   const project = projectQuery.data;
   const sameTenant = Boolean(project && tenantId && project.tenantId === tenantId);
@@ -518,7 +513,16 @@ export default function ProjectDetailPage() {
           </CardContent>
         </Card>
       ) : (
-        <div className="grid gap-6 lg:grid-cols-[1.4fr_1fr]">
+        <div className="flex flex-col gap-6">
+          <section aria-labelledby="project-overview-heading">
+            <div className="mb-3 flex items-center justify-between gap-3">
+              <h2 id="project-overview-heading" className="text-lg font-semibold">Overview</h2>
+              <Button variant="outline" size="sm" aria-expanded={isOverviewVisible} aria-controls="project-overview-content" onClick={() => setIsOverviewVisible((visible) => !visible)}>
+                {isOverviewVisible ? <ChevronUp /> : <ChevronDown />}
+                {isOverviewVisible ? "Hide overview" : "Show overview"}
+              </Button>
+            </div>
+            {isOverviewVisible ? <div id="project-overview-content" className="grid gap-6 lg:grid-cols-[1.4fr_1fr]">
           <Card>
             <CardHeader>
               <CardTitle>Project overview</CardTitle>
@@ -538,33 +542,16 @@ export default function ProjectDetailPage() {
                   <span className="font-normal text-muted-foreground">{project.description}</span>
                 </DetailItem>
               ) : null}
+              <div className="grid gap-5 border-t border-border pt-5 sm:col-span-2 sm:grid-cols-2">
+                <DetailItem label="Tasks">{taskCounts.completed}/{taskCounts.total} complete</DetailItem>
+                <DetailItem label="Notes">{(notesQuery.data ?? []).length}</DetailItem>
+                <DetailItem label="Modules">{(modulesQuery.data ?? []).length}</DetailItem>
+                <DetailItem label="Total budget">{formatCurrency(project.totalBudget)}</DetailItem>
+              </div>
             </CardContent>
           </Card>
 
           <Card>
-            <CardHeader>
-              <CardTitle>Progress and resources</CardTitle>
-            </CardHeader>
-            <CardContent className="grid gap-5 text-sm sm:grid-cols-2 lg:grid-cols-1 xl:grid-cols-2">
-              <DetailItem label="Tasks">{taskCounts.completed}/{taskCounts.total} complete</DetailItem>
-              <DetailItem label="Notes">{(notesQuery.data ?? []).length}</DetailItem>
-              <DetailItem label="Modules">{(modulesQuery.data ?? []).length}</DetailItem>
-              <DetailItem label="Total budget">{formatCurrency(project.totalBudget)}</DetailItem>
-            </CardContent>
-          </Card>
-
-          <Card className="lg:col-span-2">
-            <CardHeader>
-              <CardTitle>Linked work</CardTitle>
-            </CardHeader>
-            <CardContent className="flex flex-col gap-5">
-              <ProjectModulesDetails modules={modulesQuery.data ?? []} />
-              <ProjectTasksDetails tasks={tasksQuery.data ?? []} />
-              <ProjectNotesDetails notes={notesQuery.data ?? []} />
-            </CardContent>
-          </Card>
-
-          <Card className="lg:col-span-2">
             <CardHeader>
               <CardTitle>Project collaborators</CardTitle>
             </CardHeader>
@@ -593,6 +580,14 @@ export default function ProjectDetailPage() {
               )}
             </CardContent>
           </Card>
+            </div> : null}
+          </section>
+
+          <section className="grid gap-6 lg:grid-cols-3" aria-label="Linked work">
+            <ProjectModulesDetails modules={modulesQuery.data ?? []} />
+            <ProjectTasksDetails tasks={tasksQuery.data ?? []} />
+            <ProjectNotesDetails notes={notesQuery.data ?? []} />
+          </section>
         </div>
       )}
     </div>
