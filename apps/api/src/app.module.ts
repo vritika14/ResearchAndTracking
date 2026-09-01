@@ -28,6 +28,7 @@ import { ModulePipelineStagesPoolModule } from './modules/module-pipeline-stages
 import { ProjectInvitationsModule } from './modules/project-invitations/project-invitations.module';
 import { ConferencesModule } from './modules/conferences/conferences.module';
 import { FeedbackModule } from './modules/feedback/feedback.module';
+import { PreferencesModule } from './modules/preferences/preferences.module';
 
 @Module({
   imports: [
@@ -86,6 +87,7 @@ import { FeedbackModule } from './modules/feedback/feedback.module';
     ProjectInvitationsModule,
     ConferencesModule,
     FeedbackModule,
+    PreferencesModule,
   ],
   controllers: [AppController],
   providers: [AppService],

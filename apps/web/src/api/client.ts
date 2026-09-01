@@ -24,8 +24,8 @@ export function setApiAccessToken(token: string | undefined) {
 
 export const apiClient = createClient<paths>({ baseUrl: apiBaseUrl });
 
-export async function authenticatedJson<T>(path: string): Promise<T> {
-  return apiJson<T>(path);
+export async function authenticatedJson<T>(path: string, init: RequestInit = {}): Promise<T> {
+  return apiJson<T>(path, init);
 }
 
 export async function apiJson<T>(path: string, init: RequestInit = {}): Promise<T> {

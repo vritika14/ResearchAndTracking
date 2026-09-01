@@ -30,6 +30,24 @@ export interface UpdateProfile {
   phone?: string;
   researchInterests?: string;
 }
+export interface AccountPreferences {
+  appearanceTheme?: "light" | "dark";
+  designTheme?: "modern" | "minimal" | "executive";
+  colorTheme?: "ocean" | "violet" | "emerald" | "rose";
+  textSize?: "small" | "default" | "large";
+}
+export interface DashboardLayoutPreference {
+  order: string[];
+  hidden: string[];
+}
+export interface WorkspacePreferences {
+  dashboardLayout?: DashboardLayoutPreference;
+  tableColumns?: Record<string, string[]>;
+}
+export interface WorkspacePreferencesPatch {
+  dashboardLayout?: DashboardLayoutPreference;
+  tableColumns?: Record<string, string[]>;
+}
 export interface Workspace {
   id: string;
   name: string;
@@ -248,6 +266,9 @@ export const apiKeys = {
     ["api", "tenant", tenantId, "conferences"] as const,
   conference: (tenantId: string, conferenceId: string) =>
     ["api", "tenant", tenantId, "conferences", conferenceId] as const,
+  accountPreferences: ["api", "me", "preferences"] as const,
+  workspacePreferences: (tenantId: string) =>
+    ["api", "tenant", tenantId, "me", "preferences"] as const,
 };
 
 export function useMe(enabled = true) {
@@ -274,9 +295,73 @@ export function useUpdateMe() {
   });
 }
 
-export function useCurrentWorkspace() {
+export function useAccountPreferences(enabled = true) {
+  return useQuery({
+    queryKey: apiKeys.accountPreferences,
+    enabled,
+    queryFn: async () =>
+      (await authenticatedJson<{ preferences: AccountPreferences | null }>(
+        "/api/v1/me/preferences",
+      )).preferences,
+  });
+}
+
+export function useUpdateAccountPreferences() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async (preferences: AccountPreferences) =>
+      (await authenticatedJson<{ preferences: AccountPreferences }>(
+        "/api/v1/me/preferences",
+        { method: "PATCH", body: JSON.stringify(preferences) },
+      )).preferences,
+    onSuccess(preferences, patch) {
+      queryClient.setQueryData<AccountPreferences>(apiKeys.accountPreferences, (current) => ({
+        ...(current ?? preferences),
+        ...patch,
+      }));
+    },
+  });
+}
+
+export function useWorkspacePreferences(tenantId: string, enabled = true) {
+  return useQuery({
+    queryKey: apiKeys.workspacePreferences(tenantId),
+    enabled: Boolean(tenantId) && enabled,
+    queryFn: async () =>
+      (await authenticatedJson<{ preferences: WorkspacePreferences | null }>(
+        `/api/v1/tenant/${tenantId}/me/preferences`,
+      )).preferences,
+  });
+}
+
+export function useUpdateWorkspacePreferences(tenantId: string) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async (patch: WorkspacePreferencesPatch) =>
+      (await authenticatedJson<{ preferences: WorkspacePreferences }>(
+        `/api/v1/tenant/${tenantId}/me/preferences`,
+        { method: "PATCH", body: JSON.stringify(patch) },
+      )).preferences,
+    onSuccess(preferences, patch) {
+      queryClient.setQueryData<WorkspacePreferences>(
+        apiKeys.workspacePreferences(tenantId),
+        (current) => ({
+          ...(current ?? preferences),
+          ...(patch.dashboardLayout ? { dashboardLayout: patch.dashboardLayout } : {}),
+          tableColumns: {
+            ...(current?.tableColumns ?? preferences.tableColumns ?? {}),
+            ...(patch.tableColumns ?? {}),
+          },
+        }),
+      );
+    },
+  });
+}
+
+export function useCurrentWorkspace(enabled = true) {
   return useQuery({
     queryKey: apiKeys.currentWorkspace,
+    enabled,
     queryFn: async () => {
       const result = await apiClient.GET("/api/v1/workspaces/current");
       if (result.response.status === 404) return null;

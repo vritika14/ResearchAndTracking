@@ -228,6 +228,7 @@ export default function ProjectsPage() {
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const columns = useColumnVisibility(
     PROJECT_COLUMNS.map((column) => column.id),
+    "projects",
   );
   const gridTemplate = PROJECT_COLUMNS.filter((column) =>
     columns.visibleColumns.has(column.id),

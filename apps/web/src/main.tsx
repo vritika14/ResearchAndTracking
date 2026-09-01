@@ -12,6 +12,7 @@ import { ColorThemeProvider } from "@/theme/color-theme";
 import { AppearanceThemeProvider } from "@/theme/appearance-theme";
 import { DesignThemeProvider } from "@/theme/design-theme";
 import { TextSizeProvider } from "@/theme/text-size";
+import { PreferencesProvider } from "@/preferences/preferences-provider";
 import App from "./App";
 import "./index.css";
 
@@ -44,7 +45,9 @@ export function AuthenticatedQueryRoot() {
     <SubjectQueryRoot key={auth.user?.profile.sub ?? "signed-out"}>
       <StrictMode>
         <ApiAuthBridge>
-          <App />
+          <PreferencesProvider>
+            <App />
+          </PreferencesProvider>
         </ApiAuthBridge>
       </StrictMode>
     </SubjectQueryRoot>

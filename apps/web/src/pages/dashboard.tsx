@@ -7,7 +7,7 @@ import {
   Send,
   SlidersHorizontal,
 } from "lucide-react";
-import { useEffect, useMemo, useState, type ComponentType } from "react";
+import { useEffect, useMemo, useRef, useState, type ComponentType } from "react";
 
 import { useCurrentWorkspace, usePipelineStages, useProjects, useTasks } from "@/api/hooks";
 import { ConferenceSubmissionsTable } from "@/components/dashboard/conference-submissions-table";
@@ -23,6 +23,7 @@ import { PriorityTasksTable } from "@/components/dashboard/priority-tasks-table"
 import { PageHeading } from "@/components/typography/heading";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
+import { usePreferences } from "@/preferences/preferences-context";
 import {
   Card,
   CardContent,
@@ -138,13 +139,17 @@ function isDashboardWidgetId(value: unknown): value is DashboardWidgetId {
   return DEFAULT_WIDGET_ORDER.includes(value as DashboardWidgetId);
 }
 
-function loadDashboardLayout(): StoredDashboardLayout {
+function loadDashboardLayout(storageKey = DASHBOARD_LAYOUT_KEY): StoredDashboardLayout {
   if (typeof window === "undefined") {
     return { order: [...DEFAULT_WIDGET_ORDER], hidden: [] };
   }
 
   try {
-    const stored = JSON.parse(window.localStorage.getItem(DASHBOARD_LAYOUT_KEY) ?? "null") as {
+    const serialized = window.localStorage.getItem(storageKey)
+      ?? (storageKey === DASHBOARD_LAYOUT_KEY
+        ? null
+        : window.localStorage.getItem(DASHBOARD_LAYOUT_KEY));
+    const stored = JSON.parse(serialized ?? "null") as {
       order?: unknown;
       hidden?: unknown;
     } | null;
@@ -173,6 +178,9 @@ export default function DashboardPage() {
   const stagesQuery = usePipelineStages(tenantId);
   const [isCustomizeOpen, setIsCustomizeOpen] = useState(false);
   const [layout, setLayout] = useState(loadDashboardLayout);
+  const preferences = usePreferences();
+  const hydratedWorkspace = useRef("");
+  const skipNextLayoutSave = useRef(false);
 
   const summary = useMemo(
     () =>
@@ -202,8 +210,46 @@ export default function DashboardPage() {
     .filter((widget) => widget.group === "Tables");
 
   useEffect(() => {
-    window.localStorage.setItem(DASHBOARD_LAYOUT_KEY, JSON.stringify(layout));
-  }, [layout]);
+    if (
+      !preferences?.workspaceId ||
+      preferences.workspacePreferences === undefined ||
+      hydratedWorkspace.current === preferences.workspaceId
+    ) return;
+
+    hydratedWorkspace.current = preferences.workspaceId;
+    skipNextLayoutSave.current = true;
+    const remote = preferences.workspacePreferences?.dashboardLayout;
+    if (remote) {
+      const savedOrder = remote.order.filter(isDashboardWidgetId);
+      setLayout({
+        order: [
+          ...new Set(savedOrder),
+          ...DEFAULT_WIDGET_ORDER.filter((id) => !savedOrder.includes(id)),
+        ],
+        hidden: [...new Set(remote.hidden.filter(isDashboardWidgetId))],
+      });
+    } else {
+      const local = loadDashboardLayout(
+        `${DASHBOARD_LAYOUT_KEY}:${preferences.workspaceId}`,
+      );
+      setLayout(local);
+      preferences.updateDashboardLayout(local);
+    }
+  }, [layout, preferences]);
+
+  useEffect(() => {
+    const storageKey = preferences?.workspaceId
+      ? `${DASHBOARD_LAYOUT_KEY}:${preferences.workspaceId}`
+      : DASHBOARD_LAYOUT_KEY;
+    window.localStorage.setItem(storageKey, JSON.stringify(layout));
+    if (!preferences || hydratedWorkspace.current !== preferences.workspaceId) return;
+    if (skipNextLayoutSave.current) {
+      skipNextLayoutSave.current = false;
+      return;
+    }
+    const timeout = window.setTimeout(() => preferences.updateDashboardLayout(layout), 400);
+    return () => window.clearTimeout(timeout);
+  }, [layout, preferences]);
 
   function toggleWidget(widgetId: DashboardWidgetId) {
     setLayout((current) => ({
