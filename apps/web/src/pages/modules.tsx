@@ -87,7 +87,7 @@ export default function ModulesPage() {
 
   const [search, setSearch] = useState("");
   const [status, setStatus] = useState<StatusFilter>("All");
-  const columns = useColumnVisibility(MODULE_COLUMNS.map((column) => column.id));
+  const columns = useColumnVisibility(MODULE_COLUMNS.map((column) => column.id), "modules");
   const gridTemplate = MODULE_COLUMNS.filter((column) =>
     columns.visibleColumns.has(column.id),
   )

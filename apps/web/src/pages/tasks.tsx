@@ -139,7 +139,7 @@ export default function TasksPage() {
   const [priority, setPriority] = useState<PriorityFilter>("All");
   const [sortColumn, setSortColumn] = useState<SortColumn>("due");
   const [sortDirection, setSortDirection] = useState<SortDirection>("asc");
-  const columns = useColumnVisibility(TASK_COLUMNS.map((column) => column.id));
+  const columns = useColumnVisibility(TASK_COLUMNS.map((column) => column.id), "tasks");
   const gridTemplate = TASK_COLUMNS.filter((column) =>
     columns.visibleColumns.has(column.id),
   )

@@ -59,7 +59,10 @@ export function PriorityTasksTable() {
 
   const [search, setSearch] = useState("");
   const [priority, setPriority] = useState<PriorityFilter>("All");
-  const columns = useColumnVisibility(TASK_COLUMNS.map((column) => column.id));
+  const columns = useColumnVisibility(
+    TASK_COLUMNS.map((column) => column.id),
+    "dashboard-priority-tasks",
+  );
 
   const projectById = useMemo(() => {
     const map = new Map<string, string>();

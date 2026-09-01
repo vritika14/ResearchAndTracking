@@ -56,6 +56,7 @@ export function PipelineOverviewTable() {
   const [stage, setStage] = useState("All");
   const columns = useColumnVisibility(
     PIPELINE_COLUMNS.map((column) => column.id),
+    "dashboard-pipeline",
   );
 
   const stages = useMemo(

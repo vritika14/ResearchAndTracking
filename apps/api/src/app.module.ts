@@ -27,6 +27,7 @@ import { ModulePipelineStagesPoolModule } from './modules/module-pipeline-stages
 import { ProjectInvitationsModule } from './modules/project-invitations/project-invitations.module';
 import { ConferencesModule } from './modules/conferences/conferences.module';
 import { FeedbackModule } from './modules/feedback/feedback.module';
+import { PreferencesModule } from './modules/preferences/preferences.module';
 import { APP_INTERCEPTOR } from '@nestjs/core';
 import { RequestContextInterceptor } from './db/request-context.interceptor';
 import { ScheduleModule } from '@nestjs/schedule';
@@ -90,6 +91,7 @@ import { ArchiveCleanupModule } from './modules/archive-cleanup/archive-cleanup.
     ProjectInvitationsModule,
     ConferencesModule,
     FeedbackModule,
+    PreferencesModule,
     ArchiveCleanupModule,
   ],
   controllers: [AppController],

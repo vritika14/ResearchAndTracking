@@ -91,7 +91,10 @@ export function ConferenceSubmissionsTable({ showPast = false }: { showPast?: bo
   const [isCreateOpen, setIsCreateOpen] = useState(false);
   const [editingConference, setEditingConference] = useState<ApiConference | null>(null);
   const [actionError, setActionError] = useState<string | null>(null);
-  const columns = useColumnVisibility(CONFERENCE_COLUMNS.map((column) => column.id));
+  const columns = useColumnVisibility(
+    CONFERENCE_COLUMNS.map((column) => column.id),
+    "conferences",
+  );
 
   const ownedProjects = useMemo(
     () => (projectsQuery.data ?? []).filter((project) =>
