@@ -1,4 +1,8 @@
-import { ForbiddenException, Injectable, NotFoundException } from '@nestjs/common';
+import {
+  ForbiddenException,
+  Injectable,
+  NotFoundException,
+} from '@nestjs/common';
 import { EnumRepository } from '../../enum/repositories/enum.repository';
 import { ModuleCollaboratorsRepository } from '../../module-collaborators/repositories/module-collaborators.repository';
 import { ProjectCollaboratorsRepository } from '../../project-collaborators/repositories/project-collaborators.repository';
@@ -240,16 +244,26 @@ export class ProjectModulesService {
     if (!existingModule) {
       throw new NotFoundException('Module not found');
     }
-    const ownerMembership = await this.collaboratorsRepository.findByModuleAndUser(
-      tenantId,
-      moduleId,
-      callerUserId,
+    const ownerMembership =
+      await this.collaboratorsRepository.findByModuleAndUser(
+        tenantId,
+        moduleId,
+        callerUserId,
+      );
+    const ownerRole = await this.enumRepository.findByCategoryAndValue(
+      'project_role',
+      'Owner',
     );
-    const ownerRole = await this.enumRepository.findByCategoryAndValue('project_role', 'Owner');
-    if (!ownerMembership || !ownerRole || ownerMembership.roleId !== ownerRole.id) {
-      throw new ForbiddenException('Only the module owner can archive this module');
+    if (
+      !ownerMembership ||
+      !ownerRole ||
+      ownerMembership.roleId !== ownerRole.id
+    ) {
+      throw new ForbiddenException(
+        'Only the module owner can archive this module',
+      );
     }
-  
+
     const archivedStatusId = await this.resolveEnum(
       'project_status',
       'Archived',

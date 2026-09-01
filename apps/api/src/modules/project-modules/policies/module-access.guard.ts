@@ -50,13 +50,13 @@ export class ModuleAccessGuard implements CanActivate {
         return true;
       }
     }
-    
+
     const moduleCollaborator =
       await this.moduleCollaboratorsRepository.checkAccessForGuard(
         moduleId,
         user.id,
       );
-    
+
     if (!moduleCollaborator) {
       throw new ForbiddenException('You do not have access to this module');
     }

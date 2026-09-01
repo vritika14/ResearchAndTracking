@@ -1,4 +1,4 @@
-import { Module} from '@nestjs/common';
+import { Module } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
 import { join } from 'path';
 import { LoggerModule } from 'nestjs-pino';
@@ -90,14 +90,15 @@ import { ArchiveCleanupModule } from './modules/archive-cleanup/archive-cleanup.
     ProjectInvitationsModule,
     ConferencesModule,
     FeedbackModule,
-    ArchiveCleanupModule
+    ArchiveCleanupModule,
   ],
   controllers: [AppController],
-  providers: [AppService,
+  providers: [
+    AppService,
     {
       provide: APP_INTERCEPTOR,
       useClass: RequestContextInterceptor,
     },
   ],
 })
-export class AppModule{}
+export class AppModule {}

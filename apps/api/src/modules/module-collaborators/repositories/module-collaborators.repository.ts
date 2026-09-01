@@ -95,13 +95,13 @@ export class ModuleCollaboratorsRepository {
     return row;
   }
   /**
- * Pre-context bypass, used only by guards that run before
- * RequestContextInterceptor sets app.current_user_id.
- */
-async checkAccessForGuard(moduleId: string, userId: string) {
-  const result = await this.drizzle.db.execute(
-    sql`SELECT * FROM check_module_collaborator(${moduleId}::uuid, ${userId}::uuid)`,
-  );
-  return result.rows[0] as { id: string; roleId: string } | undefined;
-}
+   * Pre-context bypass, used only by guards that run before
+   * RequestContextInterceptor sets app.current_user_id.
+   */
+  async checkAccessForGuard(moduleId: string, userId: string) {
+    const result = await this.drizzle.db.execute(
+      sql`SELECT * FROM check_module_collaborator(${moduleId}::uuid, ${userId}::uuid)`,
+    );
+    return result.rows[0] as { id: string; roleId: string } | undefined;
+  }
 }

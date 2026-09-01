@@ -1,4 +1,8 @@
-import { ForbiddenException, Injectable, NotFoundException } from '@nestjs/common';
+import {
+  ForbiddenException,
+  Injectable,
+  NotFoundException,
+} from '@nestjs/common';
 import { EnumRepository } from '../../enum/repositories/enum.repository';
 import { ProjectCollaboratorsRepository } from '../../project-collaborators/repositories/project-collaborators.repository';
 import { TenantSequencesRepository } from '../../tenant-sequences/repositories/tenant-sequences.repository';
@@ -215,9 +219,11 @@ export class ProjectsService {
       throw new NotFoundException('Project not found');
     }
     if (existingProject.userId !== callerUserId) {
-      throw new ForbiddenException('Only the project owner can archive this project');
+      throw new ForbiddenException(
+        'Only the project owner can archive this project',
+      );
     }
-  
+
     const archivedStatusId = await this.resolveEnum(
       'project_status',
       'Archived',
@@ -227,7 +233,7 @@ export class ProjectsService {
         'Archived status is not configured in the enum table',
       );
     }
-  
+
     const project = await this.repository.archive(
       tenantId,
       projectId,
@@ -236,9 +242,9 @@ export class ProjectsService {
     if (!project) {
       throw new NotFoundException('Project not found');
     }
-  
+
     const [shaped] = await this.withDisplayValues([project], callerUserId);
-  
+
     return {
       project: shaped,
       warning: `This project has been archived and will be permanently deleted in ${ARCHIVE_RETENTION_DAYS} days.`,

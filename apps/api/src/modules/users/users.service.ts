@@ -159,7 +159,7 @@ export class UsersService {
       sql`SELECT current_setting('app.current_user_id', true) as val, pg_backend_pid() as pid`,
     );
     console.log('DEBUG - users insert, session var:', debugCheck.rows[0]);
-    
+
     const [created] = await this.drizzle.db
       .insert(users)
       .values({

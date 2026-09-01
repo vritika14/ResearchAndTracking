@@ -25,9 +25,13 @@ export class DrizzleService implements OnModuleInit, OnModuleDestroy {
       ),
       database: this.configService.getOrThrow<string>('POSTGRES_DB'),
       ssl: this.configService.get<boolean>('POSTGRES_SSL', true)
-        ? { rejectUnauthorized: true,
-          ca: readFileSync(join(__dirname, '../../certs/rds-ca-bundle.pem'), 'utf-8'),
-         }
+        ? {
+            rejectUnauthorized: true,
+            ca: readFileSync(
+              join(__dirname, '../../certs/rds-ca-bundle.pem'),
+              'utf-8',
+            ),
+          }
         : false,
     });
 

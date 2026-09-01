@@ -190,11 +190,11 @@ export class ConferencesRepository {
       .insert(conferences)
       .values(values)
       .returning();
-  
+
     if (!conference) {
       return undefined;
     }
-  
+
     await this.drizzle.db.insert(conferenceProjects).values(
       projectIds.map((projectId) => ({
         tenantId: values.tenantId,
@@ -202,7 +202,7 @@ export class ConferencesRepository {
         projectId,
       })),
     );
-  
+
     return conference;
   }
 
@@ -231,11 +231,11 @@ export class ConferencesRepository {
         ),
       )
       .returning();
-  
+
     if (!conference) {
       return undefined;
     }
-  
+
     if (projectIds !== undefined) {
       await this.drizzle.db
         .delete(conferenceProjects)
@@ -245,7 +245,7 @@ export class ConferencesRepository {
             eq(conferenceProjects.conferenceId, conferenceId),
           ),
         );
-  
+
       await this.drizzle.db.insert(conferenceProjects).values(
         projectIds.map((projectId) => ({
           tenantId,
@@ -254,7 +254,7 @@ export class ConferencesRepository {
         })),
       );
     }
-  
+
     return conference;
   }
 

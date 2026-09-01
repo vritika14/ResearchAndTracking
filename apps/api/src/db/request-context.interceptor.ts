@@ -5,7 +5,7 @@ import {
   Injectable,
   NestInterceptor,
 } from '@nestjs/common';
-import { Request } from 'express';
+import { Request, Response } from 'express';
 import { drizzle } from 'drizzle-orm/node-postgres';
 import { Observable, from } from 'rxjs';
 import * as schema from '@research-tracker/migrations';
@@ -31,7 +31,7 @@ export class RequestContextInterceptor implements NestInterceptor {
 
   private async handle(context: ExecutionContext, next: CallHandler) {
     const req = context.switchToHttp().getRequest<AuthenticatedRequest>();
-    const res = context.switchToHttp().getResponse();
+    const res = context.switchToHttp().getResponse<Response>();
 
     const tenantIdMatch = req.originalUrl.match(/\/tenant\/([^/]+)/);
     const tenantId = tenantIdMatch?.[1] ?? null;
@@ -89,7 +89,7 @@ export class RequestContextInterceptor implements NestInterceptor {
               .query('ROLLBACK')
               .catch(() => undefined)
               .finally(() => client.release());
-            reject(err);
+            reject(err instanceof Error ? err : new Error(String(err)));
           },
         });
       });

@@ -24,10 +24,14 @@ export class ArchiveCleanupService {
     );
 
     if (deletedProjects.rows.length > 0) {
-      this.logger.log(`Permanently deleted ${deletedProjects.rows.length} project(s) archived over ${RETENTION_DAYS} days ago`);
+      this.logger.log(
+        `Permanently deleted ${deletedProjects.rows.length} project(s) archived over ${RETENTION_DAYS} days ago`,
+      );
     }
     if (deletedModules.rows.length > 0) {
-      this.logger.log(`Permanently deleted ${deletedModules.rows.length} module(s) archived over ${RETENTION_DAYS} days ago`);
+      this.logger.log(
+        `Permanently deleted ${deletedModules.rows.length} module(s) archived over ${RETENTION_DAYS} days ago`,
+      );
     }
 
     return {

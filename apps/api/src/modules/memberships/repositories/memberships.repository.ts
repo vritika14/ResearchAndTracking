@@ -36,6 +36,7 @@ export class MembershipsRepository {
     const result = await this.drizzle.db.execute(
       sql`SELECT * FROM check_tenant_membership(${tenantId}::uuid, ${userId}::uuid)`,
     );
-    return result.rows[0] as { id: string; role: string; status: string } | undefined;
+    return result.rows[0] as
+      { id: string; role: string; status: string } | undefined;
   }
 }
