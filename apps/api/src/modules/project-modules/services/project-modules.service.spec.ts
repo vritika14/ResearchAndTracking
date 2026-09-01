@@ -259,19 +259,19 @@ describe('ProjectModulesService', () => {
         statusId: null,
       });
       collaboratorsRepository.findByModuleAndUser.mockResolvedValue({
-        roleId: 'role-1',
+        roleId: 'owner-role-id',
       });
-      enumRepository.findByCategoryAndValue.mockResolvedValue({
-        id: 'archived-status-id',
-      });
+      enumRepository.findByCategoryAndValue.mockImplementation((category: string, value: string) =>
+        Promise.resolve({ id: category === 'project_role' && value === 'Owner' ? 'owner-role-id' : 'archived-status-id' }),
+      );
       repository.archive.mockResolvedValue({
         id: 'module-1',
         tagId: null,
         statusId: 'archived-status-id',
       });
-
+    
       await service.archiveForCaller('module-1', 'user-1');
-
+    
       expect(repository.archive).toHaveBeenCalledWith(
         'tenant-1',
         'module-1',
@@ -419,19 +419,19 @@ describe('ProjectModulesService', () => {
         statusId: null,
       });
       collaboratorsRepository.findByModuleAndUser.mockResolvedValue({
-        roleId: 'role-1',
+        roleId: 'owner-role-id',
       });
-      enumRepository.findByCategoryAndValue.mockResolvedValue({
-        id: 'archived-status-id',
-      });
+      enumRepository.findByCategoryAndValue.mockImplementation((category: string, value: string) =>
+        Promise.resolve({ id: category === 'project_role' && value === 'Owner' ? 'owner-role-id' : 'archived-status-id' }),
+      );
       repository.archive.mockResolvedValue({
         id: 'module-1',
         tagId: null,
         statusId: 'archived-status-id',
       });
-
+    
       const result = await service.archive('tenant-1', 'module-1', 'user-1');
-
+    
       expect(repository.archive).toHaveBeenCalledWith(
         'tenant-1',
         'module-1',

@@ -186,26 +186,24 @@ export class ConferencesRepository {
    * Creates the conference and all project links in one transaction.
    */
   async create(values: CreateConferenceValues, projectIds: string[]) {
-    return this.drizzle.db.transaction(async (tx) => {
-      const [conference] = await tx
-        .insert(conferences)
-        .values(values)
-        .returning();
+    const [conference] = await this.drizzle.db
+      .insert(conferences)
+      .values(values)
+      .returning();
 
-      if (!conference) {
-        return undefined;
-      }
+    if (!conference) {
+      return undefined;
+    }
 
-      await tx.insert(conferenceProjects).values(
-        projectIds.map((projectId) => ({
-          tenantId: values.tenantId,
-          conferenceId: conference.id,
-          projectId,
-        })),
-      );
+    await this.drizzle.db.insert(conferenceProjects).values(
+      projectIds.map((projectId) => ({
+        tenantId: values.tenantId,
+        conferenceId: conference.id,
+        projectId,
+      })),
+    );
 
-      return conference;
-    });
+    return conference;
   }
 
   /**
@@ -220,46 +218,44 @@ export class ConferencesRepository {
     values: UpdateConferenceValues,
     projectIds?: string[],
   ) {
-    return this.drizzle.db.transaction(async (tx) => {
-      const [conference] = await tx
-        .update(conferences)
-        .set({
-          ...values,
-          updatedAt: new Date(),
-        })
+    const [conference] = await this.drizzle.db
+      .update(conferences)
+      .set({
+        ...values,
+        updatedAt: new Date(),
+      })
+      .where(
+        and(
+          eq(conferences.tenantId, tenantId),
+          eq(conferences.id, conferenceId),
+        ),
+      )
+      .returning();
+
+    if (!conference) {
+      return undefined;
+    }
+
+    if (projectIds !== undefined) {
+      await this.drizzle.db
+        .delete(conferenceProjects)
         .where(
           and(
-            eq(conferences.tenantId, tenantId),
-            eq(conferences.id, conferenceId),
+            eq(conferenceProjects.tenantId, tenantId),
+            eq(conferenceProjects.conferenceId, conferenceId),
           ),
-        )
-        .returning();
-
-      if (!conference) {
-        return undefined;
-      }
-
-      if (projectIds !== undefined) {
-        await tx
-          .delete(conferenceProjects)
-          .where(
-            and(
-              eq(conferenceProjects.tenantId, tenantId),
-              eq(conferenceProjects.conferenceId, conferenceId),
-            ),
-          );
-
-        await tx.insert(conferenceProjects).values(
-          projectIds.map((projectId) => ({
-            tenantId,
-            conferenceId,
-            projectId,
-          })),
         );
-      }
 
-      return conference;
-    });
+      await this.drizzle.db.insert(conferenceProjects).values(
+        projectIds.map((projectId) => ({
+          tenantId,
+          conferenceId,
+          projectId,
+        })),
+      );
+    }
+
+    return conference;
   }
 
   /**

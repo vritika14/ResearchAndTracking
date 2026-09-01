@@ -4,6 +4,8 @@ import { ConfigService } from '@nestjs/config';
 import * as schema from '@research-tracker/migrations';
 import { drizzle, NodePgDatabase } from 'drizzle-orm/node-postgres';
 import { Pool, PoolClient } from 'pg';
+import { readFileSync } from 'fs';
+import { join } from 'path';
 import { getRequestContext } from './request-context';
 
 @Injectable()
@@ -22,8 +24,14 @@ export class DrizzleService implements OnModuleInit, OnModuleDestroy {
         'POSTGRES_RUNTIME_PASSWORD',
       ),
       database: this.configService.getOrThrow<string>('POSTGRES_DB'),
-      ssl: this.configService.get<boolean>('POSTGRES_SSL', false)
-        ? { rejectUnauthorized: false }
+      ssl: this.configService.get<boolean>('POSTGRES_SSL', true)
+        ? {
+            rejectUnauthorized: true,
+            ca: readFileSync(
+              join(__dirname, '../../certs/rds-ca-bundle.pem'),
+              'utf-8',
+            ),
+          }
         : false,
     });
 
