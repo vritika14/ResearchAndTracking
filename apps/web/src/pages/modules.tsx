@@ -9,7 +9,6 @@ import {
   useMembers,
   useModules,
   useProjects,
-  useUpdateModule,
   type ApiModule,
 } from "@/api/hooks";
 import { ColumnVisibilityMenu } from "@/components/dashboard/column-visibility-menu";
@@ -77,15 +76,13 @@ export default function ModulesPage() {
   const modulesQuery = useModules(tenantId);
   const projectsQuery = useProjects(tenantId);
   const [isNewModuleOpen, setIsNewModuleOpen] = useState(false);
-  const [editingModule, setEditingModule] = useState<ApiModule | null>(null);
   const [sharingModule, setSharingModule] = useState<ApiModule | null>(null);
   const workspaceMembers = useMembers(
     tenantId,
-    isNewModuleOpen || editingModule !== null || sharingModule !== null,
+    isNewModuleOpen || sharingModule !== null,
   );
 
   const createModule = useCreateModule(tenantId);
-  const updateModule = useUpdateModule(tenantId);
   const archiveModule = useArchiveModule(tenantId);
 
   const [search, setSearch] = useState("");
@@ -145,29 +142,11 @@ export default function ModulesPage() {
 
   }
 
-  async function handleUpdateModule(input: ModuleFormInput) {
-    if (!editingModule) return;
-    await updateModule.mutateAsync({
-      moduleId: editingModule.id,
-      input: {
-        title: input.title,
-        description: input.description || undefined,
-        status: input.status,
-        pipelineStage: input.pipelineStage,
-        tag: input.tag || undefined,
-        dueDate: input.dueDate || undefined,
-        assignedToUserId: input.assignedToUserId ?? undefined,
-      },
-    });
-    setEditingModule(null);
-  }
-
   async function archive(module: ApiModule) {
     if (!window.confirm(`Archive "${module.title}"? It will be permanently deleted after 14 days.`)) {
       return;
     }
     await archiveModule.mutateAsync(module.id);
-    setEditingModule((current) => (current?.id === module.id ? null : current));
     setSharingModule((current) => (current?.id === module.id ? null : current));
   }
 
@@ -202,17 +181,6 @@ export default function ModulesPage() {
         projects={projectsQuery.data ?? []}
         members={workspaceMembers.data ?? []}
         onSave={(input) => void handleCreateModule(input)}
-      />
-      <ModuleDialog
-        open={editingModule !== null}
-        onOpenChange={(open) => {
-          if (!open) setEditingModule(null);
-        }}
-        tenantId={tenantId}
-        projects={projectsQuery.data ?? []}
-        members={workspaceMembers.data ?? []}
-        module={editingModule}
-        onSave={(input) => void handleUpdateModule(input)}
       />
       <Dialog
         open={sharingModule !== null}
@@ -329,15 +297,14 @@ export default function ModulesPage() {
                               <UserPlus className="h-3.5 w-3.5" />
                             </button>
                           ) : null}
-                          <button
-                            type="button"
+                          <Link
+                            to={`/modules/${module.id}?edit=true`}
                             aria-label={`Edit ${module.title}`}
                             title="Edit module"
-                            onClick={() => setEditingModule(module)}
                             className="inline-flex h-6 w-6 shrink-0 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-accent hover:text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
                           >
                             <Pencil className="h-3.5 w-3.5" />
-                          </button>
+                          </Link>
                           <button
                             type="button"
                             aria-label={`Archive ${module.title}`}
@@ -355,9 +322,13 @@ export default function ModulesPage() {
                     </div>
                   ) : null}
                   {columns.isColumnVisible("project") ? (
-                    <span className="max-w-56 text-sm text-muted-foreground">
-                      {projectName(module.projectId)}
-                    </span>
+                    module.projectId ? (
+                      <Link to={`/projects/${module.projectId}`} className="max-w-56 text-sm font-medium text-primary hover:underline">
+                        {projectName(module.projectId)}
+                      </Link>
+                    ) : (
+                      <span className="max-w-56 text-sm text-muted-foreground">Independent module</span>
+                    )
                   ) : null}
                   {columns.isColumnVisible("status") ? (
                     <Badge variant="outline" className={statusPillClass(module.status)}>

@@ -203,50 +203,16 @@ describe("TasksPage", () => {
     expect(screen.getByLabelText("Selected task members")).toHaveTextContent("Jamie Outsider");
   });
 
-  it("directly assigns any platform user when a private task is changed to shared", () => {
+  it("routes table-row editing to the task page", () => {
     render(
       <MemoryRouter>
         <TasksPage />
       </MemoryRouter>,
     );
 
-    fireEvent.click(
-      screen.getByRole("button", { name: "Edit Submit interim safety report to IRB" }),
-    );
-    fireEvent.click(screen.getByRole("combobox", { name: "Visibility" }));
-    fireEvent.click(screen.getByRole("option", { name: "Shared" }));
-
-    const search = screen.getByPlaceholderText("Type a name or email to search all users");
-    fireEvent.change(search, { target: { value: "Jamie" } });
-    fireEvent.click(screen.getByRole("option", { name: /Jamie Outsider/ }));
-
-    expect(sharingMutations.addTaskMember).toHaveBeenCalledWith("user-outside-workspace");
-    expect(screen.getByText(/No email invitation is sent/)).toBeInTheDocument();
-  });
-
-  it("edits an existing task from its table row", async () => {
-    render(
-      <MemoryRouter>
-        <TasksPage />
-      </MemoryRouter>,
-    );
-
-    fireEvent.click(
-      screen.getByRole("button", { name: "Edit Submit interim safety report to IRB" }),
-    );
-
-    expect(screen.getByRole("heading", { name: "Edit task" })).toBeInTheDocument();
-    expect(screen.getByLabelText(/Due date/)).toHaveValue("01/08/2026");
-
-    fireEvent.change(screen.getByRole("textbox", { name: /Task title/ }), {
-      target: { value: "Submit revised interim safety report" },
-    });
-    fireEvent.click(screen.getByRole("button", { name: "Save Changes" }));
-
-    await waitFor(() =>
-      expect(screen.getByText("Submit revised interim safety report")).toBeInTheDocument(),
-    );
-    expect(screen.queryByRole("heading", { name: "Edit task" })).not.toBeInTheDocument();
+    expect(
+      screen.getByRole("link", { name: "Edit Submit interim safety report to IRB" }),
+    ).toHaveAttribute("href", "/tasks/task-1?edit=true");
   });
 
   it("deletes a task after confirmation", async () => {
