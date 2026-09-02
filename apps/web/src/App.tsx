@@ -14,6 +14,7 @@ const ModuleDetailPage = lazy(() => import("@/pages/module-detail"));
 const ProjectDetailPage = lazy(() => import("@/pages/project-detail"));
 const TasksPage = lazy(() => import("@/pages/tasks"));
 const CalendarPage = lazy(() => import("@/pages/calendar"));
+const MindMapPage = lazy(() => import("@/pages/mind-map"));
 const ConferencesPage = lazy(() => import("@/pages/conferences"));
 const ConferenceDetailPage = lazy(() => import("@/pages/conference-detail"));
 const TaskDetailPage = lazy(() => import("@/pages/task-detail"));
@@ -77,6 +78,7 @@ export default function App() {
               />
               <Route path="tasks" element={routePage(<TasksPage />)} />
               <Route path="calendar" element={routePage(<CalendarPage />)} />
+              <Route path="mind-map" element={routePage(<MindMapPage />)} />
               <Route path="conferences" element={routePage(<ConferencesPage />)} />
               <Route path="conferences/:conferenceId" element={routePage(<ConferenceDetailPage />)} />
               <Route path="tasks/:taskId" element={routePage(<TaskDetailPage />)} />

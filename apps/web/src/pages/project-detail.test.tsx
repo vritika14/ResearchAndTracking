@@ -154,7 +154,7 @@ describe("ProjectDetailPage", () => {
     expect(screen.getByRole("heading", { name: "Pipeline" })).toBeInTheDocument();
   });
 
-  it("hides overview details and collaborators without hiding linked work", () => {
+  it("shows collaborators only when expanded, without hiding linked work", () => {
     render(
       <MemoryRouter initialEntries={["/projects/PRJ-101"]}>
         <Routes>
@@ -163,13 +163,14 @@ describe("ProjectDetailPage", () => {
       </MemoryRouter>,
     );
 
-    expect(screen.getByRole("heading", { name: "Project collaborators" })).toBeInTheDocument();
-    expect(screen.getByRole("heading", { name: "Modules (0)" })).toBeInTheDocument();
-
-    fireEvent.click(screen.getByRole("button", { name: "Hide overview" }));
-
     expect(screen.queryByRole("heading", { name: "Project collaborators" })).not.toBeInTheDocument();
     expect(screen.getByRole("heading", { name: "Modules (0)" })).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "Show overview" })).toHaveAttribute("aria-expanded", "false");
+    expect(screen.getByRole("button", { name: "Show collaborators" })).toHaveAttribute("aria-expanded", "false");
+
+    fireEvent.click(screen.getByRole("button", { name: "Show collaborators" }));
+
+    expect(screen.getByRole("heading", { name: "Project collaborators" })).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "Modules (0)" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Hide collaborators" })).toHaveAttribute("aria-expanded", "true");
   });
 });

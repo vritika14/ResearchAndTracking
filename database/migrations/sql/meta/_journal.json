@@ -127,6 +127,20 @@
       "when": 1788250593055,
       "tag": "0033_user_preferences",
       "breakpoints": true
+    },
+    {
+      "idx": 34,
+      "version": "7",
+      "when": 1788312561639,
+      "tag": "0034_restore_enum_defaults",
+      "breakpoints": true
+    },
+    {
+      "idx": 35,
+      "version": "7",
+      "when": 1788313358817,
+      "tag": "0035_repair_orphan_module_owners",
+      "breakpoints": true
     }
   ]
 }

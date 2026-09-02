@@ -52,6 +52,7 @@ export interface PageHeadingProps extends React.HTMLAttributes<HTMLDivElement> {
   icon?: LucideIcon;
   actions?: React.ReactNode;
   tone?: "blue" | "violet" | "emerald" | "amber" | "rose" | "cyan";
+  children?: React.ReactNode;
 }
 
 const pageHeadingTones = {
@@ -89,11 +90,11 @@ const pageHeadingTones = {
 
 /** Standard top-of-page header: icon badge, eyebrow, bold title, description, actions. */
 const PageHeading = React.forwardRef<HTMLDivElement, PageHeadingProps>(
-  ({ className, title, description, eyebrow, icon: Icon, actions, tone = "blue", ...props }, ref) => (
+  ({ className, title, description, eyebrow, icon: Icon, actions, tone = "blue", children, ...props }, ref) => (
     <div
       ref={ref}
       className={cn(
-        "relative overflow-hidden rounded-2xl border px-5 py-5 shadow-sm backdrop-blur-sm sm:flex sm:items-center sm:justify-between sm:px-6 sm:py-6",
+        "relative overflow-hidden rounded-2xl border px-5 py-5 shadow-sm backdrop-blur-sm sm:px-6 sm:py-6",
         pageHeadingTones[tone].surface,
         className,
       )}
@@ -106,27 +107,30 @@ const PageHeading = React.forwardRef<HTMLDivElement, PageHeadingProps>(
           className="pointer-events-none absolute -bottom-6 -right-6 h-32 w-32 rotate-12 text-foreground/[0.05] sm:h-36 sm:w-36"
         />
       ) : null}
-      <div className="relative flex items-start gap-4">
-        {Icon ? (
-          <span className={cn("flex h-11 w-11 shrink-0 items-center justify-center rounded-xl shadow-sm ring-4", pageHeadingTones[tone].icon)}>
-            <Icon className="h-5 w-5" />
-          </span>
-        ) : null}
-        <div className="flex flex-col gap-1.5">
-          {eyebrow ? (
-            <span className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-              {eyebrow}
+      <div className="relative sm:flex sm:items-center sm:justify-between">
+        <div className="flex items-start gap-4">
+          {Icon ? (
+            <span className={cn("flex h-11 w-11 shrink-0 items-center justify-center rounded-xl shadow-sm ring-4", pageHeadingTones[tone].icon)}>
+              <Icon className="h-5 w-5" />
             </span>
           ) : null}
-          <Heading level="h1">{title}</Heading>
-          {description ? (
-            <p className="max-w-2xl text-sm text-muted-foreground sm:text-base">
-              {description}
-            </p>
-          ) : null}
+          <div className="flex flex-col gap-1.5">
+            {eyebrow ? (
+              <span className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                {eyebrow}
+              </span>
+            ) : null}
+            <Heading level="h1">{title}</Heading>
+            {description ? (
+              <p className="max-w-2xl text-sm text-muted-foreground sm:text-base">
+                {description}
+              </p>
+            ) : null}
+          </div>
         </div>
+        {actions ? <div className="mt-4 flex shrink-0 flex-wrap items-center gap-2 sm:mt-0 sm:justify-end">{actions}</div> : null}
       </div>
-      {actions ? <div className="relative mt-4 flex shrink-0 flex-wrap items-center gap-2 sm:mt-0 sm:justify-end">{actions}</div> : null}
+      {children ? <div className="relative mt-4 border-t border-border/60 pt-4">{children}</div> : null}
     </div>
   ),
 );

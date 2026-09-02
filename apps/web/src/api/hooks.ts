@@ -809,7 +809,7 @@ export function useCreateModule(tenantId: string) {
         if (!current) return [module];
         return current.some((item) => item.id === module.id) ? current : [module, ...current];
       };
-      queryClient.setQueryData<ApiModule[]>(["api", "tenant", tenantId, "modules"], addModule);
+      queryClient.setQueryData<ApiModule[]>(apiKeys.modules(tenantId), addModule);
       queryClient.setQueryData<ApiModule[]>(["api", "me", "modules"], addModule);
       await Promise.all([
         queryClient.invalidateQueries({ queryKey: ["api", "tenant", tenantId, "modules"] }),
@@ -853,10 +853,20 @@ export function useArchiveModule(tenantId: string) {
           params: { path: { tenantId, moduleId } },
         }),
       ),
-    async onSuccess() {
-      await queryClient.invalidateQueries({
-        queryKey: ["api", "tenant", tenantId, "modules"],
-      });
+    async onSuccess(_result, moduleId) {
+      queryClient.setQueriesData<ApiModule[]>(
+        { queryKey: ["api", "tenant", tenantId, "modules"] },
+        (current) => current?.filter((module) => module.id !== moduleId),
+      );
+      queryClient.setQueryData<ApiModule[]>(
+        myModulesKey,
+        (current) => current?.filter((module) => module.id !== moduleId),
+      );
+      queryClient.removeQueries({ queryKey: apiKeys.module(tenantId, moduleId) });
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: ["api", "tenant", tenantId, "modules"] }),
+        queryClient.invalidateQueries({ queryKey: myModulesKey }),
+      ]);
     },
   });
 }

@@ -1,5 +1,5 @@
 import { useEffect, useState, type FormEvent, type ReactNode } from "react";
-import { ArrowLeft, Boxes, ChevronDown, ChevronUp, Pencil, Save, X } from "lucide-react";
+import { Boxes, ChevronDown, ChevronUp, Pencil, Save, X } from "lucide-react";
 import { Link, useParams, useSearchParams } from "react-router-dom";
 
 import {
@@ -17,6 +17,7 @@ import {
   type ApiTask,
 } from "@/api/hooks";
 import { ModuleCollaboratorsManager } from "@/components/modules/module-collaborators";
+import { BackButton } from "@/components/shared/back-button";
 import { EmptyState } from "@/components/shared/empty-state";
 import { ErrorState } from "@/components/shared/error-state";
 import { LoadingState } from "@/components/shared/loading-state";
@@ -59,16 +60,12 @@ function formatDate(iso: string | null) {
   return `${day}/${month}/${year}`;
 }
 
-function DetailItem({ label, children, className = "" }: {
-  label: string;
-  children: ReactNode;
-  className?: string;
-}) {
+function HeaderStat({ label, value }: { label: string; value: string }) {
   return (
-    <div className={className}>
-      <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">{label}</p>
-      <div className="mt-1 font-medium">{children}</div>
-    </div>
+    <span className="inline-flex items-center gap-1.5 rounded-full border border-border/70 bg-card/70 px-2.5 py-1 text-xs">
+      <span className="font-medium text-muted-foreground">{label}</span>
+      <span className="font-semibold text-foreground">{value}</span>
+    </span>
   );
 }
 
@@ -161,7 +158,7 @@ export default function ModuleDetailPage() {
   const stagesQuery = useModulePipelineStages(module?.tenantId ?? tenantId, moduleId, Boolean(module));
   const [form, setForm] = useState<EditableModule | null>(null);
   const [openedRequestedEdit, setOpenedRequestedEdit] = useState(false);
-  const [isOverviewVisible, setIsOverviewVisible] = useState(true);
+  const [isCollaboratorsVisible, setIsCollaboratorsVisible] = useState(false);
 
   useEffect(() => {
     if (!openedRequestedEdit && searchParams.get("edit") === "true" && module) {
@@ -224,19 +221,14 @@ export default function ModuleDetailPage() {
 
   return (
     <div className="page-stack">
-      <Button asChild variant="ghost" size="sm" className="w-fit">
-        <Link to="/modules">
-          <ArrowLeft />
-          Back to Modules
-        </Link>
-      </Button>
+      <BackButton fallback="/modules" label="Back" />
 
       <PageHeading
         tone="violet"
         icon={Boxes}
         eyebrow={module.displayId ?? module.id}
         title={module.title}
-        description="Review and update the module's status, type and planning details."
+        description={module.description || "Review and update the module's status, type and planning details."}
         actions={
           <div className="flex flex-wrap items-center gap-3">
             <StatusBadge status={module.status ?? "—"} />
@@ -244,7 +236,17 @@ export default function ModuleDetailPage() {
               : <Button type="button" onClick={() => setForm(editableValues(module))}><Pencil /> Edit Module</Button>}
           </div>
         }
-      />
+      >
+        {!form ? (
+          <div className="flex flex-wrap gap-2">
+            <HeaderStat label="Type" value={module.tag ?? "—"} />
+            <HeaderStat label="Status" value={module.status ?? "—"} />
+            <HeaderStat label="Pipeline stage" value={module.pipelineStage ?? "Unassigned"} />
+            <HeaderStat label="Due" value={formatDate(module.dueDate)} />
+            <HeaderStat label="Assigned to" value={assignee?.displayName ?? "Unassigned"} />
+          </div>
+        ) : null}
+      </PageHeading>
 
       {form ? <Card>
         <CardHeader><CardTitle>Edit module details</CardTitle></CardHeader>
@@ -266,61 +268,43 @@ export default function ModuleDetailPage() {
       </Card> : null}
 
       <div className="flex flex-col gap-6">
-        <section aria-labelledby="module-overview-heading">
+        <section aria-labelledby="module-collaborators-heading">
           <div className="mb-3 flex items-center justify-between gap-3">
-            <h2 id="module-overview-heading" className="text-lg font-semibold">Overview</h2>
-            <Button variant="outline" size="sm" aria-expanded={isOverviewVisible} aria-controls="module-overview-content" onClick={() => setIsOverviewVisible((visible) => !visible)}>
-              {isOverviewVisible ? <ChevronUp /> : <ChevronDown />}
-              {isOverviewVisible ? "Hide overview" : "Show overview"}
+            <h2 id="module-collaborators-heading" className="text-lg font-semibold">Collaborators</h2>
+            <Button variant="outline" size="sm" aria-expanded={isCollaboratorsVisible} aria-controls="module-collaborators-content" onClick={() => setIsCollaboratorsVisible((visible) => !visible)}>
+              {isCollaboratorsVisible ? <ChevronUp /> : <ChevronDown />}
+              {isCollaboratorsVisible ? "Hide collaborators" : "Show collaborators"}
             </Button>
           </div>
-          {isOverviewVisible ? <div id="module-overview-content" className="grid gap-6 lg:grid-cols-[1.4fr_1fr]">
-        <Card>
-          <CardHeader>
-            <CardTitle>Module overview</CardTitle>
-          </CardHeader>
-          <CardContent className="grid gap-5 text-sm sm:grid-cols-2">
-            <DetailItem label="Type">{module.tag ?? "—"}</DetailItem>
-            <DetailItem label="Status">{module.status ?? "—"}</DetailItem>
-            <DetailItem label="Pipeline stage">{module.pipelineStage ?? "Unassigned"}</DetailItem>
-            <DetailItem label="Due date">{formatDate(module.dueDate)}</DetailItem>
-            <DetailItem label="Assigned to">{assignee?.displayName ?? "Unassigned"}</DetailItem>
-            <DetailItem label="Description" className="sm:col-span-2">
-              <span className="font-normal text-muted-foreground">
-                {module.description || "No description provided."}
-              </span>
-            </DetailItem>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader>
-            <CardTitle>Module collaborators</CardTitle>
-          </CardHeader>
-          <CardContent>
-            {sameTenant ? (
-              <div className="grid gap-4">
-                {module.projectId ? (
+          {isCollaboratorsVisible ? (
+            <Card id="module-collaborators-content">
+              <CardHeader>
+                <CardTitle>Module collaborators</CardTitle>
+              </CardHeader>
+              <CardContent>
+                {sameTenant ? (
+                  <div className="grid gap-4">
+                    {module.projectId ? (
+                      <p className="text-sm text-muted-foreground">
+                        Project collaborators already inherit access. You can also invite someone directly to this module by email.
+                      </p>
+                    ) : null}
+                    <ModuleCollaboratorsManager
+                      tenantId={tenantId}
+                      moduleId={module.id}
+                      moduleTitle={module.title}
+                      members={membersQuery.data ?? []}
+                    />
+                  </div>
+                ) : (
                   <p className="text-sm text-muted-foreground">
-                    Project collaborators already inherit access. You can also invite someone directly to this module by email.
+                    This module was shared with you from another workspace. Only members of that
+                    workspace can manage who has access.
                   </p>
-                ) : null}
-                <ModuleCollaboratorsManager
-                  tenantId={tenantId}
-                  moduleId={module.id}
-                  moduleTitle={module.title}
-                  members={membersQuery.data ?? []}
-                />
-              </div>
-            ) : (
-              <p className="text-sm text-muted-foreground">
-                This module was shared with you from another workspace. Only members of that
-                workspace can manage who has access.
-              </p>
-            )}
-          </CardContent>
-        </Card>
-          </div> : null}
+                )}
+              </CardContent>
+            </Card>
+          ) : null}
         </section>
 
         <section className="grid gap-6 lg:grid-cols-3" aria-label="Linked work">

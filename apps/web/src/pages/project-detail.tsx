@@ -1,5 +1,5 @@
 import { useEffect, useState, type FormEvent, type ReactNode } from "react";
-import { ArrowLeft, ChevronDown, ChevronUp, FolderKanban, Pencil, Save, Trash2, Users, X } from "lucide-react";
+import { ChevronDown, ChevronUp, FolderKanban, Pencil, Save, Trash2, Users, X } from "lucide-react";
 import { Link, useNavigate, useParams, useSearchParams } from "react-router-dom";
 
 import {
@@ -20,6 +20,7 @@ import {
   type ApiTask,
 } from "@/api/hooks";
 import { ProjectCollaborators } from "@/components/projects/project-collaborators";
+import { BackButton } from "@/components/shared/back-button";
 import { EmptyState } from "@/components/shared/empty-state";
 import { ErrorState } from "@/components/shared/error-state";
 import { LoadingState } from "@/components/shared/loading-state";
@@ -86,16 +87,12 @@ function formatCurrency(value: string | null) {
   }).format(amount);
 }
 
-function DetailItem({ label, children, className = "" }: {
-  label: string;
-  children: ReactNode;
-  className?: string;
-}) {
+function HeaderStat({ label, value }: { label: string; value: string }) {
   return (
-    <div className={className}>
-      <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">{label}</p>
-      <div className="mt-1 font-medium">{children}</div>
-    </div>
+    <span className="inline-flex items-center gap-1.5 rounded-full border border-border/70 bg-card/70 px-2.5 py-1 text-xs">
+      <span className="font-medium text-muted-foreground">{label}</span>
+      <span className="font-semibold text-foreground">{value}</span>
+    </span>
   );
 }
 
@@ -236,7 +233,7 @@ export default function ProjectDetailPage() {
   const me = useMe();
   const updateProject = useUpdateMyProject();
   const archiveProject = useArchiveMyProject();
-  const [isOverviewVisible, setIsOverviewVisible] = useState(true);
+  const [isCollaboratorsVisible, setIsCollaboratorsVisible] = useState(false);
 
   const project = projectQuery.data;
   const sameTenant = Boolean(project && tenantId && project.tenantId === tenantId);
@@ -341,26 +338,17 @@ export default function ProjectDetailPage() {
   }
 
   const myRole = project.userId === me.data?.id ? "Owner" : project.role ?? "—";
-  const taskCounts = {
-    completed: (tasksQuery.data ?? []).filter((task) => task.status === "Complete").length,
-    total: (tasksQuery.data ?? []).length,
-  };
 
   return (
     <div className="page-stack">
-      <Button asChild variant="ghost" size="sm" className="w-fit">
-        <Link to="/projects">
-          <ArrowLeft />
-          Back to Projects
-        </Link>
-      </Button>
+      <BackButton fallback="/projects" label="Back" />
 
       <PageHeading
         tone="blue"
         icon={FolderKanban}
         eyebrow={project.displayId ?? project.id}
         title={project.title}
-        description="Review and update the project’s core details, planning information and progress."
+        description={project.description || "Review and update the project’s core details, planning information and progress."}
         actions={
           <div className="flex flex-wrap items-center gap-3">
             <StatusBadge status={project.status ?? "—"} />
@@ -389,7 +377,20 @@ export default function ProjectDetailPage() {
             )}
           </div>
         }
-      />
+      >
+        {!form ? (
+          <div className="flex flex-wrap gap-2">
+            <HeaderStat label="Role" value={myRole} />
+            <HeaderStat label="Importance" value={project.importance ?? "—"} />
+            <HeaderStat label="Pipeline stage" value={project.pipelineStage ?? "Unknown stage"} />
+            <HeaderStat label="Research area" value={project.researchArea ?? "—"} />
+            <HeaderStat label="Scheduled" value={formatDate(project.scheduledFor)} />
+            <HeaderStat label="Due" value={formatDate(project.dueDate)} />
+            <HeaderStat label="Budget" value={formatCurrency(project.totalBudget)} />
+            {project.targetJournals ? <HeaderStat label="Target journal" value={project.targetJournals} /> : null}
+          </div>
+        ) : null}
+      </PageHeading>
 
       {form ? (
         <Card>
@@ -514,73 +515,45 @@ export default function ProjectDetailPage() {
         </Card>
       ) : (
         <div className="flex flex-col gap-6">
-          <section aria-labelledby="project-overview-heading">
+          <section aria-labelledby="project-collaborators-heading">
             <div className="mb-3 flex items-center justify-between gap-3">
-              <h2 id="project-overview-heading" className="text-lg font-semibold">Overview</h2>
-              <Button variant="outline" size="sm" aria-expanded={isOverviewVisible} aria-controls="project-overview-content" onClick={() => setIsOverviewVisible((visible) => !visible)}>
-                {isOverviewVisible ? <ChevronUp /> : <ChevronDown />}
-                {isOverviewVisible ? "Hide overview" : "Show overview"}
+              <h2 id="project-collaborators-heading" className="text-lg font-semibold">Collaborators</h2>
+              <Button variant="outline" size="sm" aria-expanded={isCollaboratorsVisible} aria-controls="project-collaborators-content" onClick={() => setIsCollaboratorsVisible((visible) => !visible)}>
+                {isCollaboratorsVisible ? <ChevronUp /> : <ChevronDown />}
+                {isCollaboratorsVisible ? "Hide collaborators" : "Show collaborators"}
               </Button>
             </div>
-            {isOverviewVisible ? <div id="project-overview-content" className="grid gap-6 lg:grid-cols-[1.4fr_1fr]">
-          <Card>
-            <CardHeader>
-              <CardTitle>Project overview</CardTitle>
-            </CardHeader>
-            <CardContent className="grid gap-5 text-sm sm:grid-cols-2">
-              <DetailItem label="Research area">{project.researchArea ?? "—"}</DetailItem>
-              <DetailItem label="My role">{myRole}</DetailItem>
-              <DetailItem label="Importance">{project.importance ?? "—"}</DetailItem>
-              <DetailItem label="Pipeline stage">{project.pipelineStage ?? "Unknown stage"}</DetailItem>
-              <DetailItem label="Scheduled for">{formatDate(project.scheduledFor)}</DetailItem>
-              <DetailItem label="Due date">{formatDate(project.dueDate)}</DetailItem>
-              <DetailItem label="Target journal or output" className="sm:col-span-2">
-                {project.targetJournals ?? "—"}
-              </DetailItem>
-              {project.description ? (
-                <DetailItem label="Description" className="sm:col-span-2">
-                  <span className="font-normal text-muted-foreground">{project.description}</span>
-                </DetailItem>
-              ) : null}
-              <div className="grid gap-5 border-t border-border pt-5 sm:col-span-2 sm:grid-cols-2">
-                <DetailItem label="Tasks">{taskCounts.completed}/{taskCounts.total} complete</DetailItem>
-                <DetailItem label="Notes">{(notesQuery.data ?? []).length}</DetailItem>
-                <DetailItem label="Modules">{(modulesQuery.data ?? []).length}</DetailItem>
-                <DetailItem label="Total budget">{formatCurrency(project.totalBudget)}</DetailItem>
-              </div>
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardHeader>
-              <CardTitle>Project collaborators</CardTitle>
-            </CardHeader>
-            <CardContent>
-              {!tenantId ? (
-                <EmptyState
-                  icon={Users}
-                  title="No workspace selected"
-                  description="Select a workspace to manage collaborators."
-                  className="min-h-40 border-0 bg-muted/30"
-                />
-              ) : sameTenant ? (
-                <ProjectCollaborators
-                  tenantId={tenantId}
-                  projectId={project.id}
-                  ownerUserId={project.userId}
-                  members={membersQuery.data ?? []}
-                  entityTitle={project.title}
-                  canManage={me.data?.id === project.userId}
-                />
-              ) : (
-                <p className="text-sm text-muted-foreground">
-                  This project was shared with you from another workspace. Only members of
-                  that workspace can manage collaborators.
-                </p>
-              )}
-            </CardContent>
-          </Card>
-            </div> : null}
+            {isCollaboratorsVisible ? (
+              <Card id="project-collaborators-content">
+                <CardHeader>
+                  <CardTitle>Project collaborators</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  {!tenantId ? (
+                    <EmptyState
+                      icon={Users}
+                      title="No workspace selected"
+                      description="Select a workspace to manage collaborators."
+                      className="min-h-40 border-0 bg-muted/30"
+                    />
+                  ) : sameTenant ? (
+                    <ProjectCollaborators
+                      tenantId={tenantId}
+                      projectId={project.id}
+                      ownerUserId={project.userId}
+                      members={membersQuery.data ?? []}
+                      entityTitle={project.title}
+                      canManage={me.data?.id === project.userId}
+                    />
+                  ) : (
+                    <p className="text-sm text-muted-foreground">
+                      This project was shared with you from another workspace. Only members of
+                      that workspace can manage collaborators.
+                    </p>
+                  )}
+                </CardContent>
+              </Card>
+            ) : null}
           </section>
 
           <section className="grid gap-6 lg:grid-cols-3" aria-label="Linked work">
