@@ -1,6 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { enumTable, modules } from '@research-tracker/migrations';
-import { and, eq, inArray, isNull } from 'drizzle-orm';
+import { and, eq, inArray, isNull, sql } from 'drizzle-orm';
 import { DrizzleService } from '../../../db/drizzle.service';
 
 @Injectable()
@@ -72,6 +72,22 @@ export class ProjectModulesRepository {
       .values(values)
       .returning();
     return module;
+  }
+
+  /**
+   * Pre-context access check for guards. Nest guards execute before the
+   * request interceptor establishes app.current_user_id, so ordinary module
+   * queries are intentionally hidden by RLS at this point.
+   */
+  async checkAccessForGuard(
+    tenantId: string,
+    moduleId: string,
+    userId: string,
+  ) {
+    const result = await this.drizzle.db.execute(
+      sql`SELECT check_module_access(${tenantId}::uuid, ${moduleId}::uuid, ${userId}::uuid) AS allowed`,
+    );
+    return result.rows[0]?.allowed === true;
   }
 
   async configurePipelineStages(

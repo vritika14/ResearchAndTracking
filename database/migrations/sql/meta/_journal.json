@@ -141,6 +141,13 @@
       "when": 1788313358817,
       "tag": "0035_repair_orphan_module_owners",
       "breakpoints": true
+    },
+    {
+      "idx": 36,
+      "version": "7",
+      "when": 1788328087743,
+      "tag": "0036_module_guard_access_bypass",
+      "breakpoints": true
     }
   ]
 }

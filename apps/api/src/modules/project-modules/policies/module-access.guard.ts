@@ -8,8 +8,6 @@ import {
 import { Request } from 'express';
 import { UsersService } from '../../users/users.service';
 import { ProjectModulesRepository } from '../repositories/project-modules.repository';
-import { ProjectCollaboratorsRepository } from '../../project-collaborators/repositories/project-collaborators.repository';
-import { ModuleCollaboratorsRepository } from '../../module-collaborators/repositories/module-collaborators.repository';
 
 interface AuthenticatedRequest extends Request {
   user: { sub: string; username?: string };
@@ -21,8 +19,6 @@ export class ModuleAccessGuard implements CanActivate {
   constructor(
     private readonly usersService: UsersService,
     private readonly modulesRepository: ProjectModulesRepository,
-    private readonly projectCollaboratorsRepository: ProjectCollaboratorsRepository,
-    private readonly moduleCollaboratorsRepository: ModuleCollaboratorsRepository,
   ) {}
 
   async canActivate(context: ExecutionContext): Promise<boolean> {
@@ -34,30 +30,12 @@ export class ModuleAccessGuard implements CanActivate {
     }
 
     const user = await this.usersService.findByExternalAuthId(req.user.sub);
-    const module = await this.modulesRepository.findById(tenantId, moduleId);
-
-    if (!module) {
-      throw new ForbiddenException('Module not found');
-    }
-
-    if (module.projectId) {
-      const projectCollaborator =
-        await this.projectCollaboratorsRepository.checkAccessForGuard(
-          module.projectId,
-          user.id,
-        );
-      if (projectCollaborator) {
-        return true;
-      }
-    }
-
-    const moduleCollaborator =
-      await this.moduleCollaboratorsRepository.checkAccessForGuard(
-        moduleId,
-        user.id,
-      );
-
-    if (!moduleCollaborator) {
+    const canAccess = await this.modulesRepository.checkAccessForGuard(
+      tenantId,
+      moduleId,
+      user.id,
+    );
+    if (!canAccess) {
       throw new ForbiddenException('You do not have access to this module');
     }
 
