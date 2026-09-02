@@ -377,7 +377,7 @@ describe('ProjectModulesService', () => {
         'Drafting',
       );
       expect(collaboratorsRepository.create.mock.invocationCallOrder[0])
-        .toBeLessThan(repository.configurePipelineStages.mock.invocationCallOrder[0]);
+        .toBeLessThan(repository.configurePipelineStages.mock.invocationCallOrder[0]!);
       expect(enumRepository.findByCategoryAndValue).not.toHaveBeenCalledWith(
         'module_pipeline_stage',
         expect.any(String),
