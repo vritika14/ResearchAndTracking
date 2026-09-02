@@ -43,10 +43,12 @@ export interface DashboardLayoutPreference {
 export interface WorkspacePreferences {
   dashboardLayout?: DashboardLayoutPreference;
   tableColumns?: Record<string, string[]>;
+  pipelineHiddenStages?: Record<string, string[]>;
 }
 export interface WorkspacePreferencesPatch {
   dashboardLayout?: DashboardLayoutPreference;
   tableColumns?: Record<string, string[]>;
+  pipelineHiddenStages?: Record<string, string[]>;
 }
 export interface Workspace {
   id: string;
@@ -314,6 +316,19 @@ export function useUpdateAccountPreferences() {
         "/api/v1/me/preferences",
         { method: "PATCH", body: JSON.stringify(preferences) },
       )).preferences,
+    retry: 2,
+    async onMutate(patch) {
+      await queryClient.cancelQueries({ queryKey: apiKeys.accountPreferences });
+      const previous = queryClient.getQueryData<AccountPreferences>(apiKeys.accountPreferences);
+      queryClient.setQueryData<AccountPreferences>(apiKeys.accountPreferences, {
+        ...(previous ?? {}),
+        ...patch,
+      });
+      return { previous };
+    },
+    onError(_error, _patch, context) {
+      queryClient.setQueryData(apiKeys.accountPreferences, context?.previous);
+    },
     onSuccess(preferences, patch) {
       queryClient.setQueryData<AccountPreferences>(apiKeys.accountPreferences, (current) => ({
         ...(current ?? preferences),
@@ -336,23 +351,44 @@ export function useWorkspacePreferences(tenantId: string, enabled = true) {
 
 export function useUpdateWorkspacePreferences(tenantId: string) {
   const queryClient = useQueryClient();
+  const queryKey = apiKeys.workspacePreferences(tenantId);
+
+  const mergePatch = (
+    current: WorkspacePreferences | null | undefined,
+    patch: WorkspacePreferencesPatch,
+  ): WorkspacePreferences => ({
+    ...(current ?? {}),
+    ...(patch.dashboardLayout ? { dashboardLayout: patch.dashboardLayout } : {}),
+    tableColumns: {
+      ...(current?.tableColumns ?? {}),
+      ...(patch.tableColumns ?? {}),
+    },
+    pipelineHiddenStages: {
+      ...(current?.pipelineHiddenStages ?? {}),
+      ...(patch.pipelineHiddenStages ?? {}),
+    },
+  });
+
   return useMutation({
     mutationFn: async (patch: WorkspacePreferencesPatch) =>
       (await authenticatedJson<{ preferences: WorkspacePreferences }>(
         `/api/v1/tenant/${tenantId}/me/preferences`,
         { method: "PATCH", body: JSON.stringify(patch) },
       )).preferences,
+    retry: 2,
+    async onMutate(patch) {
+      await queryClient.cancelQueries({ queryKey });
+      const previous = queryClient.getQueryData<WorkspacePreferences | null>(queryKey);
+      queryClient.setQueryData<WorkspacePreferences>(queryKey, mergePatch(previous, patch));
+      return { previous };
+    },
+    onError(_error, _patch, context) {
+      queryClient.setQueryData(queryKey, context?.previous);
+    },
     onSuccess(preferences, patch) {
       queryClient.setQueryData<WorkspacePreferences>(
-        apiKeys.workspacePreferences(tenantId),
-        (current) => ({
-          ...(current ?? preferences),
-          ...(patch.dashboardLayout ? { dashboardLayout: patch.dashboardLayout } : {}),
-          tableColumns: {
-            ...(current?.tableColumns ?? preferences.tableColumns ?? {}),
-            ...(patch.tableColumns ?? {}),
-          },
-        }),
+        queryKey,
+        (current) => mergePatch(current ?? preferences, patch),
       );
     },
   });

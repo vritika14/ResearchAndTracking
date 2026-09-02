@@ -180,7 +180,7 @@ export default function DashboardPage() {
   const [layout, setLayout] = useState(loadDashboardLayout);
   const preferences = usePreferences();
   const hydratedWorkspace = useRef("");
-  const skipNextLayoutSave = useRef(false);
+  const lastSavedLayout = useRef("");
 
   const summary = useMemo(
     () =>
@@ -217,38 +217,36 @@ export default function DashboardPage() {
     ) return;
 
     hydratedWorkspace.current = preferences.workspaceId;
-    skipNextLayoutSave.current = true;
     const remote = preferences.workspacePreferences?.dashboardLayout;
     if (remote) {
       const savedOrder = remote.order.filter(isDashboardWidgetId);
-      setLayout({
+      const next = {
         order: [
           ...new Set(savedOrder),
           ...DEFAULT_WIDGET_ORDER.filter((id) => !savedOrder.includes(id)),
         ],
         hidden: [...new Set(remote.hidden.filter(isDashboardWidgetId))],
-      });
+      };
+      lastSavedLayout.current = JSON.stringify(next);
+      setLayout(next);
     } else {
       const local = loadDashboardLayout(
         `${DASHBOARD_LAYOUT_KEY}:${preferences.workspaceId}`,
       );
       setLayout(local);
-      preferences.updateDashboardLayout(local);
     }
-  }, [layout, preferences]);
+  }, [preferences]);
 
   useEffect(() => {
     const storageKey = preferences?.workspaceId
       ? `${DASHBOARD_LAYOUT_KEY}:${preferences.workspaceId}`
       : DASHBOARD_LAYOUT_KEY;
-    window.localStorage.setItem(storageKey, JSON.stringify(layout));
+    const serialized = JSON.stringify(layout);
+    window.localStorage.setItem(storageKey, serialized);
     if (!preferences || hydratedWorkspace.current !== preferences.workspaceId) return;
-    if (skipNextLayoutSave.current) {
-      skipNextLayoutSave.current = false;
-      return;
-    }
-    const timeout = window.setTimeout(() => preferences.updateDashboardLayout(layout), 400);
-    return () => window.clearTimeout(timeout);
+    if (serialized === lastSavedLayout.current) return;
+    lastSavedLayout.current = serialized;
+    preferences.updateDashboardLayout(layout);
   }, [layout, preferences]);
 
   function toggleWidget(widgetId: DashboardWidgetId) {

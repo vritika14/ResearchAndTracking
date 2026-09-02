@@ -8,18 +8,27 @@ export function useColumnVisibility<T extends string>(
 ) {
   const preferences = usePreferences();
   const hydratedWorkspace = useRef("");
+  const readLocalHidden = (workspaceId?: string) => {
+    if (!preferenceKey) return [] as string[];
+    try {
+      const scoped = workspaceId
+        ? window.localStorage.getItem(`flow-table-columns:${workspaceId}:${preferenceKey}`)
+        : null;
+      const parsed = JSON.parse(
+        scoped ?? window.localStorage.getItem(`flow-table-columns:${preferenceKey}`) ?? "[]",
+      ) as unknown;
+      return Array.isArray(parsed)
+        ? parsed.filter((item): item is string => typeof item === "string")
+        : [];
+    } catch {
+      return [];
+    }
+  };
   const [visibleColumns, setVisibleColumns] = useState<Set<T>>(
     () => {
       if (!preferenceKey) return new Set(columns);
-      try {
-        const hidden = JSON.parse(
-          window.localStorage.getItem(`flow-table-columns:${preferenceKey}`) ?? "[]",
-        ) as unknown;
-        const hiddenSet = new Set(Array.isArray(hidden) ? hidden : []);
-        return new Set(columns.filter((column) => !hiddenSet.has(column)));
-      } catch {
-        return new Set(columns);
-      }
+      const hiddenSet = new Set(readLocalHidden(preferences?.workspaceId));
+      return new Set(columns.filter((column) => !hiddenSet.has(column)));
     },
   );
 
@@ -36,18 +45,8 @@ export function useColumnVisibility<T extends string>(
       const hiddenSet = new Set(remoteHidden);
       setVisibleColumns(new Set(columns.filter((column) => !hiddenSet.has(column))));
     } else {
-      let hidden = columns.filter((column) => !visibleColumns.has(column));
-      try {
-        const scoped = window.localStorage.getItem(
-          `flow-table-columns:${preferences.workspaceId}:${preferenceKey}`,
-        );
-        if (scoped) {
-          const parsed = JSON.parse(scoped) as unknown;
-          if (Array.isArray(parsed)) hidden = columns.filter((column) => parsed.includes(column));
-        }
-      } catch {
-        // Fall back to the current in-memory selection.
-      }
+      const localHidden = new Set(readLocalHidden(preferences.workspaceId));
+      const hidden = columns.filter((column) => localHidden.has(column));
       setVisibleColumns(new Set(columns.filter((column) => !hidden.includes(column))));
       preferences.updateTableColumns(preferenceKey, hidden);
     }

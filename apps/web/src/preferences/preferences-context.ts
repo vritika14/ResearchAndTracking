@@ -10,6 +10,7 @@ export interface PreferencesContextValue {
   workspacePreferences: WorkspacePreferences | null | undefined;
   updateDashboardLayout: (layout: DashboardLayoutPreference) => void;
   updateTableColumns: (table: string, columns: string[]) => void;
+  updatePipelineHiddenStages: (pipeline: string, stages: string[]) => void;
 }
 
 export const PreferencesContext = createContext<PreferencesContextValue | null>(null);

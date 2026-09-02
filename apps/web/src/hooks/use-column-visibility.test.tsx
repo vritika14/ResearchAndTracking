@@ -37,6 +37,7 @@ describe("useColumnVisibility", () => {
       workspacePreferences: { tableColumns: { projects: ["due"] } },
       updateDashboardLayout: vi.fn(),
       updateTableColumns,
+      updatePipelineHiddenStages: vi.fn(),
     });
 
     await waitFor(() => expect(screen.getByText("project,status")).toBeInTheDocument());
@@ -57,10 +58,27 @@ describe("useColumnVisibility", () => {
       workspacePreferences: null,
       updateDashboardLayout: vi.fn(),
       updateTableColumns,
+      updatePipelineHiddenStages: vi.fn(),
     });
 
     await waitFor(() =>
       expect(updateTableColumns).toHaveBeenCalledWith("projects", ["due"]),
     );
+  });
+
+  it("restores workspace-scoped columns immediately on remount", () => {
+    window.localStorage.setItem(
+      "flow-table-columns:workspace-1:projects",
+      JSON.stringify(["status"]),
+    );
+    renderWithPreferences({
+      workspaceId: "workspace-1",
+      workspacePreferences: undefined,
+      updateDashboardLayout: vi.fn(),
+      updateTableColumns: vi.fn(),
+      updatePipelineHiddenStages: vi.fn(),
+    });
+
+    expect(screen.getByText("project,due")).toBeInTheDocument();
   });
 });

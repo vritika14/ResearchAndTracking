@@ -53,6 +53,9 @@ describe('PreferencesService', () => {
         projects: ['due', 'due', 'status'],
         unsafeTable: ['secret'],
       },
+      pipelineHiddenStages: {
+        'projects:all': ['Review', 'Review'],
+      },
     });
 
     expect(result).toEqual({
@@ -62,6 +65,9 @@ describe('PreferencesService', () => {
       },
       tableColumns: {
         projects: ['due', 'status'],
+      },
+      pipelineHiddenStages: {
+        'projects:all': ['Review'],
       },
     });
   });

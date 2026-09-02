@@ -1,4 +1,4 @@
-import { useMemo, useState, type DragEvent } from "react";
+import { useEffect, useMemo, useRef, useState, type DragEvent } from "react";
 import { GripVertical, Pencil, Settings2, Workflow } from "lucide-react";
 import { Link } from "react-router-dom";
 
@@ -39,6 +39,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { cn } from "@/lib/utils";
+import { usePreferences } from "@/preferences/preferences-context";
 
 const VIEW_OPTIONS = ["Flow", "Columns"] as const;
 type ViewOption = (typeof VIEW_OPTIONS)[number];
@@ -281,6 +282,7 @@ export default function PipelinePage() {
   const tasksQuery = useTasks(tenantId);
   const membersQuery = useMembers(tenantId);
   const me = useMe();
+  const preferences = usePreferences();
 
   const [entityType, setEntityType] = useState<EntityType>("Project");
   const [entityFilter, setEntityFilter] = useState<string>(ALL_ENTITIES);
@@ -340,6 +342,7 @@ export default function PipelinePage() {
   );
 
   const [hiddenStageValues, setHiddenStageValues] = useState<Set<string>>(new Set());
+  const hydratedPipelinePreference = useRef("");
   const [isManageStagesOpen, setIsManageStagesOpen] = useState(false);
   const [view, setView] = useState<ViewOption>("Flow");
   const [priority, setPriority] = useState<PriorityFilter>("All");
@@ -367,6 +370,35 @@ export default function PipelinePage() {
     () => [...(activeStagesQuery.data ?? [])].sort((a, b) => a.sortOrder - b.sortOrder),
     [activeStagesQuery.data],
   );
+  const pipelinePreferenceKey = `${entityType.toLowerCase()}:${isAllEntities ? "all" : entityFilter}`;
+
+  useEffect(() => {
+    if (
+      !preferences?.workspaceId ||
+      preferences.workspacePreferences === undefined
+    ) return;
+    const hydrationKey = `${preferences.workspaceId}:${pipelinePreferenceKey}`;
+    if (hydratedPipelinePreference.current === hydrationKey) return;
+    hydratedPipelinePreference.current = hydrationKey;
+
+    const remote = preferences.workspacePreferences?.pipelineHiddenStages?.[pipelinePreferenceKey];
+    let hidden = remote;
+    if (hidden === undefined) {
+      try {
+        const stored = window.localStorage.getItem(
+          `flow-pipeline-hidden:${hydrationKey}`,
+        );
+        const parsed = JSON.parse(stored ?? "[]") as unknown;
+        hidden = Array.isArray(parsed)
+          ? parsed.filter((item): item is string => typeof item === "string")
+          : [];
+      } catch {
+        hidden = [];
+      }
+      preferences.updatePipelineHiddenStages(pipelinePreferenceKey, hidden);
+    }
+    setHiddenStageValues(new Set(hidden));
+  }, [pipelinePreferenceKey, preferences]);
   const stageIndexByValue = useMemo(() => {
     const map = new Map<string, number>();
     stages.forEach((stage, index) => map.set(stage.value, index));
@@ -544,17 +576,30 @@ export default function PipelinePage() {
     .map((stage, index) => ({ stage, index }))
     .filter(({ stage }) => !hiddenStageValues.has(stage.value));
 
+  function persistHiddenStages(next: Set<string>) {
+    setHiddenStageValues(next);
+    if (!preferences?.workspaceId) return;
+    const values = [...next];
+    try {
+      window.localStorage.setItem(
+        `flow-pipeline-hidden:${preferences.workspaceId}:${pipelinePreferenceKey}`,
+        JSON.stringify(values),
+      );
+    } catch {
+      // The visibility selection still applies for this session.
+    }
+    preferences.updatePipelineHiddenStages(pipelinePreferenceKey, values);
+  }
+
   function toggleStageVisibility(stageValue: string) {
-    setHiddenStageValues((current) => {
-      const next = new Set(current);
-      if (next.has(stageValue)) {
-        next.delete(stageValue);
-      } else {
-        if (stages.length - current.size <= 1) return current;
-        next.add(stageValue);
-      }
-      return next;
-    });
+    const next = new Set(hiddenStageValues);
+    if (next.has(stageValue)) {
+      next.delete(stageValue);
+    } else {
+      if (stages.length - next.size <= 1) return;
+      next.add(stageValue);
+    }
+    persistHiddenStages(next);
   }
 
   async function addStage(value: string) {
@@ -586,12 +631,11 @@ export default function PipelinePage() {
     } else {
       await deleteModulePoolStage.mutateAsync(stage.id);
     }
-    setHiddenStageValues((current) => {
-      if (!current.has(stage.value)) return current;
-      const next = new Set(current);
+    if (hiddenStageValues.has(stage.value)) {
+      const next = new Set(hiddenStageValues);
       next.delete(stage.value);
-      return next;
-    });
+      persistHiddenStages(next);
+    }
   }
 
   function moveItem(id: string, stageIndex: number) {

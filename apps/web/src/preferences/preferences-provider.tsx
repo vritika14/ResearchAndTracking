@@ -36,21 +36,17 @@ export function PreferencesProvider({ children }: { children: ReactNode }) {
   const updateAccountPreferences = updateAccount.mutate;
   const updateWorkspacePreferences = updateWorkspace.mutate;
   const accountHydrated = useRef(false);
-  const skipNextAccountSave = useRef(false);
+  const lastSavedAccount = useRef("");
 
   useEffect(() => {
-    if (!accountQuery.isSuccess || accountHydrated.current) return;
-    const stored = accountQuery.data;
-    skipNextAccountSave.current = true;
+    if (
+      (!accountQuery.isSuccess && !accountQuery.isError) ||
+      accountHydrated.current
+    ) return;
+    const stored = accountQuery.isSuccess ? accountQuery.data : null;
     accountHydrated.current = true;
 
     if (!stored) {
-      updateAccountPreferences({
-        appearanceTheme,
-        designTheme,
-        colorTheme,
-        textSize,
-      });
       return;
     }
 
@@ -60,6 +56,7 @@ export function PreferencesProvider({ children }: { children: ReactNode }) {
       colorTheme: stored.colorTheme ?? colorTheme,
       textSize: stored.textSize ?? textSize,
     };
+    lastSavedAccount.current = JSON.stringify(merged);
     setAppearanceTheme(merged.appearanceTheme);
     setDesignTheme(merged.designTheme);
     setColorTheme(merged.colorTheme);
@@ -74,6 +71,7 @@ export function PreferencesProvider({ children }: { children: ReactNode }) {
     }
   }, [
     accountQuery.data,
+    accountQuery.isError,
     accountQuery.isSuccess,
     appearanceTheme,
     colorTheme,
@@ -88,19 +86,11 @@ export function PreferencesProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     if (!accountHydrated.current) return;
-    if (skipNextAccountSave.current) {
-      skipNextAccountSave.current = false;
-      return;
-    }
-    const timeout = window.setTimeout(() => {
-      updateAccountPreferences({
-        appearanceTheme,
-        designTheme,
-        colorTheme,
-        textSize,
-      });
-    }, 400);
-    return () => window.clearTimeout(timeout);
+    const next = { appearanceTheme, designTheme, colorTheme, textSize };
+    const serialized = JSON.stringify(next);
+    if (serialized === lastSavedAccount.current) return;
+    lastSavedAccount.current = serialized;
+    updateAccountPreferences(next);
   }, [appearanceTheme, colorTheme, designTheme, textSize, updateAccountPreferences]);
 
   const updateDashboardLayout = useCallback(
@@ -117,18 +107,34 @@ export function PreferencesProvider({ children }: { children: ReactNode }) {
     [tenantId, updateWorkspacePreferences],
   );
 
+  const updatePipelineHiddenStages = useCallback(
+    (pipeline: string, stages: string[]) => {
+      if (tenantId) {
+        updateWorkspacePreferences({ pipelineHiddenStages: { [pipeline]: stages } });
+      }
+    },
+    [tenantId, updateWorkspacePreferences],
+  );
+
   const contextValue = useMemo<PreferencesContextValue>(
     () => ({
       workspaceId: tenantId,
-      workspacePreferences: preferencesQuery.isSuccess ? preferencesQuery.data : undefined,
+      workspacePreferences: preferencesQuery.isSuccess
+        ? preferencesQuery.data
+        : preferencesQuery.isError
+          ? null
+          : undefined,
       updateDashboardLayout,
       updateTableColumns,
+      updatePipelineHiddenStages,
     }),
     [
       preferencesQuery.data,
+      preferencesQuery.isError,
       preferencesQuery.isSuccess,
       tenantId,
       updateDashboardLayout,
+      updatePipelineHiddenStages,
       updateTableColumns,
     ],
   );

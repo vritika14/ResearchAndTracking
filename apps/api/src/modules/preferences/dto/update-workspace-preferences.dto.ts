@@ -17,4 +17,12 @@ export class UpdateWorkspacePreferencesDto {
   @IsOptional()
   @IsObject()
   tableColumns?: Record<string, unknown>;
+
+  @ApiProperty({
+    required: false,
+    example: { 'projects:all': ['Review'] },
+  })
+  @IsOptional()
+  @IsObject()
+  pipelineHiddenStages?: Record<string, unknown>;
 }

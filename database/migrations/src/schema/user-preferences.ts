@@ -17,6 +17,7 @@ export interface DashboardLayoutPreference {
 export interface WorkspacePreferenceValues {
   dashboardLayout?: DashboardLayoutPreference;
   tableColumns?: Record<string, string[]>;
+  pipelineHiddenStages?: Record<string, string[]>;
 }
 
 export const userPreferences = pgTable('user_preferences', {

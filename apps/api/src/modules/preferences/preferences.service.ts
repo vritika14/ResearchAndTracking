@@ -74,6 +74,14 @@ export class PreferencesService {
       );
     }
 
+    if (input.pipelineHiddenStages) {
+      patch.pipelineHiddenStages = Object.fromEntries(
+        Object.entries(input.pipelineHiddenStages)
+          .filter(([key]) => key.length > 0 && key.length <= 200)
+          .map(([key, value]) => [key, stringList(value)]),
+      );
+    }
+
     const updated = await this.repository.updateWorkspace(
       userId,
       tenantId,

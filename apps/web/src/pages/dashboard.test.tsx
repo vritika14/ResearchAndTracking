@@ -1,8 +1,9 @@
-import { fireEvent, render, screen } from "@testing-library/react";
+import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { MemoryRouter } from "react-router-dom";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import DashboardPage from "@/pages/dashboard";
+import { PreferencesContext } from "@/preferences/preferences-context";
 
 vi.mock("@/api/hooks", () => ({
   useCurrentWorkspace: () => ({
@@ -90,5 +91,43 @@ describe("DashboardPage", () => {
       "Pipeline table",
       "Conferences table",
     ]);
+  });
+
+  it("saves the first dashboard change after hydrating a default server layout", async () => {
+    const updateDashboardLayout = vi.fn();
+    render(
+      <MemoryRouter>
+        <PreferencesContext.Provider
+          value={{
+            workspaceId: "workspace-1",
+            workspacePreferences: {
+              dashboardLayout: {
+                order: [
+                  "pipeline-distribution",
+                  "task-health",
+                  "priority-workload",
+                  "project-progress",
+                  "tasks",
+                  "pipeline",
+                  "conferences",
+                ],
+                hidden: [],
+              },
+            },
+            updateDashboardLayout,
+            updateTableColumns: vi.fn(),
+            updatePipelineHiddenStages: vi.fn(),
+          }}
+        >
+          <DashboardPage />
+        </PreferencesContext.Provider>
+      </MemoryRouter>,
+    );
+
+    fireEvent.click(screen.getByRole("button", { name: "Customize dashboard" }));
+    fireEvent.click(screen.getByRole("checkbox", { name: /Task health/ }));
+
+    await waitFor(() => expect(updateDashboardLayout).toHaveBeenCalledTimes(1));
+    expect(updateDashboardLayout.mock.calls[0]?.[0].hidden).toContain("task-health");
   });
 });

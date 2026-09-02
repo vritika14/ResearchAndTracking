@@ -10,6 +10,7 @@ const fixtures = vi.hoisted(() => ({
     colorTheme?: "ocean" | "violet" | "emerald" | "rose";
     textSize?: "small" | "default" | "large";
   },
+  appearanceTheme: "light" as "light" | "dark",
 }));
 
 const mutations = vi.hoisted(() => ({
@@ -38,7 +39,10 @@ vi.mock("@/api/hooks", () => ({
 }));
 
 vi.mock("@/theme/appearance-theme", () => ({
-  useAppearanceTheme: () => ({ theme: "light", setTheme: themeSetters.appearance }),
+  useAppearanceTheme: () => ({
+    theme: fixtures.appearanceTheme,
+    setTheme: themeSetters.appearance,
+  }),
 }));
 vi.mock("@/theme/design-theme", () => ({
   useDesignTheme: () => ({ theme: "modern", setTheme: themeSetters.design }),
@@ -53,6 +57,7 @@ vi.mock("@/theme/text-size", () => ({
 describe("PreferencesProvider", () => {
   beforeEach(() => {
     fixtures.accountPreferences = null;
+    fixtures.appearanceTheme = "light";
     Object.values(mutations).forEach((mock) => mock.mockClear());
     Object.values(themeSetters).forEach((mock) => mock.mockClear());
   });
@@ -85,5 +90,28 @@ describe("PreferencesProvider", () => {
       expect(themeSetters.color).toHaveBeenCalledWith("rose");
       expect(themeSetters.textSize).toHaveBeenCalledWith("large");
     });
+  });
+
+  it("saves the first user change when hydrated values matched the defaults", async () => {
+    fixtures.accountPreferences = {
+      appearanceTheme: "light",
+      designTheme: "modern",
+      colorTheme: "ocean",
+      textSize: "default",
+    };
+    const view = render(<PreferencesProvider><span>App</span></PreferencesProvider>);
+    await waitFor(() => expect(themeSetters.appearance).toHaveBeenCalledWith("light"));
+
+    fixtures.appearanceTheme = "dark";
+    view.rerender(<PreferencesProvider><span>App</span></PreferencesProvider>);
+
+    await waitFor(() =>
+      expect(mutations.account).toHaveBeenCalledWith({
+        appearanceTheme: "dark",
+        designTheme: "modern",
+        colorTheme: "ocean",
+        textSize: "default",
+      }),
+    );
   });
 });

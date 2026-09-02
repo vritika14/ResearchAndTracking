@@ -3,6 +3,7 @@ import { MemoryRouter } from "react-router-dom";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import PipelinePage from "@/pages/pipeline";
+import { PreferencesContext } from "@/preferences/preferences-context";
 
 type StageFixture = {
   id: string;
@@ -358,6 +359,37 @@ describe("PipelinePage", () => {
       "href",
       "/projects/PRJ-101?edit=true&from=pipeline",
     );
+  });
+
+  it("hydrates and saves pipeline stage visibility for the workspace", async () => {
+    const updatePipelineHiddenStages = vi.fn();
+    render(
+      <MemoryRouter>
+        <PreferencesContext.Provider
+          value={{
+            workspaceId: "workspace-1",
+            workspacePreferences: {
+              pipelineHiddenStages: { "project:all": ["Data Collection"] },
+            },
+            updateDashboardLayout: vi.fn(),
+            updateTableColumns: vi.fn(),
+            updatePipelineHiddenStages,
+          }}
+        >
+          <PipelinePage />
+        </PreferencesContext.Provider>
+      </MemoryRouter>,
+    );
+
+    await waitFor(() =>
+      expect(
+        screen.queryByRole("group", { name: "Data Collection stage drop zone" }),
+      ).not.toBeInTheDocument(),
+    );
+    fireEvent.click(screen.getByRole("button", { name: "Manage stages" }));
+    fireEvent.click(screen.getByRole("checkbox", { name: /Data Collection/ }));
+
+    expect(updatePipelineHiddenStages).toHaveBeenCalledWith("project:all", []);
   });
 
   it("moves a project to another stage with drag and drop", async () => {
