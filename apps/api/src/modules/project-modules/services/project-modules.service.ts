@@ -106,6 +106,14 @@ export class ProjectModulesService {
     return this.findOne(module.tenantId, moduleId, callerUserId);
   }
 
+  /** Tenant-agnostic module pipeline lookup for the module details page. */
+  async listPipelineStagesForCaller(moduleId: string, callerUserId: string) {
+    await this.findOneForCaller(moduleId, callerUserId);
+    const { baseStages, customStages } =
+      await this.enumRepository.findPipelineStagesForModule(moduleId);
+    return customStages.length > 0 ? customStages : baseStages;
+  }
+
   async create(
     tenantId: string,
     callerUserId: string,

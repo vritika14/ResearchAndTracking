@@ -11,10 +11,14 @@ export class ProjectPipelineStagesService {
   constructor(private readonly repository: EnumRepository) {}
 
   async list(projectId: string) {
-    const { baseStages, customStages } = await this.repository.findPipelineStagesForProject(projectId);
-    const customValues = new Set(customStages.map((s) => s.value));
-    const filteredBaseStages = baseStages.filter((s) => !customValues.has(s.value));
-    return [...filteredBaseStages, ...customStages];
+    const { baseStages, customStages } =
+      await this.repository.findPipelineStagesForProject(projectId);
+    // Projects created with an explicit stage selection store ordered,
+    // project-scoped copies of those stages. In that case the copies are the
+    // complete pipeline; merging defaults back in would reintroduce stages the
+    // user deliberately left out during project creation. Older projects that
+    // predate stage selection continue to use the default pipeline.
+    return customStages.length > 0 ? customStages : baseStages;
   }
 
   async create(projectId: string, value: string, sortOrder: number) {
@@ -29,11 +33,14 @@ export class ProjectPipelineStagesService {
       }
       return row;
     } catch (err) {
-      const causeMessage = err instanceof Error && 'cause' in err && err.cause instanceof Error
-        ? err.cause.message
-        : '';
+      const causeMessage =
+        err instanceof Error && 'cause' in err && err.cause instanceof Error
+          ? err.cause.message
+          : '';
       if (causeMessage.includes('enum_project_category_value_key')) {
-        throw new ConflictException(`A pipeline stage named "${value}" already exists for this project`);
+        throw new ConflictException(
+          `A pipeline stage named "${value}" already exists for this project`,
+        );
       }
       throw err;
     }

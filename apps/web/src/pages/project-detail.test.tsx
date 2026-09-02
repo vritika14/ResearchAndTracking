@@ -5,6 +5,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import ProjectDetailPage from "@/pages/project-detail";
 
 const fixtures = vi.hoisted(() => ({
+  updateProject: vi.fn(),
   project: {
     id: "PRJ-101",
     displayId: "PRJ-101",
@@ -35,14 +36,30 @@ const fixtures = vi.hoisted(() => ({
       createdAt: "2026-01-01T00:00:00.000Z",
       updatedAt: "2026-01-01T00:00:00.000Z",
     },
+    {
+      id: "stage-2",
+      tenantId: null,
+      category: "pipeline_stage",
+      value: "Publication",
+      sortOrder: 2,
+      createdAt: "2026-01-01T00:00:00.000Z",
+      updatedAt: "2026-01-01T00:00:00.000Z",
+    },
   ],
 }));
 
 vi.mock("@/api/hooks", () => ({
   useMe: () => ({
-    data: { id: "user-owner", email: "owner@example.com", displayName: "Avi Researcher" },
+    data: {
+      id: "user-owner",
+      email: "owner@example.com",
+      displayName: "Avi Researcher",
+    },
   }),
-  useCurrentWorkspace: () => ({ data: { id: "workspace-1" }, isPending: false }),
+  useCurrentWorkspace: () => ({
+    data: { id: "workspace-1" },
+    isPending: false,
+  }),
   useMembers: () => ({
     data: [
       {
@@ -63,23 +80,30 @@ vi.mock("@/api/hooks", () => ({
     refetch: vi.fn(),
   }),
   useUpdateMyProject: () => ({
-    mutateAsync: vi.fn(async ({ input }: { input: Record<string, unknown> }) => {
-      Object.assign(fixtures.project, input);
-      return fixtures.project;
-    }),
+    mutateAsync: fixtures.updateProject,
     isPending: false,
   }),
   useArchiveMyProject: () => ({ mutateAsync: vi.fn(), isPending: false }),
   useModules: () => ({ data: [] }),
   useTasks: () => ({ data: [] }),
   useNotes: () => ({ data: [] }),
-  useProjectPipelineStages: () => ({ data: fixtures.pipelineStages }),
-  usePipelineStages: () => ({ data: fixtures.pipelineStages }),
+  useMyProjectPipelineStages: () => ({
+    data: fixtures.pipelineStages,
+    isPending: false,
+    isError: false,
+  }),
   useProjectCollaborators: () => ({ data: [], isPending: false }),
   useRemoveProjectCollaborator: () => ({ mutate: vi.fn() }),
   useCollaboratorInvitations: () => ({ data: [], isPending: false }),
-  useInviteCollaborator: () => ({ mutateAsync: vi.fn(), isPending: false, isError: false }),
-  useRevokeCollaboratorInvitation: () => ({ mutate: vi.fn(), isPending: false }),
+  useInviteCollaborator: () => ({
+    mutateAsync: vi.fn(),
+    isPending: false,
+    isError: false,
+  }),
+  useRevokeCollaboratorInvitation: () => ({
+    mutate: vi.fn(),
+    isPending: false,
+  }),
   useUserSearch: () => ({ data: [], isPending: false, isError: false }),
 }));
 
@@ -89,6 +113,14 @@ describe("ProjectDetailPage", () => {
     fixtures.project.researchArea = "Biochemistry";
     fixtures.project.scheduledFor = "2026-08-06";
     fixtures.project.dueDate = "2026-08-15";
+    fixtures.project.pipelineStage = "Data Collection";
+    fixtures.updateProject.mockReset();
+    fixtures.updateProject.mockImplementation(
+      async ({ input }: { input: Record<string, unknown> }) => {
+        Object.assign(fixtures.project, input);
+        return fixtures.project;
+      },
+    );
   });
 
   it("edits project details in place", async () => {
@@ -123,7 +155,9 @@ describe("ProjectDetailPage", () => {
       ).toBeInTheDocument(),
     );
     expect(screen.getByText("Updated research area")).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "Edit Project" })).toBeInTheDocument();
+    expect(
+      screen.getByRole("button", { name: "Edit Project" }),
+    ).toBeInTheDocument();
   });
 
   it("opens directly in edit mode from a project-table edit link", () => {
@@ -135,13 +169,19 @@ describe("ProjectDetailPage", () => {
       </MemoryRouter>,
     );
 
-    expect(screen.getByRole("heading", { name: "Edit project details" })).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "Save Changes" })).toBeInTheDocument();
+    expect(
+      screen.getByRole("heading", { name: "Edit project details" }),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByRole("button", { name: "Save Changes" }),
+    ).toBeInTheDocument();
   });
 
   it("returns to the pipeline when pipeline editing is cancelled", () => {
     render(
-      <MemoryRouter initialEntries={["/projects/PRJ-101?edit=true&from=pipeline"]}>
+      <MemoryRouter
+        initialEntries={["/projects/PRJ-101?edit=true&from=pipeline"]}
+      >
         <Routes>
           <Route path="projects/:projectId" element={<ProjectDetailPage />} />
           <Route path="pipeline" element={<h1>Pipeline</h1>} />
@@ -151,7 +191,9 @@ describe("ProjectDetailPage", () => {
 
     fireEvent.click(screen.getByRole("button", { name: "Cancel Editing" }));
 
-    expect(screen.getByRole("heading", { name: "Pipeline" })).toBeInTheDocument();
+    expect(
+      screen.getByRole("heading", { name: "Pipeline" }),
+    ).toBeInTheDocument();
   });
 
   it("shows collaborators only when expanded, without hiding linked work", () => {
@@ -163,14 +205,77 @@ describe("ProjectDetailPage", () => {
       </MemoryRouter>,
     );
 
-    expect(screen.queryByRole("heading", { name: "Project collaborators" })).not.toBeInTheDocument();
-    expect(screen.getByRole("heading", { name: "Modules (0)" })).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "Show collaborators" })).toHaveAttribute("aria-expanded", "false");
+    expect(
+      screen.queryByRole("heading", { name: "Project collaborators" }),
+    ).not.toBeInTheDocument();
+    expect(
+      screen.getByRole("heading", { name: "Modules (0)" }),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByRole("button", { name: "Show collaborators" }),
+    ).toHaveAttribute("aria-expanded", "false");
 
     fireEvent.click(screen.getByRole("button", { name: "Show collaborators" }));
 
-    expect(screen.getByRole("heading", { name: "Project collaborators" })).toBeInTheDocument();
-    expect(screen.getByRole("heading", { name: "Modules (0)" })).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "Hide collaborators" })).toHaveAttribute("aria-expanded", "true");
+    expect(
+      screen.getByRole("heading", { name: "Project collaborators" }),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByRole("heading", { name: "Modules (0)" }),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByRole("button", { name: "Hide collaborators" }),
+    ).toHaveAttribute("aria-expanded", "true");
+  });
+
+  it("shows the project's selected stages in its pipeline at the bottom", () => {
+    render(
+      <MemoryRouter initialEntries={["/projects/PRJ-101"]}>
+        <Routes>
+          <Route path="projects/:projectId" element={<ProjectDetailPage />} />
+        </Routes>
+      </MemoryRouter>,
+    );
+
+    const pipeline = screen.getByRole("region", { name: "Project pipeline" });
+    expect(pipeline).toHaveTextContent("Data Collection");
+    expect(pipeline).toHaveTextContent("Publication");
+    expect(
+      screen.getByRole("group", {
+        name: "Data Collection stage, current stage",
+      }),
+    ).toContainElement(screen.getByLabelText(`Drag ${fixtures.project.title}`));
+  });
+
+  it("moves the project card when it is dropped onto another stage", async () => {
+    render(
+      <MemoryRouter initialEntries={["/projects/PRJ-101"]}>
+        <Routes>
+          <Route path="projects/:projectId" element={<ProjectDetailPage />} />
+        </Routes>
+      </MemoryRouter>,
+    );
+
+    const dataTransfer = {
+      effectAllowed: "none",
+      dropEffect: "none",
+      setData: vi.fn(),
+      getData: vi.fn(() => fixtures.project.id),
+    } as unknown as DataTransfer;
+    const projectCard = screen.getByLabelText(`Drag ${fixtures.project.title}`);
+    const targetStage = screen.getByRole("group", {
+      name: "Publication stage",
+    });
+
+    fireEvent.dragStart(projectCard, { dataTransfer });
+    fireEvent.dragOver(targetStage, { dataTransfer });
+    fireEvent.drop(targetStage, { dataTransfer });
+
+    await waitFor(() =>
+      expect(fixtures.updateProject).toHaveBeenCalledWith({
+        projectId: "PRJ-101",
+        input: { pipelineStage: "Publication" },
+      }),
+    );
   });
 });
