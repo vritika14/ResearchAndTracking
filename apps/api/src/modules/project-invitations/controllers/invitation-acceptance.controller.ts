@@ -56,7 +56,13 @@ export class InvitationAcceptanceController {
     @Param('token') token: string,
     @Req() req: AuthenticatedRequest,
   ) {
-    const user = await this.usersService.findByExternalAuthId(req.user.sub);
+    const user = await this.usersService.findOrProvisionFromAccessToken(
+      req.user.sub,
+      req.user.accessToken,
+    );
+    if (!user) {
+      throw new NotFoundException('User could not be found or provisioned');
+    }
 
     const project = await this.projectInvitations
       .accept(token, user.id, user.email)

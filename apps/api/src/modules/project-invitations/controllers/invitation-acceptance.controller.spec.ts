@@ -1,0 +1,89 @@
+import { Test, TestingModule } from '@nestjs/testing';
+import { NotFoundException } from '@nestjs/common';
+import { InvitationAcceptanceController } from './invitation-acceptance.controller';
+import { ProjectInvitationsService } from '../services/project-invitations.service';
+import { ModuleInvitationsService } from '../../module-invitations/services/module-invitations.service';
+import { UsersService } from '../../users/users.service';
+
+describe('InvitationAcceptanceController', () => {
+  let controller: InvitationAcceptanceController;
+  let projectInvitations: { preview: jest.Mock; accept: jest.Mock };
+  let moduleInvitations: { preview: jest.Mock; accept: jest.Mock };
+  let usersService: { findOrProvisionFromAccessToken: jest.Mock };
+
+  beforeEach(async () => {
+    projectInvitations = { preview: jest.fn(), accept: jest.fn() };
+    moduleInvitations = { preview: jest.fn(), accept: jest.fn() };
+    usersService = { findOrProvisionFromAccessToken: jest.fn() };
+
+    const moduleRef: TestingModule = await Test.createTestingModule({
+      controllers: [InvitationAcceptanceController],
+      providers: [
+        { provide: ProjectInvitationsService, useValue: projectInvitations },
+        { provide: ModuleInvitationsService, useValue: moduleInvitations },
+        { provide: UsersService, useValue: usersService },
+      ],
+    }).compile();
+
+    controller = moduleRef.get<InvitationAcceptanceController>(
+      InvitationAcceptanceController,
+    );
+  });
+
+  describe('accept', () => {
+    it('provisions a brand-new user from the access token before accepting', async () => {
+      usersService.findOrProvisionFromAccessToken.mockResolvedValue({
+        id: 'new-user-id',
+        email: 'newcomer@example.com',
+      });
+      projectInvitations.accept.mockResolvedValue({ id: 'collab-1' });
+
+      const req = {
+        user: { sub: 'cognito-sub-new', accessToken: 'access-token-new' },
+      } as any;
+
+      const result = await controller.accept('raw-token', req);
+
+      expect(usersService.findOrProvisionFromAccessToken).toHaveBeenCalledWith(
+        'cognito-sub-new',
+        'access-token-new',
+      );
+      expect(projectInvitations.accept).toHaveBeenCalledWith(
+        'raw-token',
+        'new-user-id',
+        'newcomer@example.com',
+      );
+      expect(result).toEqual({ type: 'project', row: { id: 'collab-1' } });
+    });
+
+    it('falls back to a module invitation when no project invitation matches', async () => {
+      usersService.findOrProvisionFromAccessToken.mockResolvedValue({
+        id: 'user-id',
+        email: 'someone@example.com',
+      });
+      projectInvitations.accept.mockRejectedValue(new NotFoundException());
+      moduleInvitations.accept.mockResolvedValue({ id: 'collab-2' });
+
+      const req = {
+        user: { sub: 'cognito-sub', accessToken: 'access-token' },
+      } as any;
+
+      const result = await controller.accept('raw-token', req);
+
+      expect(result).toEqual({ type: 'module', row: { id: 'collab-2' } });
+    });
+
+    it('throws NotFoundException when the user could not be found or provisioned', async () => {
+      usersService.findOrProvisionFromAccessToken.mockResolvedValue(undefined);
+
+      const req = {
+        user: { sub: 'cognito-sub', accessToken: 'access-token' },
+      } as any;
+
+      await expect(controller.accept('raw-token', req)).rejects.toThrow(
+        NotFoundException,
+      );
+      expect(projectInvitations.accept).not.toHaveBeenCalled();
+    });
+  });
+});

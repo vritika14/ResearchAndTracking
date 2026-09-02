@@ -1,4 +1,4 @@
-import { Controller, Get, Req, UseGuards } from '@nestjs/common';
+import { Controller, Get, NotFoundException, Req, UseGuards } from '@nestjs/common';
 import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
 import { Request } from 'express';
 import type { AuthenticatedPrincipal } from '../../auth/jwt.strategy';
@@ -27,7 +27,13 @@ export class MyInvitationsController {
   @UseGuards(JwtAuthGuard)
   @Get()
   async list(@Req() req: AuthenticatedRequest) {
-    const user = await this.usersService.findByExternalAuthId(req.user.sub);
+    const user = await this.usersService.findOrProvisionFromAccessToken(
+      req.user.sub,
+      req.user.accessToken,
+    );
+    if (!user) {
+      throw new NotFoundException('User could not be found or provisioned');
+    }
     const [projectInvites, moduleInvites] = await Promise.all([
       this.projectInvitations.listForEmailWithTitles(user.email),
       this.moduleInvitations.listForEmailWithTitles(user.email),
