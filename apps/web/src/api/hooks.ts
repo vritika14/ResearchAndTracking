@@ -1,6 +1,12 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 
-import { ApiError, apiClient, apiJson, authenticatedJson, responseData } from "@/api/client";
+import {
+  ApiError,
+  apiClient,
+  apiJson,
+  authenticatedJson,
+  responseData,
+} from "@/api/client";
 
 /**
  * None of the API's controllers annotate their response bodies with
@@ -240,7 +246,14 @@ export const apiKeys = {
   project: (tenantId: string, projectId: string) =>
     ["api", "tenant", tenantId, "projects", projectId] as const,
   projectCollaborators: (tenantId: string, projectId: string) =>
-    ["api", "tenant", tenantId, "projects", projectId, "collaborators"] as const,
+    [
+      "api",
+      "tenant",
+      tenantId,
+      "projects",
+      projectId,
+      "collaborators",
+    ] as const,
   projectInvitations: (tenantId: string, projectId: string) =>
     ["api", "tenant", tenantId, "projects", projectId, "invitations"] as const,
   modules: (tenantId: string, projectId?: string) =>
@@ -277,8 +290,7 @@ export function useMe(enabled = true) {
   return useQuery({
     queryKey: apiKeys.me,
     enabled,
-    queryFn: async () =>
-      responseData<Me>(await apiClient.GET("/api/v1/me")),
+    queryFn: async () => responseData<Me>(await apiClient.GET("/api/v1/me")),
   });
 }
 
@@ -302,9 +314,11 @@ export function useAccountPreferences(enabled = true) {
     queryKey: apiKeys.accountPreferences,
     enabled,
     queryFn: async () =>
-      (await authenticatedJson<{ preferences: AccountPreferences | null }>(
-        "/api/v1/me/preferences",
-      )).preferences,
+      (
+        await authenticatedJson<{ preferences: AccountPreferences | null }>(
+          "/api/v1/me/preferences",
+        )
+      ).preferences,
   });
 }
 
@@ -312,14 +326,18 @@ export function useUpdateAccountPreferences() {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: async (preferences: AccountPreferences) =>
-      (await authenticatedJson<{ preferences: AccountPreferences }>(
-        "/api/v1/me/preferences",
-        { method: "PATCH", body: JSON.stringify(preferences) },
-      )).preferences,
+      (
+        await authenticatedJson<{ preferences: AccountPreferences }>(
+          "/api/v1/me/preferences",
+          { method: "PATCH", body: JSON.stringify(preferences) },
+        )
+      ).preferences,
     retry: 2,
     async onMutate(patch) {
       await queryClient.cancelQueries({ queryKey: apiKeys.accountPreferences });
-      const previous = queryClient.getQueryData<AccountPreferences>(apiKeys.accountPreferences);
+      const previous = queryClient.getQueryData<AccountPreferences>(
+        apiKeys.accountPreferences,
+      );
       queryClient.setQueryData<AccountPreferences>(apiKeys.accountPreferences, {
         ...(previous ?? {}),
         ...patch,
@@ -330,10 +348,13 @@ export function useUpdateAccountPreferences() {
       queryClient.setQueryData(apiKeys.accountPreferences, context?.previous);
     },
     onSuccess(preferences, patch) {
-      queryClient.setQueryData<AccountPreferences>(apiKeys.accountPreferences, (current) => ({
-        ...(current ?? preferences),
-        ...patch,
-      }));
+      queryClient.setQueryData<AccountPreferences>(
+        apiKeys.accountPreferences,
+        (current) => ({
+          ...(current ?? preferences),
+          ...patch,
+        }),
+      );
     },
   });
 }
@@ -343,9 +364,11 @@ export function useWorkspacePreferences(tenantId: string, enabled = true) {
     queryKey: apiKeys.workspacePreferences(tenantId),
     enabled: Boolean(tenantId) && enabled,
     queryFn: async () =>
-      (await authenticatedJson<{ preferences: WorkspacePreferences | null }>(
-        `/api/v1/tenant/${tenantId}/me/preferences`,
-      )).preferences,
+      (
+        await authenticatedJson<{ preferences: WorkspacePreferences | null }>(
+          `/api/v1/tenant/${tenantId}/me/preferences`,
+        )
+      ).preferences,
   });
 }
 
@@ -358,7 +381,9 @@ export function useUpdateWorkspacePreferences(tenantId: string) {
     patch: WorkspacePreferencesPatch,
   ): WorkspacePreferences => ({
     ...(current ?? {}),
-    ...(patch.dashboardLayout ? { dashboardLayout: patch.dashboardLayout } : {}),
+    ...(patch.dashboardLayout
+      ? { dashboardLayout: patch.dashboardLayout }
+      : {}),
     tableColumns: {
       ...(current?.tableColumns ?? {}),
       ...(patch.tableColumns ?? {}),
@@ -371,24 +396,30 @@ export function useUpdateWorkspacePreferences(tenantId: string) {
 
   return useMutation({
     mutationFn: async (patch: WorkspacePreferencesPatch) =>
-      (await authenticatedJson<{ preferences: WorkspacePreferences }>(
-        `/api/v1/tenant/${tenantId}/me/preferences`,
-        { method: "PATCH", body: JSON.stringify(patch) },
-      )).preferences,
+      (
+        await authenticatedJson<{ preferences: WorkspacePreferences }>(
+          `/api/v1/tenant/${tenantId}/me/preferences`,
+          { method: "PATCH", body: JSON.stringify(patch) },
+        )
+      ).preferences,
     retry: 2,
     async onMutate(patch) {
       await queryClient.cancelQueries({ queryKey });
-      const previous = queryClient.getQueryData<WorkspacePreferences | null>(queryKey);
-      queryClient.setQueryData<WorkspacePreferences>(queryKey, mergePatch(previous, patch));
+      const previous = queryClient.getQueryData<WorkspacePreferences | null>(
+        queryKey,
+      );
+      queryClient.setQueryData<WorkspacePreferences>(
+        queryKey,
+        mergePatch(previous, patch),
+      );
       return { previous };
     },
     onError(_error, _patch, context) {
       queryClient.setQueryData(queryKey, context?.previous);
     },
     onSuccess(preferences, patch) {
-      queryClient.setQueryData<WorkspacePreferences>(
-        queryKey,
-        (current) => mergePatch(current ?? preferences, patch),
+      queryClient.setQueryData<WorkspacePreferences>(queryKey, (current) =>
+        mergePatch(current ?? preferences, patch),
       );
     },
   });
@@ -475,9 +506,12 @@ export function useDeleteWorkspace() {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: async (workspaceId: string) => {
-      const result = await apiClient.DELETE("/api/v1/workspaces/{workspaceId}", {
-        params: { path: { workspaceId } },
-      });
+      const result = await apiClient.DELETE(
+        "/api/v1/workspaces/{workspaceId}",
+        {
+          params: { path: { workspaceId } },
+        },
+      );
 
       if (result.response.status !== 200) {
         await responseData(result);
@@ -548,7 +582,11 @@ export function useProjects(tenantId: string, enabled = true) {
   });
 }
 
-export function useProject(tenantId: string, projectId: string, enabled = true) {
+export function useProject(
+  tenantId: string,
+  projectId: string,
+  enabled = true,
+) {
   return useQuery({
     queryKey: apiKeys.project(tenantId, projectId),
     enabled: Boolean(tenantId) && Boolean(projectId) && enabled,
@@ -574,10 +612,18 @@ export function useCreateProject(tenantId: string) {
     async onSuccess(project) {
       const addProject = (current: ApiProject[] | undefined) => {
         if (!current) return [project];
-        return current.some((item) => item.id === project.id) ? current : [project, ...current];
+        return current.some((item) => item.id === project.id)
+          ? current
+          : [project, ...current];
       };
-      queryClient.setQueryData<ApiProject[]>(apiKeys.projects(tenantId), addProject);
-      queryClient.setQueryData<ApiProject[]>(["api", "me", "projects"], addProject);
+      queryClient.setQueryData<ApiProject[]>(
+        apiKeys.projects(tenantId),
+        addProject,
+      );
+      queryClient.setQueryData<ApiProject[]>(
+        ["api", "me", "projects"],
+        addProject,
+      );
       await Promise.all([
         queryClient.invalidateQueries({ queryKey: apiKeys.projects(tenantId) }),
         queryClient.invalidateQueries({ queryKey: ["api", "me", "projects"] }),
@@ -597,14 +643,19 @@ export function useUpdateProject(tenantId: string) {
       input: UpdateProjectInput;
     }) =>
       responseData<ApiProject>(
-        await apiClient.PATCH("/api/v1/tenant/{tenantId}/projects/{projectId}", {
-          params: { path: { tenantId, projectId } },
-          body: input,
-        }),
+        await apiClient.PATCH(
+          "/api/v1/tenant/{tenantId}/projects/{projectId}",
+          {
+            params: { path: { tenantId, projectId } },
+            body: input,
+          },
+        ),
       ),
     async onSuccess(project) {
       queryClient.setQueryData(apiKeys.project(tenantId, project.id), project);
-      await queryClient.invalidateQueries({ queryKey: apiKeys.projects(tenantId) });
+      await queryClient.invalidateQueries({
+        queryKey: apiKeys.projects(tenantId),
+      });
     },
   });
 }
@@ -614,18 +665,24 @@ export function useArchiveProject(tenantId: string) {
   return useMutation({
     mutationFn: async (projectId: string) =>
       responseData<{ project: ApiProject; warning: string }>(
-        await apiClient.DELETE("/api/v1/tenant/{tenantId}/projects/{projectId}", {
-          params: { path: { tenantId, projectId } },
-        }),
+        await apiClient.DELETE(
+          "/api/v1/tenant/{tenantId}/projects/{projectId}",
+          {
+            params: { path: { tenantId, projectId } },
+          },
+        ),
       ),
     async onSuccess() {
-      await queryClient.invalidateQueries({ queryKey: apiKeys.projects(tenantId) });
+      await queryClient.invalidateQueries({
+        queryKey: apiKeys.projects(tenantId),
+      });
     },
   });
 }
 
 const myProjectsKey = ["api", "me", "projects"] as const;
-const myProjectKey = (projectId: string) => ["api", "me", "projects", projectId] as const;
+const myProjectKey = (projectId: string) =>
+  ["api", "me", "projects", projectId] as const;
 
 /**
  * Tenant-agnostic: every project the caller owns or collaborates on,
@@ -650,6 +707,17 @@ export function useMyProject(projectId: string, enabled = true) {
         await apiClient.GET("/api/v1/me/projects/{projectId}", {
           params: { path: { projectId } },
         }),
+      ),
+  });
+}
+
+export function useMyProjectPipelineStages(projectId: string, enabled = true) {
+  return useQuery({
+    queryKey: [...myProjectKey(projectId), "pipeline-stages"] as const,
+    enabled: Boolean(projectId) && enabled,
+    queryFn: () =>
+      authenticatedJson<ApiPipelineStage[]>(
+        `/api/v1/me/projects/${encodeURIComponent(projectId)}/pipeline-stages`,
       ),
   });
 }
@@ -728,7 +796,10 @@ export function useAddProjectCollaborator(tenantId: string, projectId: string) {
   });
 }
 
-export function useRemoveProjectCollaborator(tenantId: string, projectId: string) {
+export function useRemoveProjectCollaborator(
+  tenantId: string,
+  projectId: string,
+) {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: async (userId: string) =>
@@ -763,7 +834,11 @@ export interface CreateModuleInput {
 }
 export type UpdateModuleInput = Partial<CreateModuleInput>;
 
-export function useModules(tenantId: string, projectId?: string, enabled = true) {
+export function useModules(
+  tenantId: string,
+  projectId?: string,
+  enabled = true,
+) {
   return useQuery({
     queryKey: apiKeys.modules(tenantId, projectId),
     enabled: Boolean(tenantId) && enabled,
@@ -807,12 +882,22 @@ export function useCreateModule(tenantId: string) {
     async onSuccess(module) {
       const addModule = (current: ApiModule[] | undefined) => {
         if (!current) return [module];
-        return current.some((item) => item.id === module.id) ? current : [module, ...current];
+        return current.some((item) => item.id === module.id)
+          ? current
+          : [module, ...current];
       };
-      queryClient.setQueryData<ApiModule[]>(apiKeys.modules(tenantId), addModule);
-      queryClient.setQueryData<ApiModule[]>(["api", "me", "modules"], addModule);
+      queryClient.setQueryData<ApiModule[]>(
+        apiKeys.modules(tenantId),
+        addModule,
+      );
+      queryClient.setQueryData<ApiModule[]>(
+        ["api", "me", "modules"],
+        addModule,
+      );
       await Promise.all([
-        queryClient.invalidateQueries({ queryKey: ["api", "tenant", tenantId, "modules"] }),
+        queryClient.invalidateQueries({
+          queryKey: ["api", "tenant", tenantId, "modules"],
+        }),
         queryClient.invalidateQueries({ queryKey: ["api", "me", "modules"] }),
       ]);
     },
@@ -858,13 +943,16 @@ export function useArchiveModule(tenantId: string) {
         { queryKey: ["api", "tenant", tenantId, "modules"] },
         (current) => current?.filter((module) => module.id !== moduleId),
       );
-      queryClient.setQueryData<ApiModule[]>(
-        myModulesKey,
-        (current) => current?.filter((module) => module.id !== moduleId),
+      queryClient.setQueryData<ApiModule[]>(myModulesKey, (current) =>
+        current?.filter((module) => module.id !== moduleId),
       );
-      queryClient.removeQueries({ queryKey: apiKeys.module(tenantId, moduleId) });
+      queryClient.removeQueries({
+        queryKey: apiKeys.module(tenantId, moduleId),
+      });
       await Promise.all([
-        queryClient.invalidateQueries({ queryKey: ["api", "tenant", tenantId, "modules"] }),
+        queryClient.invalidateQueries({
+          queryKey: ["api", "tenant", tenantId, "modules"],
+        }),
         queryClient.invalidateQueries({ queryKey: myModulesKey }),
       ]);
     },
@@ -907,7 +995,10 @@ export function useAddModuleCollaborator(tenantId: string, moduleId: string) {
   });
 }
 
-export function useRemoveModuleCollaborator(tenantId: string, moduleId: string) {
+export function useRemoveModuleCollaborator(
+  tenantId: string,
+  moduleId: string,
+) {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: async (userId: string) =>
@@ -926,7 +1017,8 @@ export function useRemoveModuleCollaborator(tenantId: string, moduleId: string) 
 }
 
 const myModulesKey = ["api", "me", "modules"] as const;
-const myModuleKey = (moduleId: string) => ["api", "me", "modules", moduleId] as const;
+const myModuleKey = (moduleId: string) =>
+  ["api", "me", "modules", moduleId] as const;
 
 /**
  * Tenant-agnostic: every module the caller can access, regardless of which
@@ -950,6 +1042,17 @@ export function useMyModule(moduleId: string, enabled = true) {
         await apiClient.GET("/api/v1/me/modules/{moduleId}", {
           params: { path: { moduleId } },
         }),
+      ),
+  });
+}
+
+export function useMyModulePipelineStages(moduleId: string, enabled = true) {
+  return useQuery({
+    queryKey: [...myModuleKey(moduleId), "pipeline-stages"] as const,
+    enabled: Boolean(moduleId) && enabled,
+    queryFn: () =>
+      authenticatedJson<ApiPipelineStage[]>(
+        `/api/v1/me/modules/${encodeURIComponent(moduleId)}/pipeline-stages`,
       ),
   });
 }
@@ -1136,7 +1239,13 @@ export function useMyTask(taskId: string, enabled = true) {
 export function useUpdateMyTask() {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: async ({ taskId, input }: { taskId: string; input: UpdateTaskInput }) =>
+    mutationFn: async ({
+      taskId,
+      input,
+    }: {
+      taskId: string;
+      input: UpdateTaskInput;
+    }) =>
       responseData<ApiTask>(
         await apiClient.PATCH("/api/v1/me/tasks/{taskId}", {
           params: { path: { taskId } },
@@ -1165,15 +1274,22 @@ export function useDeleteMyTask() {
   });
 }
 
-export function useTaskMembers(tenantId: string, taskId: string, enabled = true) {
+export function useTaskMembers(
+  tenantId: string,
+  taskId: string,
+  enabled = true,
+) {
   return useQuery({
     queryKey: apiKeys.taskMembers(tenantId, taskId),
     enabled: Boolean(tenantId) && Boolean(taskId) && enabled,
     queryFn: async () =>
       responseData<ApiMember[]>(
-        await apiClient.GET("/api/v1/tenant/{tenantId}/tasks/{taskId}/members", {
-          params: { path: { tenantId, taskId } },
-        }),
+        await apiClient.GET(
+          "/api/v1/tenant/{tenantId}/tasks/{taskId}/members",
+          {
+            params: { path: { tenantId, taskId } },
+          },
+        ),
       ),
   });
 }
@@ -1183,10 +1299,13 @@ export function useAddTaskMember(tenantId: string, taskId: string) {
   return useMutation({
     mutationFn: async (userId: string) =>
       responseData<ApiMember>(
-        await apiClient.POST("/api/v1/tenant/{tenantId}/tasks/{taskId}/members", {
-          params: { path: { tenantId, taskId } },
-          body: { userId },
-        }),
+        await apiClient.POST(
+          "/api/v1/tenant/{tenantId}/tasks/{taskId}/members",
+          {
+            params: { path: { tenantId, taskId } },
+            body: { userId },
+          },
+        ),
       ),
     async onSuccess() {
       await queryClient.invalidateQueries({
@@ -1318,15 +1437,22 @@ export function useDeleteNote(tenantId: string) {
   });
 }
 
-export function useNoteMembers(tenantId: string, noteId: string, enabled = true) {
+export function useNoteMembers(
+  tenantId: string,
+  noteId: string,
+  enabled = true,
+) {
   return useQuery({
     queryKey: apiKeys.noteMembers(tenantId, noteId),
     enabled: Boolean(tenantId) && Boolean(noteId) && enabled,
     queryFn: async () =>
       responseData<ApiMember[]>(
-        await apiClient.GET("/api/v1/tenant/{tenantId}/notes/{noteId}/members", {
-          params: { path: { tenantId, noteId } },
-        }),
+        await apiClient.GET(
+          "/api/v1/tenant/{tenantId}/notes/{noteId}/members",
+          {
+            params: { path: { tenantId, noteId } },
+          },
+        ),
       ),
   });
 }
@@ -1336,10 +1462,13 @@ export function useAddNoteMember(tenantId: string, noteId: string) {
   return useMutation({
     mutationFn: async (userId: string) =>
       responseData<ApiMember>(
-        await apiClient.POST("/api/v1/tenant/{tenantId}/notes/{noteId}/members", {
-          params: { path: { tenantId, noteId } },
-          body: { userId },
-        }),
+        await apiClient.POST(
+          "/api/v1/tenant/{tenantId}/notes/{noteId}/members",
+          {
+            params: { path: { tenantId, noteId } },
+            body: { userId },
+          },
+        ),
       ),
     async onSuccess() {
       await queryClient.invalidateQueries({
@@ -1449,7 +1578,11 @@ export function useConferences(tenantId: string, enabled = true) {
   });
 }
 
-export function useConference(tenantId: string, conferenceId: string, enabled = true) {
+export function useConference(
+  tenantId: string,
+  conferenceId: string,
+  enabled = true,
+) {
   return useQuery({
     queryKey: apiKeys.conference(tenantId, conferenceId),
     enabled: Boolean(tenantId) && Boolean(conferenceId) && enabled,
@@ -1469,7 +1602,9 @@ export function useCreateConference(tenantId: string) {
         { method: "POST", body: JSON.stringify(input) },
       ),
     async onSuccess() {
-      await queryClient.invalidateQueries({ queryKey: apiKeys.conferences(tenantId) });
+      await queryClient.invalidateQueries({
+        queryKey: apiKeys.conferences(tenantId),
+      });
     },
   });
 }
@@ -1477,14 +1612,25 @@ export function useCreateConference(tenantId: string) {
 export function useUpdateConference(tenantId: string) {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: ({ conferenceId, input }: { conferenceId: string; input: ConferenceInput }) =>
+    mutationFn: ({
+      conferenceId,
+      input,
+    }: {
+      conferenceId: string;
+      input: ConferenceInput;
+    }) =>
       apiJson<ApiConference>(
         `/api/v1/tenant/${encodeURIComponent(tenantId)}/conferences/${encodeURIComponent(conferenceId)}`,
         { method: "PATCH", body: JSON.stringify(input) },
       ),
     async onSuccess(conference) {
-      queryClient.setQueryData(apiKeys.conference(tenantId, conference.id), conference);
-      await queryClient.invalidateQueries({ queryKey: apiKeys.conferences(tenantId) });
+      queryClient.setQueryData(
+        apiKeys.conference(tenantId, conference.id),
+        conference,
+      );
+      await queryClient.invalidateQueries({
+        queryKey: apiKeys.conferences(tenantId),
+      });
     },
   });
 }
@@ -1498,8 +1644,12 @@ export function useDeleteConference(tenantId: string) {
         { method: "DELETE" },
       ),
     async onSuccess(_result, conferenceId) {
-      queryClient.removeQueries({ queryKey: apiKeys.conference(tenantId, conferenceId) });
-      await queryClient.invalidateQueries({ queryKey: apiKeys.conferences(tenantId) });
+      queryClient.removeQueries({
+        queryKey: apiKeys.conference(tenantId, conferenceId),
+      });
+      await queryClient.invalidateQueries({
+        queryKey: apiKeys.conferences(tenantId),
+      });
     },
   });
 }
@@ -1524,7 +1674,9 @@ export function useEnumValues(category: string, enabled = true) {
     enabled: Boolean(category) && enabled,
     queryFn: async () =>
       responseData<ApiEnumValue[]>(
-        await apiClient.GET("/api/v1/enum", { params: { query: { category } } }),
+        await apiClient.GET("/api/v1/enum", {
+          params: { query: { category } },
+        }),
       ),
   });
 }
@@ -1547,7 +1699,9 @@ export function useUserSearch(query: string, enabled = true) {
     enabled: trimmed.length > 0 && enabled,
     queryFn: async () =>
       responseData<ApiUserSearchResult[]>(
-        await apiClient.GET("/api/v1/users/search", { params: { query: { q: trimmed } } }),
+        await apiClient.GET("/api/v1/users/search", {
+          params: { query: { q: trimmed } },
+        }),
       ),
   });
 }
@@ -1569,7 +1723,11 @@ export interface ApiPipelineStage {
 }
 
 const pipelineStagesKey = ["api", "enum", "project_pipeline_stage"] as const;
-const modulePipelineStagePoolKey = ["api", "enum", "module_pipeline_stage"] as const;
+const modulePipelineStagePoolKey = [
+  "api",
+  "enum",
+  "module_pipeline_stage",
+] as const;
 
 export function usePipelineStages(tenantId: string, enabled = true) {
   return useQuery({
@@ -1607,7 +1765,11 @@ function invitationCollectionPath(
   return `/api/v1/tenant/${encodeURIComponent(tenantId)}/${collection}/${encodeURIComponent(entityId)}/invitations`;
 }
 
-function invitationQueryKey(target: InvitationTarget, tenantId: string, entityId: string) {
+function invitationQueryKey(
+  target: InvitationTarget,
+  tenantId: string,
+  entityId: string,
+) {
   return target === "project"
     ? apiKeys.projectInvitations(tenantId, entityId)
     : apiKeys.moduleInvitations(tenantId, entityId);
@@ -1619,10 +1781,13 @@ export async function inviteCollaboratorByEmail(
   entityId: string,
   email: string,
 ) {
-  return apiJson<CreatedInvitation>(invitationCollectionPath(target, tenantId, entityId), {
-    method: "POST",
-    body: JSON.stringify({ email }),
-  });
+  return apiJson<CreatedInvitation>(
+    invitationCollectionPath(target, tenantId, entityId),
+    {
+      method: "POST",
+      body: JSON.stringify({ email }),
+    },
+  );
 }
 
 export function useCollaboratorInvitations(
@@ -1635,7 +1800,9 @@ export function useCollaboratorInvitations(
     queryKey: invitationQueryKey(target, tenantId, entityId),
     enabled: enabled && Boolean(tenantId && entityId),
     queryFn: () =>
-      apiJson<ApiInvitation[]>(invitationCollectionPath(target, tenantId, entityId)),
+      apiJson<ApiInvitation[]>(
+        invitationCollectionPath(target, tenantId, entityId),
+      ),
   });
 }
 
@@ -1682,7 +1849,9 @@ export function useInvitationPreview(token: string) {
     enabled: Boolean(token),
     retry: false,
     queryFn: () =>
-      apiJson<InvitationPreview>(`/api/v1/invitations/${encodeURIComponent(token)}`),
+      apiJson<InvitationPreview>(
+        `/api/v1/invitations/${encodeURIComponent(token)}`,
+      ),
   });
 }
 
@@ -1706,7 +1875,14 @@ export function useProjectPipelineStages(
   enabled = true,
 ) {
   return useQuery({
-    queryKey: ["api", "tenant", tenantId, "projects", projectId, "pipeline-stages"] as const,
+    queryKey: [
+      "api",
+      "tenant",
+      tenantId,
+      "projects",
+      projectId,
+      "pipeline-stages",
+    ] as const,
     enabled: Boolean(tenantId) && Boolean(projectId) && enabled,
     queryFn: () =>
       authenticatedJson<ApiPipelineStage[]>(
@@ -1721,7 +1897,14 @@ export function useModulePipelineStages(
   enabled = true,
 ) {
   return useQuery({
-    queryKey: ["api", "tenant", tenantId, "modules", moduleId, "pipeline-stages"] as const,
+    queryKey: [
+      "api",
+      "tenant",
+      tenantId,
+      "modules",
+      moduleId,
+      "pipeline-stages",
+    ] as const,
     enabled: Boolean(tenantId) && Boolean(moduleId) && enabled,
     queryFn: () =>
       authenticatedJson<ApiPipelineStage[]>(
@@ -1731,13 +1914,30 @@ export function useModulePipelineStages(
 }
 
 function projectPipelineStagesKey(tenantId: string, projectId: string) {
-  return ["api", "tenant", tenantId, "projects", projectId, "pipeline-stages"] as const;
+  return [
+    "api",
+    "tenant",
+    tenantId,
+    "projects",
+    projectId,
+    "pipeline-stages",
+  ] as const;
 }
 function modulePipelineStagesKey(tenantId: string, moduleId: string) {
-  return ["api", "tenant", tenantId, "modules", moduleId, "pipeline-stages"] as const;
+  return [
+    "api",
+    "tenant",
+    tenantId,
+    "modules",
+    moduleId,
+    "pipeline-stages",
+  ] as const;
 }
 
-export function useCreateProjectPipelineStage(tenantId: string, projectId: string) {
+export function useCreateProjectPipelineStage(
+  tenantId: string,
+  projectId: string,
+) {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: (input: { value: string; sortOrder?: number }) =>
@@ -1753,7 +1953,10 @@ export function useCreateProjectPipelineStage(tenantId: string, projectId: strin
   });
 }
 
-export function useUpdateProjectPipelineStage(tenantId: string, projectId: string) {
+export function useUpdateProjectPipelineStage(
+  tenantId: string,
+  projectId: string,
+) {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: ({
@@ -1775,7 +1978,10 @@ export function useUpdateProjectPipelineStage(tenantId: string, projectId: strin
   });
 }
 
-export function useDeleteProjectPipelineStage(tenantId: string, projectId: string) {
+export function useDeleteProjectPipelineStage(
+  tenantId: string,
+  projectId: string,
+) {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: (id: string) =>
@@ -1791,7 +1997,10 @@ export function useDeleteProjectPipelineStage(tenantId: string, projectId: strin
   });
 }
 
-export function useCreateModuleOwnPipelineStage(tenantId: string, moduleId: string) {
+export function useCreateModuleOwnPipelineStage(
+  tenantId: string,
+  moduleId: string,
+) {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: (input: { value: string; sortOrder?: number }) =>
@@ -1807,7 +2016,10 @@ export function useCreateModuleOwnPipelineStage(tenantId: string, moduleId: stri
   });
 }
 
-export function useUpdateModuleOwnPipelineStage(tenantId: string, moduleId: string) {
+export function useUpdateModuleOwnPipelineStage(
+  tenantId: string,
+  moduleId: string,
+) {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: ({
@@ -1829,7 +2041,10 @@ export function useUpdateModuleOwnPipelineStage(tenantId: string, moduleId: stri
   });
 }
 
-export function useDeleteModuleOwnPipelineStage(tenantId: string, moduleId: string) {
+export function useDeleteModuleOwnPipelineStage(
+  tenantId: string,
+  moduleId: string,
+) {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: (id: string) =>
@@ -1872,10 +2087,13 @@ export function useUpdatePipelineStage(tenantId: string) {
       input: { value?: string; sortOrder?: number };
     }) =>
       responseData<ApiPipelineStage>(
-        await apiClient.PATCH("/api/v1/tenant/{tenantId}/pipeline-stages/{id}", {
-          params: { path: { tenantId, id } },
-          body: input,
-        }),
+        await apiClient.PATCH(
+          "/api/v1/tenant/{tenantId}/pipeline-stages/{id}",
+          {
+            params: { path: { tenantId, id } },
+            body: input,
+          },
+        ),
       ),
     async onSuccess() {
       await queryClient.invalidateQueries({ queryKey: pipelineStagesKey });
@@ -1888,9 +2106,12 @@ export function useDeletePipelineStage(tenantId: string) {
   return useMutation({
     mutationFn: async (id: string) =>
       responseData<ApiPipelineStage>(
-        await apiClient.DELETE("/api/v1/tenant/{tenantId}/pipeline-stages/{id}", {
-          params: { path: { tenantId, id } },
-        }),
+        await apiClient.DELETE(
+          "/api/v1/tenant/{tenantId}/pipeline-stages/{id}",
+          {
+            params: { path: { tenantId, id } },
+          },
+        ),
       ),
     async onSuccess() {
       await queryClient.invalidateQueries({ queryKey: pipelineStagesKey });
@@ -1903,13 +2124,18 @@ export function useCreateModulePipelineStage(tenantId: string) {
   return useMutation({
     mutationFn: async (input: { value: string; sortOrder?: number }) =>
       responseData<ApiPipelineStage>(
-        await apiClient.POST("/api/v1/tenant/{tenantId}/module-pipeline-stages", {
-          params: { path: { tenantId } },
-          body: input,
-        }),
+        await apiClient.POST(
+          "/api/v1/tenant/{tenantId}/module-pipeline-stages",
+          {
+            params: { path: { tenantId } },
+            body: input,
+          },
+        ),
       ),
     async onSuccess() {
-      await queryClient.invalidateQueries({ queryKey: modulePipelineStagePoolKey });
+      await queryClient.invalidateQueries({
+        queryKey: modulePipelineStagePoolKey,
+      });
     },
   });
 }
@@ -1925,13 +2151,18 @@ export function useUpdateModulePipelineStage(tenantId: string) {
       input: { value?: string; sortOrder?: number };
     }) =>
       responseData<ApiPipelineStage>(
-        await apiClient.PATCH("/api/v1/tenant/{tenantId}/module-pipeline-stages/{id}", {
-          params: { path: { tenantId, id } },
-          body: input,
-        }),
+        await apiClient.PATCH(
+          "/api/v1/tenant/{tenantId}/module-pipeline-stages/{id}",
+          {
+            params: { path: { tenantId, id } },
+            body: input,
+          },
+        ),
       ),
     async onSuccess() {
-      await queryClient.invalidateQueries({ queryKey: modulePipelineStagePoolKey });
+      await queryClient.invalidateQueries({
+        queryKey: modulePipelineStagePoolKey,
+      });
     },
   });
 }
@@ -1941,12 +2172,17 @@ export function useDeleteModulePipelineStage(tenantId: string) {
   return useMutation({
     mutationFn: async (id: string) =>
       responseData<ApiPipelineStage>(
-        await apiClient.DELETE("/api/v1/tenant/{tenantId}/module-pipeline-stages/{id}", {
-          params: { path: { tenantId, id } },
-        }),
+        await apiClient.DELETE(
+          "/api/v1/tenant/{tenantId}/module-pipeline-stages/{id}",
+          {
+            params: { path: { tenantId, id } },
+          },
+        ),
       ),
     async onSuccess() {
-      await queryClient.invalidateQueries({ queryKey: modulePipelineStagePoolKey });
+      await queryClient.invalidateQueries({
+        queryKey: modulePipelineStagePoolKey,
+      });
     },
   });
 }

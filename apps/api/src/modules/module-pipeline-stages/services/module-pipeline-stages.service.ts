@@ -11,9 +11,7 @@ export class ModulePipelineStagesService {
 
   async list(moduleId: string) {
     const { baseStages, customStages } = await this.repository.findPipelineStagesForModule(moduleId);
-    const customValues = new Set(customStages.map((s) => s.value));
-    const filteredBaseStages = baseStages.filter((s) => !customValues.has(s.value));
-    return [...filteredBaseStages, ...customStages];
+    return customStages.length > 0 ? customStages : baseStages;
   }
 
   async create(moduleId: string, value: string, sortOrder: number) {

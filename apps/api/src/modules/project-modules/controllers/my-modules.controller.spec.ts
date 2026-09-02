@@ -9,6 +9,7 @@ describe('MyModulesController', () => {
     findOneForCaller: jest.Mock;
     updateForCaller: jest.Mock;
     archiveForCaller: jest.Mock;
+    listPipelineStagesForCaller: jest.Mock;
   };
   let usersService: { findByExternalAuthId: jest.Mock };
 
@@ -18,6 +19,7 @@ describe('MyModulesController', () => {
       findOneForCaller: jest.fn(),
       updateForCaller: jest.fn(),
       archiveForCaller: jest.fn(),
+      listPipelineStagesForCaller: jest.fn(),
     };
     usersService = {
       findByExternalAuthId: jest.fn().mockResolvedValue({ id: 'user-1' }),
@@ -50,6 +52,18 @@ describe('MyModulesController', () => {
       'user-1',
     );
     expect(result).toEqual({ id: 'module-1' });
+  });
+
+  it('listPipelineStages() returns only the accessible module pipeline', async () => {
+    modulesService.listPipelineStagesForCaller.mockResolvedValue([
+      { id: 'stage-1', value: 'Analysis' },
+    ]);
+    const result = await controller.listPipelineStages('module-1', req());
+    expect(modulesService.listPipelineStagesForCaller).toHaveBeenCalledWith(
+      'module-1',
+      'user-1',
+    );
+    expect(result).toEqual([{ id: 'stage-1', value: 'Analysis' }]);
   });
 
   it('update() delegates to updateForCaller with the module id, caller id, and body', async () => {

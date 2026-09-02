@@ -6,8 +6,8 @@ import {
   useCurrentWorkspace,
   useMembers,
   useEnumValues,
-  useModulePipelineStages,
   useMyModule,
+  useMyModulePipelineStages,
   useNotes,
   useProject,
   useTasks,
@@ -17,6 +17,7 @@ import {
   type ApiTask,
 } from "@/api/hooks";
 import { ModuleCollaboratorsManager } from "@/components/modules/module-collaborators";
+import { EntityDetailPipeline } from "@/components/pipeline/entity-detail-pipeline";
 import { BackButton } from "@/components/shared/back-button";
 import { EmptyState } from "@/components/shared/empty-state";
 import { ErrorState } from "@/components/shared/error-state";
@@ -155,7 +156,7 @@ export default function ModuleDetailPage() {
   const module = moduleQuery.data;
   const sameTenant = Boolean(module && tenantId && module.tenantId === tenantId);
   const linkedProjectQuery = useProject(tenantId, module?.projectId ?? "", Boolean(module?.projectId));
-  const stagesQuery = useModulePipelineStages(module?.tenantId ?? tenantId, moduleId, Boolean(module));
+  const stagesQuery = useMyModulePipelineStages(moduleId);
   const [form, setForm] = useState<EditableModule | null>(null);
   const [openedRequestedEdit, setOpenedRequestedEdit] = useState(false);
   const [isCollaboratorsVisible, setIsCollaboratorsVisible] = useState(false);
@@ -211,6 +212,13 @@ export default function ModuleDetailPage() {
       },
     });
     setForm(null);
+  }
+
+  function changePipelineStage(stage: string) {
+    void updateModule.mutateAsync({
+      moduleId,
+      input: { pipelineStage: stage },
+    });
   }
 
   const assignee = module.assignedToUserId
@@ -326,6 +334,16 @@ export default function ModuleDetailPage() {
           <ModuleTasksDetails tasks={moduleTasks} />
           <ModuleNotesDetails notes={moduleNotes} />
         </section>
+
+        <EntityDetailPipeline
+          entityLabel="module"
+          entity={{ ...module, secondaryStatus: module.tag }}
+          stages={stagesQuery.data ?? []}
+          isPending={stagesQuery.isPending}
+          isError={stagesQuery.isError}
+          isUpdating={updateModule.isPending}
+          onStageChange={changePipelineStage}
+        />
       </div>
     </div>
   );

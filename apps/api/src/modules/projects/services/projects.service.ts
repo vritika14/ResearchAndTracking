@@ -69,6 +69,14 @@ export class ProjectsService {
     return this.findOne(project.tenantId, projectId, callerUserId);
   }
 
+  /** Tenant-agnostic project pipeline lookup for the project details page. */
+  async listPipelineStagesForCaller(projectId: string, callerUserId: string) {
+    await this.findOneForCaller(projectId, callerUserId);
+    const { baseStages, customStages } =
+      await this.enumRepository.findPipelineStagesForProject(projectId);
+    return customStages.length > 0 ? customStages : baseStages;
+  }
+
   async create(
     userId: string,
     tenantId: string,

@@ -59,6 +59,19 @@ export class MyProjectsController {
     return this.projectsService.findOneForCaller(projectId, user.id);
   }
 
+  @ApiOperation({
+    summary: 'List the selected pipeline stages for an accessible project',
+  })
+  @UseGuards(JwtAuthGuard)
+  @Get(':projectId/pipeline-stages')
+  async listPipelineStages(
+    @Param('projectId') projectId: string,
+    @Req() req: AuthenticatedRequest,
+  ) {
+    const user = await this.usersService.findByExternalAuthId(req.user.sub);
+    return this.projectsService.listPipelineStagesForCaller(projectId, user.id);
+  }
+
   @ApiOperation({ summary: 'Update a project the caller can access' })
   @UseGuards(JwtAuthGuard)
   @Patch(':projectId')

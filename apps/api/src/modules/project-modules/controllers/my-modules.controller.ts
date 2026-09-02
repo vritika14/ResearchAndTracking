@@ -58,6 +58,17 @@ export class MyModulesController {
     return this.modulesService.findOneForCaller(moduleId, user.id);
   }
 
+  @ApiOperation({ summary: 'List the selected pipeline stages for an accessible module' })
+  @UseGuards(JwtAuthGuard)
+  @Get(':moduleId/pipeline-stages')
+  async listPipelineStages(
+    @Param('moduleId') moduleId: string,
+    @Req() req: AuthenticatedRequest,
+  ) {
+    const user = await this.usersService.findByExternalAuthId(req.user.sub);
+    return this.modulesService.listPipelineStagesForCaller(moduleId, user.id);
+  }
+
   @ApiOperation({ summary: 'Update a module the caller can access' })
   @UseGuards(JwtAuthGuard)
   @Patch(':moduleId')
