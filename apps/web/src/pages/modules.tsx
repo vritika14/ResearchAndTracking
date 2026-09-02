@@ -77,6 +77,7 @@ export default function ModulesPage() {
   const projectsQuery = useProjects(tenantId);
   const [isNewModuleOpen, setIsNewModuleOpen] = useState(false);
   const [sharingModule, setSharingModule] = useState<ApiModule | null>(null);
+  const [actionError, setActionError] = useState<string | null>(null);
   const workspaceMembers = useMembers(
     tenantId,
     isNewModuleOpen || sharingModule !== null,
@@ -139,15 +140,19 @@ export default function ModulesPage() {
       dueDate: input.dueDate || undefined,
       assignedToUserId: input.assignedToUserId ?? undefined,
     });
-
   }
 
   async function archive(module: ApiModule) {
     if (!window.confirm(`Archive "${module.title}"? It will be permanently deleted after 14 days.`)) {
       return;
     }
-    await archiveModule.mutateAsync(module.id);
-    setSharingModule((current) => (current?.id === module.id ? null : current));
+    setActionError(null);
+    try {
+      await archiveModule.mutateAsync(module.id);
+      setSharingModule((current) => (current?.id === module.id ? null : current));
+    } catch (error) {
+      setActionError(error instanceof Error ? error.message : "The module could not be archived.");
+    }
   }
 
   if (workspace.isPending || modulesQuery.isPending) {
@@ -180,7 +185,7 @@ export default function ModulesPage() {
         tenantId={tenantId}
         projects={projectsQuery.data ?? []}
         members={workspaceMembers.data ?? []}
-        onSave={(input) => void handleCreateModule(input)}
+        onSave={handleCreateModule}
       />
       <Dialog
         open={sharingModule !== null}
@@ -211,6 +216,13 @@ export default function ModulesPage() {
           ) : null}
         </DialogContent>
       </Dialog>
+
+      {actionError ? (
+        <div role="alert" className="flex items-center justify-between gap-3 rounded-xl border border-destructive/30 bg-destructive/10 px-4 py-3 text-sm text-destructive">
+          <span>{actionError}</span>
+          <button type="button" className="font-medium underline" onClick={() => setActionError(null)}>Dismiss</button>
+        </div>
+      ) : null}
 
       <div className="surface-toolbar flex flex-wrap items-center gap-3 border-violet-200/70 bg-violet-50/40 dark:border-violet-900/50 dark:bg-violet-950/10">
         <Input
@@ -310,6 +322,7 @@ export default function ModulesPage() {
                             aria-label={`Archive ${module.title}`}
                             title="Archive module"
                             onClick={() => void archive(module)}
+                            disabled={archiveModule.isPending}
                             className="inline-flex h-6 w-6 shrink-0 items-center justify-center rounded-md text-destructive transition-colors hover:bg-destructive/10 hover:text-destructive focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
                           >
                             <Archive className="h-3.5 w-3.5" />

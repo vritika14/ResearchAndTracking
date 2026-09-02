@@ -80,7 +80,7 @@ vi.mock("@/api/hooks", () => ({
 }));
 
 describe("CalendarPage", () => {
-  it("shows project and task due dates and filters each type", () => {
+  it("starts with every filter unselected and shows all due dates", () => {
     render(
       <MemoryRouter>
         <CalendarPage />
@@ -92,13 +92,28 @@ describe("CalendarPage", () => {
     expect(screen.getAllByRole("link", { name: "Submit ethics application" })).not.toHaveLength(0);
     expect(screen.getAllByRole("link", { name: "Research Conference — submission deadline" })).not.toHaveLength(0);
 
-    fireEvent.click(screen.getByRole("button", { name: /Projects/ }));
-
-    expect(screen.queryByRole("link", { name: "Research launch" })).not.toBeInTheDocument();
-    expect(screen.getAllByRole("link", { name: "Submit ethics application" })).not.toHaveLength(0);
+    expect(screen.getByRole("button", { name: /Projects/ })).toHaveAttribute("aria-pressed", "false");
+    expect(screen.getByRole("button", { name: /Modules/ })).toHaveAttribute("aria-pressed", "false");
+    expect(screen.getByRole("button", { name: /Tasks/ })).toHaveAttribute("aria-pressed", "false");
+    expect(screen.getByRole("button", { name: /Conferences/ })).toHaveAttribute("aria-pressed", "false");
   });
 
-  it("filters module due dates independently", () => {
+  it("shows only project due dates when Projects is selected", () => {
+    render(
+      <MemoryRouter>
+        <CalendarPage />
+      </MemoryRouter>,
+    );
+
+    fireEvent.click(screen.getByRole("button", { name: /Projects/ }));
+
+    expect(screen.getAllByRole("link", { name: "Research launch" })).not.toHaveLength(0);
+    expect(screen.queryByRole("link", { name: "Analysis module" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("link", { name: "Submit ethics application" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("link", { name: "Research Conference" })).not.toBeInTheDocument();
+  });
+
+  it("switches exclusively between module, task, and conference due dates", () => {
     render(
       <MemoryRouter>
         <CalendarPage />
@@ -106,21 +121,22 @@ describe("CalendarPage", () => {
     );
 
     fireEvent.click(screen.getByRole("button", { name: /Modules/ }));
+    expect(screen.getAllByRole("link", { name: "Analysis module" })).not.toHaveLength(0);
+    expect(screen.queryByRole("link", { name: "Research launch" })).not.toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole("button", { name: /Tasks/ }));
+    expect(screen.getAllByRole("link", { name: "Submit ethics application" })).not.toHaveLength(0);
     expect(screen.queryByRole("link", { name: "Analysis module" })).not.toBeInTheDocument();
-    expect(screen.getAllByRole("link", { name: "Research launch" })).not.toHaveLength(0);
-  });
 
-  it("shows and filters conference submission and event dates", () => {
-    render(
-      <MemoryRouter>
-        <CalendarPage />
-      </MemoryRouter>,
-    );
-
-    expect(screen.getAllByRole("link", { name: "Research Conference" })).not.toHaveLength(0);
     fireEvent.click(screen.getByRole("button", { name: /Conferences/ }));
-    expect(screen.queryByRole("link", { name: "Research Conference — submission deadline" })).not.toBeInTheDocument();
-    expect(screen.queryByRole("link", { name: "Research Conference" })).not.toBeInTheDocument();
+    expect(screen.getAllByRole("link", { name: "Research Conference — submission deadline" })).not.toHaveLength(0);
+    expect(screen.getAllByRole("link", { name: "Research Conference" })).not.toHaveLength(0);
+    expect(screen.queryByRole("link", { name: "Submit ethics application" })).not.toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole("button", { name: /Conferences/ }));
+    expect(screen.getAllByRole("link", { name: "Research launch" })).not.toHaveLength(0);
+    expect(screen.getAllByRole("link", { name: "Analysis module" })).not.toHaveLength(0);
+    expect(screen.getAllByRole("link", { name: "Submit ethics application" })).not.toHaveLength(0);
   });
 
   it("supports month navigation and returning to today", () => {

@@ -66,20 +66,28 @@ export class ProjectModulesRepository {
       dueDate?: string;
       displayId?: string;
     },
-    pipelineStages?: string[],
-    initialPipelineStage?: string,
   ) {
-    let [module] = await this.drizzle.db
+    const [module] = await this.drizzle.db
       .insert(modules)
       .values(values)
       .returning();
-    if (!module || !pipelineStages?.length) return module;
+    return module;
+  }
+
+  async configurePipelineStages(
+    moduleId: string,
+    pipelineStages: string[],
+    initialPipelineStage?: string,
+  ) {
+    if (pipelineStages.length === 0) {
+      return this.findByIdGlobal(moduleId);
+    }
 
     const stageRows = await this.drizzle.db
       .insert(enumTable)
       .values(
         pipelineStages.map((value, index) => ({
-          moduleId: module!.id,
+          moduleId,
           category: 'module_pipeline_stage',
           value,
           sortOrder: index + 1,
@@ -91,13 +99,15 @@ export class ProjectModulesRepository {
       stageRows.find((stage) => stage.value === initialPipelineStage) ??
       stageRows[0];
 
-    if (initialStage) {
-      [module] = await this.drizzle.db
+    if (!initialStage) {
+      return this.findByIdGlobal(moduleId);
+    }
+
+    const [module] = await this.drizzle.db
         .update(modules)
         .set({ pipelineStageId: initialStage.id, updatedAt: new Date() })
-        .where(eq(modules.id, module.id))
+        .where(eq(modules.id, moduleId))
         .returning();
-    }
 
     return module;
   }

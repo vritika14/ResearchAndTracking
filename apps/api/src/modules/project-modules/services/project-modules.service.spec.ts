@@ -15,6 +15,7 @@ describe('ProjectModulesService', () => {
     findByProjectIds: jest.Mock;
     findActiveByTenant: jest.Mock;
     create: jest.Mock;
+    configurePipelineStages: jest.Mock;
     update: jest.Mock;
     archive: jest.Mock;
   };
@@ -43,6 +44,7 @@ describe('ProjectModulesService', () => {
       findByProjectIds: jest.fn(),
       findActiveByTenant: jest.fn(),
       create: jest.fn(),
+      configurePipelineStages: jest.fn(),
       update: jest.fn(),
       archive: jest.fn(),
     };
@@ -342,12 +344,18 @@ describe('ProjectModulesService', () => {
       );
     });
 
-    it('passes an ordered module-specific stage list to the creation transaction', async () => {
+    it('creates the owner before configuring module-specific pipeline stages', async () => {
       enumRepository.findByCategoryAndValue.mockImplementation(
         (category: string, value: string) =>
           Promise.resolve({ id: `${category}-${value}-id` }),
       );
       repository.create.mockResolvedValue({
+        id: 'module-1',
+        tagId: null,
+        statusId: null,
+        pipelineStageId: null,
+      });
+      repository.configurePipelineStages.mockResolvedValue({
         id: 'module-1',
         tagId: null,
         statusId: null,
@@ -362,9 +370,14 @@ describe('ProjectModulesService', () => {
 
       expect(repository.create).toHaveBeenCalledWith(
         expect.objectContaining({ pipelineStageId: undefined }),
+      );
+      expect(repository.configurePipelineStages).toHaveBeenCalledWith(
+        'module-1',
         ['Drafting', 'Internal Review', 'Published'],
         'Drafting',
       );
+      expect(collaboratorsRepository.create.mock.invocationCallOrder[0])
+        .toBeLessThan(repository.configurePipelineStages.mock.invocationCallOrder[0]!);
       expect(enumRepository.findByCategoryAndValue).not.toHaveBeenCalledWith(
         'module_pipeline_stage',
         expect.any(String),

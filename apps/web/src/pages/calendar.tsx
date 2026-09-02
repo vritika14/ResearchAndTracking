@@ -34,6 +34,8 @@ type CalendarEvent = {
   meta: string | null;
 };
 
+type CalendarFilter = CalendarEvent["kind"];
+
 const WEEKDAYS = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"];
 const shortDateFormatter = new Intl.DateTimeFormat(undefined, { month: "short", day: "numeric" });
 const monthFormatter = new Intl.DateTimeFormat(undefined, { month: "long", year: "numeric" });
@@ -75,10 +77,7 @@ export default function CalendarPage() {
   const [visibleMonth, setVisibleMonth] = useState(
     () => new Date(new Date().getFullYear(), new Date().getMonth(), 1),
   );
-  const [showProjects, setShowProjects] = useState(true);
-  const [showModules, setShowModules] = useState(true);
-  const [showTasks, setShowTasks] = useState(true);
-  const [showConferences, setShowConferences] = useState(true);
+  const [activeFilter, setActiveFilter] = useState<CalendarFilter | null>(null);
 
   const projectById = useMemo(
     () => new Map((projectsQuery.data ?? []).map((project) => [project.id, project])),
@@ -87,7 +86,7 @@ export default function CalendarPage() {
 
   const events = useMemo(() => {
     const rows: CalendarEvent[] = [];
-    if (showProjects) {
+    if (activeFilter === null || activeFilter === "project") {
       for (const project of projectsQuery.data ?? []) {
         if (!project.dueDate) continue;
         rows.push({
@@ -100,7 +99,7 @@ export default function CalendarPage() {
         });
       }
     }
-    if (showModules) {
+    if (activeFilter === null || activeFilter === "module") {
       for (const module of modulesQuery.data ?? []) {
         if (!module.dueDate) continue;
         rows.push({
@@ -113,7 +112,7 @@ export default function CalendarPage() {
         });
       }
     }
-    if (showTasks) {
+    if (activeFilter === null || activeFilter === "task") {
       for (const task of tasksQuery.data ?? []) {
         if (!task.dueDate) continue;
         rows.push({
@@ -126,7 +125,7 @@ export default function CalendarPage() {
         });
       }
     }
-    if (showConferences) {
+    if (activeFilter === null || activeFilter === "conference") {
       for (const conference of conferencesQuery.data ?? []) {
         rows.push({
           id: `${conference.id}-submission`,
@@ -153,7 +152,7 @@ export default function CalendarPage() {
       }
     }
     return rows.sort((a, b) => a.title.localeCompare(b.title));
-  }, [conferencesQuery.data, modulesQuery.data, projectById, projectsQuery.data, showConferences, showModules, showProjects, showTasks, tasksQuery.data]);
+  }, [activeFilter, conferencesQuery.data, modulesQuery.data, projectById, projectsQuery.data, tasksQuery.data]);
 
   const eventsByDate = useMemo(() => {
     const grouped = new Map<string, CalendarEvent[]>();
@@ -173,6 +172,10 @@ export default function CalendarPage() {
   function goToToday() {
     const today = new Date();
     setVisibleMonth(new Date(today.getFullYear(), today.getMonth(), 1));
+  }
+
+  function toggleFilter(filter: CalendarFilter) {
+    setActiveFilter((current) => current === filter ? null : filter);
   }
 
   if (workspace.isPending || projectsQuery.isPending || modulesQuery.isPending || tasksQuery.isPending || conferencesQuery.isPending) {
@@ -219,11 +222,11 @@ export default function CalendarPage() {
             <span className="mr-1 text-xs font-semibold uppercase tracking-wide text-muted-foreground">Show</span>
             <button
               type="button"
-              aria-pressed={showProjects}
-              onClick={() => setShowProjects((current) => !current)}
+              aria-pressed={activeFilter === "project"}
+              onClick={() => toggleFilter("project")}
               className={cn(
                 "inline-flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-sm font-medium transition-colors",
-                showProjects
+                activeFilter === "project"
                   ? "border-blue-600 bg-blue-600 text-white"
                   : "border-border bg-background text-muted-foreground hover:bg-accent",
               )}
@@ -232,11 +235,11 @@ export default function CalendarPage() {
             </button>
             <button
               type="button"
-              aria-pressed={showModules}
-              onClick={() => setShowModules((current) => !current)}
+              aria-pressed={activeFilter === "module"}
+              onClick={() => toggleFilter("module")}
               className={cn(
                 "inline-flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-sm font-medium transition-colors",
-                showModules
+                activeFilter === "module"
                   ? "border-violet-600 bg-violet-600 text-white"
                   : "border-border bg-background text-muted-foreground hover:bg-accent",
               )}
@@ -245,11 +248,11 @@ export default function CalendarPage() {
             </button>
             <button
               type="button"
-              aria-pressed={showTasks}
-              onClick={() => setShowTasks((current) => !current)}
+              aria-pressed={activeFilter === "task"}
+              onClick={() => toggleFilter("task")}
               className={cn(
                 "inline-flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-sm font-medium transition-colors",
-                showTasks
+                activeFilter === "task"
                   ? "border-amber-500 bg-amber-500 text-white"
                   : "border-border bg-background text-muted-foreground hover:bg-accent",
               )}
@@ -258,11 +261,11 @@ export default function CalendarPage() {
             </button>
             <button
               type="button"
-              aria-pressed={showConferences}
-              onClick={() => setShowConferences((current) => !current)}
+              aria-pressed={activeFilter === "conference"}
+              onClick={() => toggleFilter("conference")}
               className={cn(
                 "inline-flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-sm font-medium transition-colors",
-                showConferences
+                activeFilter === "conference"
                   ? "border-rose-600 bg-rose-600 text-white"
                   : "border-border bg-background text-muted-foreground hover:bg-accent",
               )}

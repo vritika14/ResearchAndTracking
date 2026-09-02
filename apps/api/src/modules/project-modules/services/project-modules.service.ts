@@ -151,15 +151,7 @@ export class ProjectModulesService {
       dueDate: input.dueDate,
       displayId,
     };
-    const module = pipelineStages.length
-      ? await this.repository.create(
-          createValues,
-          pipelineStages,
-          pipelineStages.includes(input.pipelineStage ?? '')
-            ? input.pipelineStage
-            : pipelineStages[0],
-        )
-      : await this.repository.create(createValues);
+    let module = await this.repository.create(createValues);
 
     if (!module) {
       throw new NotFoundException('Failed to create module');
@@ -176,6 +168,22 @@ export class ProjectModulesService {
       userId: callerUserId,
       roleId: ownerRoleId,
     });
+
+    // Module-scoped enum rows are protected by RLS and require the caller to
+    // already be the module Owner. Create that relationship first, then add
+    // the selected stages within the request transaction.
+    if (pipelineStages.length) {
+      module = await this.repository.configurePipelineStages(
+        module.id,
+        pipelineStages,
+        pipelineStages.includes(input.pipelineStage ?? '')
+          ? input.pipelineStage
+          : pipelineStages[0],
+      );
+      if (!module) {
+        throw new NotFoundException('Failed to configure module pipeline');
+      }
+    }
 
     const [shaped] = await this.withDisplayValues([module], callerUserId);
     return shaped;

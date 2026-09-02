@@ -76,7 +76,13 @@ function matchesDeadline(daysRemaining: number, filter: DeadlineFilter) {
   }
 }
 
-export function ConferenceSubmissionsTable({ showPast = false }: { showPast?: boolean }) {
+export function ConferenceSubmissionsTable({
+  showPast = false,
+  dashboardView = false,
+}: {
+  showPast?: boolean;
+  dashboardView?: boolean;
+}) {
   const workspace = useCurrentWorkspace();
   const tenantId = workspace.data?.id ?? "";
   const conferencesQuery = useConferences(tenantId);
@@ -91,8 +97,11 @@ export function ConferenceSubmissionsTable({ showPast = false }: { showPast?: bo
   const [isCreateOpen, setIsCreateOpen] = useState(false);
   const [editingConference, setEditingConference] = useState<ApiConference | null>(null);
   const [actionError, setActionError] = useState<string | null>(null);
+  const availableColumns = dashboardView
+    ? CONFERENCE_COLUMNS.filter((column) => column.id !== "actions")
+    : CONFERENCE_COLUMNS;
   const columns = useColumnVisibility(
-    CONFERENCE_COLUMNS.map((column) => column.id),
+    availableColumns.map((column) => column.id),
     "conferences",
   );
 
@@ -149,9 +158,11 @@ export function ConferenceSubmissionsTable({ showPast = false }: { showPast?: bo
             <CardTitle>{showPast ? "Conference Submissions" : "Upcoming Conference Submissions"}</CardTitle>
             <CardDescription>Submission deadlines, event dates, and linked projects.</CardDescription>
           </div>
-          <Button onClick={() => setIsCreateOpen(true)} disabled={ownedProjects.length === 0 || isLoading}>
-            <Plus /> New Conference
-          </Button>
+          {dashboardView ? null : (
+            <Button onClick={() => setIsCreateOpen(true)} disabled={ownedProjects.length === 0 || isLoading}>
+              <Plus /> New Conference
+            </Button>
+          )}
         </div>
         <div className="flex flex-wrap items-center gap-3">
           <Input value={search} onChange={(event) => setSearch(event.target.value)}
@@ -164,11 +175,11 @@ export function ConferenceSubmissionsTable({ showPast = false }: { showPast?: bo
             <SelectTrigger className="sm:w-40"><SelectValue placeholder="Deadline" /></SelectTrigger>
             <SelectContent>{DEADLINE_FILTERS.filter((option) => showPast || option !== "Past").map((option) => <SelectItem key={option} value={option}>{option === "All" ? "All deadlines" : option}</SelectItem>)}</SelectContent>
           </Select>
-          <ColumnVisibilityMenu columns={CONFERENCE_COLUMNS} visibleColumns={columns.visibleColumns} onToggle={columns.toggleColumn} />
+          <ColumnVisibilityMenu columns={availableColumns} visibleColumns={columns.visibleColumns} onToggle={columns.toggleColumn} />
           {hasActiveFilters ? <button type="button" onClick={() => { setSearch(""); setType("All"); setDeadline("All"); }}
             className="text-sm font-medium text-muted-foreground underline-offset-4 hover:text-foreground hover:underline">Clear filters</button> : null}
         </div>
-        {ownedProjects.length === 0 && !isLoading ? <p className="text-sm text-muted-foreground">Create or own a project before adding a conference.</p> : null}
+        {!dashboardView && ownedProjects.length === 0 && !isLoading ? <p className="text-sm text-muted-foreground">Create or own a project before adding a conference.</p> : null}
         {actionError ? <p role="alert" className="text-sm text-destructive">{actionError}</p> : null}
       </CardHeader>
       <CardContent>

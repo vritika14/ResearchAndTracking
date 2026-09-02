@@ -1,5 +1,5 @@
 import { useEffect, useState, type FormEvent, type ReactNode } from "react";
-import { ArrowLeft, ChevronDown, ChevronUp, ListTodo, Pencil, Save, X } from "lucide-react";
+import { ChevronDown, ChevronUp, ListTodo, Pencil, Save, X } from "lucide-react";
 import { Link, useParams, useSearchParams } from "react-router-dom";
 
 import {
@@ -13,6 +13,7 @@ import {
 } from "@/api/hooks";
 import type { TaskFormInput } from "@/components/tasks/task-dialog";
 import { TaskMembersManager } from "@/components/tasks/task-members";
+import { BackButton } from "@/components/shared/back-button";
 import { EmptyState } from "@/components/shared/empty-state";
 import { ErrorState } from "@/components/shared/error-state";
 import { LoadingState } from "@/components/shared/loading-state";
@@ -185,12 +186,7 @@ export default function TaskDetailPage() {
 
   return (
     <div className="page-stack">
-      <Button asChild variant="ghost" size="sm" className="w-fit">
-        <Link to="/tasks">
-          <ArrowLeft />
-          Back to Tasks
-        </Link>
-      </Button>
+      <BackButton fallback="/tasks" label="Back" />
 
       <PageHeading
         tone="amber"

@@ -123,7 +123,7 @@ const DASHBOARD_WIDGETS: readonly DashboardWidgetDefinition[] = [
     label: "Upcoming conference submissions",
     description: "Submission deadlines and linked papers.",
     group: "Tables",
-    component: ConferenceSubmissionsTable,
+    component: () => <ConferenceSubmissionsTable dashboardView />,
   },
 ] as const;
 

@@ -52,7 +52,7 @@ interface ModuleDialogProps {
   projects: ApiProject[];
   members: Membership[];
   module?: ApiModule | null;
-  onSave: (input: ModuleFormInput) => void;
+  onSave: (input: ModuleFormInput) => Promise<void> | void;
 }
 
 const INITIAL_FORM: ModuleFormInput = {
@@ -98,6 +98,8 @@ export function ModuleDialog({
   const [form, setForm] = useState<ModuleFormInput>(INITIAL_FORM);
   const [isIndependent, setIsIndependent] = useState(true);
   const [stagesInitialized, setStagesInitialized] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
+  const [saveError, setSaveError] = useState<string | null>(null);
   const isEditing = Boolean(module);
   const moduleStageValuesQuery = useModulePipelineStages(
     module?.tenantId ?? tenantId,
@@ -107,6 +109,7 @@ export function ModuleDialog({
 
   useEffect(() => {
     if (!open) return;
+    setSaveError(null);
     if (module) {
       setForm({
         title: module.title,
@@ -140,17 +143,25 @@ export function ModuleDialog({
     setStagesInitialized(true);
   }, [open, module, stageValuesQuery.data, stagesInitialized]);
 
-  function handleSubmit(event: FormEvent<HTMLFormElement>) {
+  async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     if (!isIndependent && !form.projectId) return;
-    onSave({
-      ...form,
-      title: form.title.trim(),
-      description: form.description.trim(),
-      projectId: isIndependent ? null : form.projectId,
-      pipelineStage: form.pipelineStage || form.pipelineStages[0] || "",
-    });
-    onOpenChange(false);
+    setIsSaving(true);
+    setSaveError(null);
+    try {
+      await onSave({
+        ...form,
+        title: form.title.trim(),
+        description: form.description.trim(),
+        projectId: isIndependent ? null : form.projectId,
+        pipelineStage: form.pipelineStage || form.pipelineStages[0] || "",
+      });
+      onOpenChange(false);
+    } catch (error) {
+      setSaveError(error instanceof Error ? error.message : "The module could not be saved.");
+    } finally {
+      setIsSaving(false);
+    }
   }
 
   return (
@@ -163,7 +174,7 @@ export function ModuleDialog({
           </DialogDescription>
         </DialogHeader>
 
-        <form onSubmit={handleSubmit} className="grid gap-5">
+        <form onSubmit={(event) => void handleSubmit(event)} className="grid gap-5">
           <FormField label="Module title" htmlFor="module-title" required>
             <Input
               id="module-title"
@@ -374,10 +385,16 @@ export function ModuleDialog({
             </p>
           ) : null}
 
+          {saveError ? (
+            <p role="alert" className="rounded-lg border border-destructive/30 bg-destructive/10 p-3 text-sm text-destructive">
+              {saveError}
+            </p>
+          ) : null}
+
           <DialogFooter className="border-t pt-4">
-            <DialogClose asChild><Button type="button" variant="outline">Cancel</Button></DialogClose>
-            <Button type="submit" disabled={!isEditing && !form.pipelineStages.length}>
-              {isEditing ? "Save Changes" : "Create Module"}
+            <DialogClose asChild><Button type="button" variant="outline" disabled={isSaving}>Cancel</Button></DialogClose>
+            <Button type="submit" disabled={isSaving || (!isEditing && !form.pipelineStages.length)}>
+              {isSaving ? "Saving…" : isEditing ? "Save Changes" : "Create Module"}
             </Button>
           </DialogFooter>
         </form>

@@ -1,5 +1,5 @@
 import { useMemo, useState, type ReactNode } from "react";
-import { ArrowLeft, CalendarDays, MapPin, Pencil, Presentation, Trash2 } from "lucide-react";
+import { CalendarDays, MapPin, Pencil, Presentation, Trash2 } from "lucide-react";
 import { Link, useNavigate, useParams } from "react-router-dom";
 
 import {
@@ -11,6 +11,7 @@ import {
   useUpdateConference,
 } from "@/api/hooks";
 import { ConferenceSubmissionDialog, type ConferenceSubmissionInput } from "@/components/dashboard/conference-submission-dialog";
+import { BackButton } from "@/components/shared/back-button";
 import { EmptyState } from "@/components/shared/empty-state";
 import { ErrorState } from "@/components/shared/error-state";
 import { LoadingState } from "@/components/shared/loading-state";
@@ -94,9 +95,7 @@ export default function ConferenceDetailPage() {
 
   return (
     <div className="page-stack">
-      <Button asChild variant="ghost" size="sm" className="w-fit">
-        <Link to="/conferences"><ArrowLeft /> Back to Conferences</Link>
-      </Button>
+      <BackButton fallback="/conferences" label="Back" />
 
       <PageHeading
         icon={Presentation}
