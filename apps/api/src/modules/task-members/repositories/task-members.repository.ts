@@ -1,7 +1,7 @@
 // apps/api/src/modules/task-members/repositories/task-members.repository.ts
 import { Injectable } from '@nestjs/common';
 import { taskMembers, users } from '@research-tracker/migrations';
-import { and, eq } from 'drizzle-orm';
+import { and, eq, inArray } from 'drizzle-orm';
 import { DrizzleService } from '../../../db/drizzle.service';
 
 @Injectable()
@@ -77,5 +77,25 @@ export class TaskMembersRepository {
       )
       .returning();
     return row;
+  }
+  /**
+   * Batched version of findByTaskAndUser — checks membership across many
+   * tasks in a single query, instead of one query per task (avoids the
+   * N+1 pattern when listing tasks).
+   */
+  async findByTaskIdsAndUser(taskIds: string[], userId: string) {
+    if (taskIds.length === 0) return new Set<string>();
+
+    const rows = await this.drizzle.db
+      .select({ taskId: taskMembers.taskId })
+      .from(taskMembers)
+      .where(
+        and(
+          inArray(taskMembers.taskId, taskIds),
+          eq(taskMembers.userId, userId),
+        ),
+      );
+
+    return new Set(rows.map((row) => row.taskId));
   }
 }

@@ -1,7 +1,7 @@
 // apps/api/src/modules/note-members/repositories/note-members.repository.ts
 import { Injectable } from '@nestjs/common';
 import { noteMembers, users } from '@research-tracker/migrations';
-import { and, eq } from 'drizzle-orm';
+import { and, eq, inArray } from 'drizzle-orm';
 import { DrizzleService } from '../../../db/drizzle.service';
 
 @Injectable()
@@ -77,5 +77,25 @@ export class NoteMembersRepository {
       )
       .returning();
     return row;
+  }
+  /**
+   * Batched version of findByNoteAndUser — checks membership across many
+   * notes in a single query, instead of one query per note (avoids the
+   * N+1 pattern when listing notes).
+   */
+  async findByNoteIdsAndUser(noteIds: string[], userId: string) {
+    if (noteIds.length === 0) return new Set<string>();
+
+    const rows = await this.drizzle.db
+      .select({ noteId: noteMembers.noteId })
+      .from(noteMembers)
+      .where(
+        and(
+          inArray(noteMembers.noteId, noteIds),
+          eq(noteMembers.userId, userId),
+        ),
+      );
+
+    return new Set(rows.map((row) => row.noteId));
   }
 }

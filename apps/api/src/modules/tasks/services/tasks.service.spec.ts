@@ -28,6 +28,7 @@ describe('TasksService', () => {
     create: jest.Mock;
     deleteAllForTask: jest.Mock;
     findByTaskAndUser: jest.Mock;
+    findByTaskIdsAndUser: jest.Mock;
     findTaskIdsByUser: jest.Mock;
   };
   let modulesRepository: { findById: jest.Mock };
@@ -54,6 +55,7 @@ describe('TasksService', () => {
       create: jest.fn(),
       deleteAllForTask: jest.fn(),
       findByTaskAndUser: jest.fn().mockResolvedValue(undefined),
+      findByTaskIdsAndUser: jest.fn().mockResolvedValue(new Set()),
       findTaskIdsByUser: jest.fn().mockResolvedValue([]),
     };
     modulesRepository = { findById: jest.fn() };
@@ -227,10 +229,9 @@ describe('TasksService', () => {
           visibilityId: null,
         },
       ]);
-      taskMembers.findByTaskAndUser.mockResolvedValue(undefined);
+      taskMembers.findByTaskIdsAndUser.mockResolvedValue(new Set());
 
       const result = await service.list('tenant-1', 'user-1');
-
       expect(result.map((task) => task.id)).toEqual(['task-1']);
     });
   });

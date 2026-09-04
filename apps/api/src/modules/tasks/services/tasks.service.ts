@@ -66,10 +66,19 @@ export class TasksService {
 
   async list(tenantId: string, callerUserId: string, projectId?: string) {
     const rows = await this.repository.findByTenant(tenantId, projectId);
-    const accessFlags = await Promise.all(
-      rows.map((row) => this.canAccess(tenantId, row, callerUserId)),
+
+    const nonCreatorTaskIds = rows
+      .filter((row) => row.createdBy !== callerUserId)
+      .map((row) => row.id);
+    const memberTaskIds = await this.taskMembers.findByTaskIdsAndUser(
+      nonCreatorTaskIds,
+      callerUserId,
     );
-    const visibleRows = rows.filter((_row, index) => accessFlags[index]);
+
+    const visibleRows = rows.filter(
+      (row) => row.createdBy === callerUserId || memberTaskIds.has(row.id),
+    );
+
     return this.withDisplayValues(visibleRows);
   }
 
