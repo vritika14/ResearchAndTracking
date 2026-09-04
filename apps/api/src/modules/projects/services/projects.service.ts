@@ -295,38 +295,37 @@ export class ProjectsService {
       .flatMap((r) => [r.statusId, r.pipelineStageId, r.importanceId])
       .filter((id): id is string => id !== null);
 
-    const [valuesById, roleRows] = await Promise.all([
+    const projectIds = rows.map((r) => r.id);
+
+    const [valuesById, roleByProjectId] = await Promise.all([
       this.enumRepository.findValuesByIds(enumIds),
-      Promise.all(
-        rows.map((r) =>
-          this.collaboratorsRepository.findByProjectAndUser(
-            r.tenantId,
-            r.id,
-            callerUserId,
-          ),
-        ),
+      this.collaboratorsRepository.findByProjectIdsAndUser(
+        projectIds,
+        callerUserId,
       ),
     ]);
 
-    const roleIds = roleRows
-      .map((r) => r?.roleId)
+    const roleIds = Array.from(roleByProjectId.values())
+      .map((r) => r.roleId)
       .filter((id): id is string => !!id);
     const roleValuesById = await this.enumRepository.findValuesByIds(roleIds);
 
     return rows.map(
-      ({ statusId, pipelineStageId, importanceId, ...rest }, index) => ({
-        ...rest,
-        status: statusId ? (valuesById.get(statusId) ?? null) : null,
-        pipelineStage: pipelineStageId
-          ? (valuesById.get(pipelineStageId) ?? null)
-          : null,
-        importance: importanceId
-          ? (valuesById.get(importanceId) ?? null)
-          : null,
-        role: roleRows[index]?.roleId
-          ? (roleValuesById.get(roleRows[index].roleId) ?? null)
-          : null,
-      }),
+      ({ id, statusId, pipelineStageId, importanceId, ...rest }) => {
+        const roleId = roleByProjectId.get(id)?.roleId;
+        return {
+          id,
+          ...rest,
+          status: statusId ? (valuesById.get(statusId) ?? null) : null,
+          pipelineStage: pipelineStageId
+            ? (valuesById.get(pipelineStageId) ?? null)
+            : null,
+          importance: importanceId
+            ? (valuesById.get(importanceId) ?? null)
+            : null,
+          role: roleId ? (roleValuesById.get(roleId) ?? null) : null,
+        };
+      },
     );
   }
 

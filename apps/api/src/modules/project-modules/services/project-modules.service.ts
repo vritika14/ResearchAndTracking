@@ -53,10 +53,31 @@ export class ProjectModulesService {
 
   async listActive(tenantId: string, callerUserId: string, projectId?: string) {
     const rows = await this.repository.findActiveByTenant(tenantId, projectId);
-    const accessFlags = await Promise.all(
-      rows.map((row) => this.canAccess(tenantId, row, callerUserId)),
+
+    const projectScopedIds = rows
+      .filter((r) => r.projectId !== null)
+      .map((r) => r.projectId!);
+    const standaloneIds = rows
+      .filter((r) => r.projectId === null)
+      .map((r) => r.id);
+
+    const [projectMemberships, standaloneMemberships] = await Promise.all([
+      this.projectCollaboratorsRepository.findByProjectIdsAndUser(
+        projectScopedIds,
+        callerUserId,
+      ),
+      this.collaboratorsRepository.findByModuleIdsAndUser(
+        standaloneIds,
+        callerUserId,
+      ),
+    ]);
+
+    const visibleRows = rows.filter((row) =>
+      row.projectId
+        ? projectMemberships.has(row.projectId)
+        : standaloneMemberships.has(row.id),
     );
-    const visibleRows = rows.filter((_row, index) => accessFlags[index]);
+
     return this.withDisplayValues(visibleRows, callerUserId);
   }
 

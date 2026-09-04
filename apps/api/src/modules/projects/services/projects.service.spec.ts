@@ -24,6 +24,7 @@ describe('ProjectsService', () => {
   };
   let collaboratorsRepository: {
     findByProjectAndUser: jest.Mock;
+    findByProjectIdsAndUser: jest.Mock;
     findProjectIdsByUser: jest.Mock;
   };
   let sequences: { nextDisplayId: jest.Mock };
@@ -50,6 +51,7 @@ describe('ProjectsService', () => {
     };
     collaboratorsRepository = {
       findByProjectAndUser: jest.fn().mockResolvedValue(undefined),
+      findByProjectIdsAndUser: jest.fn().mockResolvedValue(new Map()),
       findProjectIdsByUser: jest.fn().mockResolvedValue([]),
     };
     sequences = {
@@ -81,9 +83,9 @@ describe('ProjectsService', () => {
         pipelineStageId: null,
         importanceId: null,
       });
-      collaboratorsRepository.findByProjectAndUser.mockResolvedValue({
-        roleId: 'role-collaborator',
-      });
+      collaboratorsRepository.findByProjectIdsAndUser.mockResolvedValue(
+        new Map([['project-1', { roleId: 'role-collaborator' }]]),
+      );
       const result = await service.findOne('tenant-1', 'project-1', 'user-1');
       expect(result).toEqual(
         expect.objectContaining({ id: 'project-1', title: 'Test' }),
@@ -199,9 +201,9 @@ describe('ProjectsService', () => {
         pipelineStageId: null,
         importanceId: null,
       });
-      collaboratorsRepository.findByProjectAndUser.mockResolvedValue({
-        roleId: 'role-collaborator',
-      });
+      collaboratorsRepository.findByProjectIdsAndUser.mockResolvedValue(
+        new Map([['project-1', { roleId: 'role-collaborator' }]]),
+      );
 
       const result = await service.findOneForCaller('project-1', 'user-1');
 
@@ -273,9 +275,9 @@ describe('ProjectsService', () => {
         ],
         totalItems: 1,
       });
-      collaboratorsRepository.findByProjectAndUser.mockResolvedValue({
-        roleId: 'role-owner',
-      });
+      collaboratorsRepository.findByProjectIdsAndUser.mockResolvedValue(
+        new Map([['project-1', { roleId: 'role-owner' }]]),
+      );
 
       const result = await service.listActive('tenant-1', 'user-1', 1, 20);
 

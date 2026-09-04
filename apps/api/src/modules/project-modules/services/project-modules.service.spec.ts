@@ -27,11 +27,13 @@ describe('ProjectModulesService', () => {
   };
   let collaboratorsRepository: {
     findByModuleAndUser: jest.Mock;
+    findByModuleIdsAndUser: jest.Mock;
     findModuleIdsByUser: jest.Mock;
     create: jest.Mock;
   };
   let projectCollaboratorsRepository: {
     findByProjectAndUser: jest.Mock;
+    findByProjectIdsAndUser: jest.Mock;
     findProjectIdsByUser: jest.Mock;
   };
   let sequences: { nextDisplayId: jest.Mock };
@@ -56,11 +58,13 @@ describe('ProjectModulesService', () => {
     };
     collaboratorsRepository = {
       findByModuleAndUser: jest.fn().mockResolvedValue(undefined),
+      findByModuleIdsAndUser: jest.fn().mockResolvedValue(new Set()),
       findModuleIdsByUser: jest.fn().mockResolvedValue([]),
       create: jest.fn().mockResolvedValue({ id: 'collaborator-1' }),
     };
     projectCollaboratorsRepository = {
       findByProjectAndUser: jest.fn().mockResolvedValue(undefined),
+      findByProjectIdsAndUser: jest.fn().mockResolvedValue(new Map()),
       findProjectIdsByUser: jest.fn().mockResolvedValue([]),
     };
     sequences = {
@@ -263,17 +267,23 @@ describe('ProjectModulesService', () => {
       collaboratorsRepository.findByModuleAndUser.mockResolvedValue({
         roleId: 'owner-role-id',
       });
-      enumRepository.findByCategoryAndValue.mockImplementation((category: string, value: string) =>
-        Promise.resolve({ id: category === 'project_role' && value === 'Owner' ? 'owner-role-id' : 'archived-status-id' }),
+      enumRepository.findByCategoryAndValue.mockImplementation(
+        (category: string, value: string) =>
+          Promise.resolve({
+            id:
+              category === 'project_role' && value === 'Owner'
+                ? 'owner-role-id'
+                : 'archived-status-id',
+          }),
       );
       repository.archive.mockResolvedValue({
         id: 'module-1',
         tagId: null,
         statusId: 'archived-status-id',
       });
-    
+
       await service.archiveForCaller('module-1', 'user-1');
-    
+
       expect(repository.archive).toHaveBeenCalledWith(
         'tenant-1',
         'module-1',
@@ -296,17 +306,11 @@ describe('ProjectModulesService', () => {
         { id: 'module-2', projectId: 'project-1', tagId: null, statusId: null },
         { id: 'module-3', projectId: 'project-2', tagId: null, statusId: null },
       ]);
-      collaboratorsRepository.findByModuleAndUser.mockImplementation(
-        (_tenantId: string, moduleId: string) =>
-          Promise.resolve(
-            moduleId === 'module-1' ? { roleId: 'role-1' } : undefined,
-          ),
+      collaboratorsRepository.findByModuleIdsAndUser.mockResolvedValue(
+        new Set(['module-1']),
       );
-      projectCollaboratorsRepository.findByProjectAndUser.mockImplementation(
-        (_tenantId: string, projectId: string) =>
-          Promise.resolve(
-            projectId === 'project-1' ? { roleId: 'role-1' } : undefined,
-          ),
+      projectCollaboratorsRepository.findByProjectIdsAndUser.mockResolvedValue(
+        new Map([['project-1', { roleId: 'role-1' }]]),
       );
 
       const result = await service.listActive('tenant-1', 'user-1');
@@ -376,8 +380,11 @@ describe('ProjectModulesService', () => {
         ['Drafting', 'Internal Review', 'Published'],
         'Drafting',
       );
-      expect(collaboratorsRepository.create.mock.invocationCallOrder[0])
-        .toBeLessThan(repository.configurePipelineStages.mock.invocationCallOrder[0]!);
+      expect(
+        collaboratorsRepository.create.mock.invocationCallOrder[0],
+      ).toBeLessThan(
+        repository.configurePipelineStages.mock.invocationCallOrder[0]!,
+      );
       expect(enumRepository.findByCategoryAndValue).not.toHaveBeenCalledWith(
         'module_pipeline_stage',
         expect.any(String),
@@ -434,17 +441,23 @@ describe('ProjectModulesService', () => {
       collaboratorsRepository.findByModuleAndUser.mockResolvedValue({
         roleId: 'owner-role-id',
       });
-      enumRepository.findByCategoryAndValue.mockImplementation((category: string, value: string) =>
-        Promise.resolve({ id: category === 'project_role' && value === 'Owner' ? 'owner-role-id' : 'archived-status-id' }),
+      enumRepository.findByCategoryAndValue.mockImplementation(
+        (category: string, value: string) =>
+          Promise.resolve({
+            id:
+              category === 'project_role' && value === 'Owner'
+                ? 'owner-role-id'
+                : 'archived-status-id',
+          }),
       );
       repository.archive.mockResolvedValue({
         id: 'module-1',
         tagId: null,
         statusId: 'archived-status-id',
       });
-    
+
       const result = await service.archive('tenant-1', 'module-1', 'user-1');
-    
+
       expect(repository.archive).toHaveBeenCalledWith(
         'tenant-1',
         'module-1',
