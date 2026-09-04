@@ -5,6 +5,7 @@ import {
   Delete,
   ForbiddenException,
   Get,
+  NotFoundException,
   Param,
   Patch,
   Post,
@@ -27,6 +28,7 @@ import { EnumRepository } from '../../enum/repositories/enum.repository';
 import { CreatePipelineStageDto } from '../dto/create-pipeline-stage.dto';
 import { UpdatePipelineStageDto } from '../dto/update-pipeline-stage.dto';
 import { ModulePipelineStagesService } from '../services/module-pipeline-stages.service';
+import { ProjectModulesRepository } from '../../project-modules/repositories/project-modules.repository';
 
 interface AuthenticatedRequest extends Request {
   user: AuthenticatedPrincipal;
@@ -41,6 +43,7 @@ export class ModulePipelineStagesController {
     private readonly usersService: UsersService,
     private readonly moduleCollaboratorsRepository: ModuleCollaboratorsRepository,
     private readonly enumRepository: EnumRepository,
+    private readonly modulesRepository: ProjectModulesRepository,
   ) {}
 
   private async assertOwner(
@@ -80,6 +83,10 @@ export class ModulePipelineStagesController {
     @Param('tenantId') tenantId: string,
     @Param('moduleId') moduleId: string,
   ) {
+    const module = await this.modulesRepository.findById(tenantId, moduleId);
+    if (!module) {
+      throw new NotFoundException('Module not found');
+    }
     return this.service.list(moduleId);
   }
 
