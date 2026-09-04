@@ -1,5 +1,6 @@
 import {
   BadRequestException,
+  ForbiddenException,
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
@@ -216,11 +217,13 @@ export class NotesService {
 
   async delete(tenantId: string, noteId: string, callerUserId: string) {
     const existing = await this.repository.findById(tenantId, noteId);
-    if (
-      !existing ||
-      !(await this.canAccess(tenantId, existing, callerUserId))
-    ) {
+    if (!existing) {
       throw new NotFoundException('Note not found');
+    }
+    if (existing.createdBy !== callerUserId) {
+      throw new ForbiddenException(
+        'Only the note creator can delete this note',
+      );
     }
     const note = await this.repository.delete(tenantId, noteId);
     if (!note) {

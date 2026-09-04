@@ -79,7 +79,7 @@ export class ModuleInvitationsService {
         expiresAt,
       });
     } catch (error) {
-      await this.repository.delete(invitation.id);
+      await this.repository.delete(invitation.moduleId, invitation.id);
       throw error;
     }
 
@@ -154,8 +154,8 @@ export class ModuleInvitationsService {
     return this.repository.markAccepted(invitation.id);
   }
 
-  async revoke(id: string) {
-    const row = await this.repository.delete(id);
+  async revoke(moduleId: string, id: string) {
+    const row = await this.repository.delete(moduleId, id);
     if (!row) {
       throw new NotFoundException('Invitation not found');
     }
