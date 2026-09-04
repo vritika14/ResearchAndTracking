@@ -48,6 +48,7 @@ export function PipelineOverviewTable() {
   const workspace = useCurrentWorkspace();
   const tenantId = workspace.data?.id ?? "";
   const projectsQuery = useProjects(tenantId);
+  const projects = projectsQuery.data?.data ?? [];
   const tasksQuery = useTasks(tenantId);
   const pipelineStagesQuery = usePipelineStages(tenantId);
 
@@ -86,7 +87,7 @@ export function PipelineOverviewTable() {
 
   const projectRows = useMemo(
     () =>
-      (projectsQuery.data ?? []).map((project) => {
+      projects.map((project) => {
           const counts = taskCountByProject.get(project.id) ?? { completed: 0, total: 0 };
           const stageIndex = project.pipelineStage
             ? stageIndexByValue.get(project.pipelineStage)
@@ -99,7 +100,7 @@ export function PipelineOverviewTable() {
             completion: counts.total > 0 ? Math.round((counts.completed / counts.total) * 100) : 0,
           };
         }),
-    [projectsQuery.data, taskCountByProject, stageIndexByValue],
+    [projects, taskCountByProject, stageIndexByValue],
   );
 
   const filtered = useMemo(() => {

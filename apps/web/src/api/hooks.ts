@@ -15,6 +15,18 @@ import {
  * response shape for any endpoint (`content?: never`) — these interfaces
  * are hand-written to match what each service actually returns.
  */
+export interface PaginationMeta {
+  page: number;
+  pageSize: number;
+  totalItems: number;
+  totalPages: number;
+}
+
+export interface PaginatedResponse<T> {
+  data: T[];
+  meta: PaginationMeta;
+}
+
 export interface Me {
   id: string;
   email: string;
@@ -574,7 +586,7 @@ export function useProjects(tenantId: string, enabled = true) {
     queryKey: apiKeys.projects(tenantId),
     enabled: Boolean(tenantId) && enabled,
     queryFn: async () =>
-      responseData<ApiProject[]>(
+      responseData<PaginatedResponse<ApiProject>>(
         await apiClient.GET("/api/v1/tenant/{tenantId}/projects", {
           params: { path: { tenantId } },
         }),

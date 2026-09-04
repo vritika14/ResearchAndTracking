@@ -127,6 +127,7 @@ export default function TasksPage() {
 
   const tasksQuery = useTasks(tenantId);
   const projectsQuery = useProjects(tenantId);
+  const projects = projectsQuery.data?.data ?? [];
   const modulesQuery = useModules(tenantId);
 
   const [isNewTaskOpen, setIsNewTaskOpen] = useState(false);
@@ -148,9 +149,9 @@ export default function TasksPage() {
 
   const projectById = useMemo(() => {
     const map = new Map<string, string>();
-    for (const project of projectsQuery.data ?? []) map.set(project.id, project.title);
+    for (const project of projects) map.set(project.id, project.title);
     return map;
-  }, [projectsQuery.data]);
+  }, [projects]);
 
   const moduleById = useMemo(() => {
     const map = new Map<string, string>();
@@ -284,7 +285,7 @@ export default function TasksPage() {
         open={isNewTaskOpen}
         onOpenChange={setIsNewTaskOpen}
         tenantId={tenantId}
-        projects={projectsQuery.data ?? []}
+        projects={projects}
         modules={modulesQuery.data ?? []}
         onSave={(input) => void handleCreateTask(input)}
       />

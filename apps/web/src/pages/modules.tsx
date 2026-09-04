@@ -75,6 +75,7 @@ export default function ModulesPage() {
 
   const modulesQuery = useModules(tenantId);
   const projectsQuery = useProjects(tenantId);
+  const projects = projectsQuery.data?.data ?? [];
   const [isNewModuleOpen, setIsNewModuleOpen] = useState(false);
   const [sharingModule, setSharingModule] = useState<ApiModule | null>(null);
   const [actionError, setActionError] = useState<string | null>(null);
@@ -97,9 +98,9 @@ export default function ModulesPage() {
 
   const projectById = useMemo(() => {
     const map = new Map<string, string>();
-    for (const project of projectsQuery.data ?? []) map.set(project.id, project.title);
+    for (const project of projects) map.set(project.id, project.title);
     return map;
-  }, [projectsQuery.data]);
+  }, [projects]);
 
   const memberById = useMemo(() => {
     const map = new Map<string, string>();
@@ -183,7 +184,7 @@ export default function ModulesPage() {
         open={isNewModuleOpen}
         onOpenChange={setIsNewModuleOpen}
         tenantId={tenantId}
-        projects={projectsQuery.data ?? []}
+        projects={projects}
         members={workspaceMembers.data ?? []}
         onSave={handleCreateModule}
       />

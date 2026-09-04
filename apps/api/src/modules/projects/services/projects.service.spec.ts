@@ -259,48 +259,38 @@ describe('ProjectsService', () => {
   });
 
   describe('listActive', () => {
-    it('filters out projects the caller cannot see', async () => {
-      repository.findActiveByTenant.mockResolvedValue([
-        {
-          id: 'project-1',
-          title: 'Visible via ownership',
-          userId: 'user-1',
-          statusId: null,
-          pipelineStageId: null,
-          importanceId: null,
-        },
-        {
-          id: 'project-2',
-          title: 'Visible via collaboration',
-          userId: 'owner-2',
-          statusId: null,
-          pipelineStageId: null,
-          importanceId: null,
-        },
-        {
-          id: 'project-3',
-          title: 'Not visible',
-          userId: 'owner-3',
-          statusId: null,
-          pipelineStageId: null,
-          importanceId: null,
-        },
-      ]);
-      collaboratorsRepository.findByProjectAndUser.mockImplementation(
-        (_tenantId: string, projectId: string) =>
-          Promise.resolve(
-            projectId === 'project-2'
-              ? { roleId: 'role-collaborator' }
-              : undefined,
-          ),
+    it('returns a paginated page of projects with pagination metadata', async () => {
+      repository.findActiveByTenant.mockResolvedValue({
+        data: [
+          {
+            id: 'project-1',
+            title: 'Project One',
+            userId: 'user-1',
+            statusId: null,
+            pipelineStageId: null,
+            importanceId: null,
+          },
+        ],
+        totalItems: 1,
+      });
+      collaboratorsRepository.findByProjectAndUser.mockResolvedValue({
+        roleId: 'role-owner',
+      });
+
+      const result = await service.listActive('tenant-1', 'user-1', 1, 20);
+
+      expect(repository.findActiveByTenant).toHaveBeenCalledWith(
+        'tenant-1',
+        0,
+        20,
       );
-
-      const result = await service.listActive('tenant-1', 'user-1');
-
-      expect(result.map((project) => project.id)).toEqual([
-        'project-1',
-        'project-2',
-      ]);
+      expect(result.data.map((project) => project.id)).toEqual(['project-1']);
+      expect(result.meta).toEqual({
+        page: 1,
+        pageSize: 20,
+        totalItems: 1,
+        totalPages: 1,
+      });
     });
   });
 

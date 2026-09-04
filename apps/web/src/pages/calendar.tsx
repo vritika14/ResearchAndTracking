@@ -71,6 +71,7 @@ export default function CalendarPage() {
   const workspace = useCurrentWorkspace();
   const tenantId = workspace.data?.id ?? "";
   const projectsQuery = useProjects(tenantId);
+  const projects = projectsQuery.data?.data ?? [];
   const modulesQuery = useModules(tenantId);
   const tasksQuery = useTasks(tenantId);
   const conferencesQuery = useConferences(tenantId);
@@ -80,14 +81,14 @@ export default function CalendarPage() {
   const [activeFilter, setActiveFilter] = useState<CalendarFilter | null>(null);
 
   const projectById = useMemo(
-    () => new Map((projectsQuery.data ?? []).map((project) => [project.id, project])),
-    [projectsQuery.data],
+    () => new Map(projects.map((project) => [project.id, project])),
+    [projects],
   );
 
   const events = useMemo(() => {
     const rows: CalendarEvent[] = [];
     if (activeFilter === null || activeFilter === "project") {
-      for (const project of projectsQuery.data ?? []) {
+      for (const project of projects) {
         if (!project.dueDate) continue;
         rows.push({
           id: project.id,
@@ -152,7 +153,7 @@ export default function CalendarPage() {
       }
     }
     return rows.sort((a, b) => a.title.localeCompare(b.title));
-  }, [activeFilter, conferencesQuery.data, modulesQuery.data, projectById, projectsQuery.data, tasksQuery.data]);
+  }, [activeFilter, conferencesQuery.data, modulesQuery.data, projectById, projects, tasksQuery.data]);
 
   const eventsByDate = useMemo(() => {
     const grouped = new Map<string, CalendarEvent[]>();
