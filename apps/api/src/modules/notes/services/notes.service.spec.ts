@@ -1,5 +1,5 @@
 // apps/api/src/modules/notes/services/notes.service.spec.ts
-import { NotFoundException } from '@nestjs/common';
+import { ForbiddenException, NotFoundException } from '@nestjs/common';
 import { NotesService } from './notes.service';
 import { NotesRepository } from '../repositories/notes.repository';
 import { TenantSequencesRepository } from '../../tenant-sequences/repositories/tenant-sequences.repository';
@@ -258,14 +258,14 @@ describe('NotesService', () => {
       ).rejects.toThrow(NotFoundException);
     });
 
-    it('throws NotFoundException if the caller cannot access the note', async () => {
+    it('throws ForbiddenException if the caller is not the creator', async () => {
       repository.findById.mockResolvedValue({
         id: 'note-1',
         createdBy: 'owner-1',
       });
       await expect(
         service.delete('tenant-1', 'note-1', 'outsider-1'),
-      ).rejects.toThrow(NotFoundException);
+      ).rejects.toThrow(ForbiddenException);
       expect(repository.delete).not.toHaveBeenCalled();
     });
 

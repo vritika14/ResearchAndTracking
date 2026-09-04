@@ -99,6 +99,6 @@ export class ProjectInvitationsController {
     @Req() req: AuthenticatedRequest,
   ) {
     await this.assertOwner(tenantId, projectId, req);
-    return this.service.revoke(id);
+    return this.service.revoke(projectId, id);
   }
 }

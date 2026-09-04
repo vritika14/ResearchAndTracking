@@ -68,6 +68,10 @@ export class ProjectPipelineStagesController {
     @Param('tenantId') tenantId: string,
     @Param('projectId') projectId: string,
   ) {
+    const project = await this.projectsRepository.findById(tenantId, projectId);
+    if (!project) {
+      throw new NotFoundException('Project not found');
+    }
     return this.service.list(projectId);
   }
 

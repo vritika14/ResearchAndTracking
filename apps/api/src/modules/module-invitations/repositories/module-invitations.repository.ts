@@ -85,10 +85,15 @@ export class ModuleInvitationsRepository {
     return row;
   }
 
-  async delete(id: string) {
+  async delete(moduleId: string, id: string) {
     const [row] = await this.drizzle.db
       .delete(moduleInvitations)
-      .where(eq(moduleInvitations.id, id))
+      .where(
+        and(
+          eq(moduleInvitations.id, id),
+          eq(moduleInvitations.moduleId, moduleId),
+        ),
+      )
       .returning();
     return row;
   }

@@ -5,7 +5,7 @@ import {
   Injectable,
   NestInterceptor,
 } from '@nestjs/common';
-import { Request, Response } from 'express';
+import { Request } from 'express';
 import { drizzle } from 'drizzle-orm/node-postgres';
 import { Observable, from } from 'rxjs';
 import * as schema from '@research-tracker/migrations';
@@ -31,7 +31,6 @@ export class RequestContextInterceptor implements NestInterceptor {
 
   private async handle(context: ExecutionContext, next: CallHandler) {
     const req = context.switchToHttp().getRequest<AuthenticatedRequest>();
-    const res = context.switchToHttp().getResponse<Response>();
 
     const tenantIdMatch = req.originalUrl.match(/\/tenant\/([^/]+)/);
     const tenantId = tenantIdMatch?.[1] ?? null;
@@ -75,14 +74,23 @@ export class RequestContextInterceptor implements NestInterceptor {
       requestContextStorage.run({ tenantId, userId, tx }, () => {
         next.handle().subscribe({
           next: (value) => {
-            res.on('finish', () => {
-              const isError = res.statusCode >= 400;
-              client
-                .query(isError ? 'ROLLBACK' : 'COMMIT')
-                .catch(() => undefined)
-                .finally(() => client.release());
-            });
-            resolve(value);
+            // Commit BEFORE resolving — the HTTP response only goes out
+            // once the database has genuinely, durably confirmed the write.
+            // This closes the window where a client could be told "success"
+            // moments before (or even instead of) the actual commit.
+            client
+              .query('COMMIT')
+              .then(() => {
+                resolve(value);
+              })
+              .catch((commitErr) => {
+                reject(
+                  commitErr instanceof Error
+                    ? commitErr
+                    : new Error(String(commitErr)),
+                );
+              })
+              .finally(() => client.release());
           },
           error: (err) => {
             client

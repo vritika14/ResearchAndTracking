@@ -1,5 +1,5 @@
 // apps/api/src/modules/tasks/services/tasks.service.spec.ts
-import { NotFoundException } from '@nestjs/common';
+import { ForbiddenException, NotFoundException } from '@nestjs/common';
 import { TasksService } from './tasks.service';
 import { TasksRepository } from '../repositories/tasks.repository';
 import { EnumRepository } from '../../enum/repositories/enum.repository';
@@ -142,17 +142,6 @@ describe('TasksService', () => {
       ).rejects.toThrow(NotFoundException);
     });
 
-    it('throws NotFoundException if the caller cannot access the task', async () => {
-      repository.findById.mockResolvedValue({
-        id: 'task-1',
-        createdBy: 'owner-1',
-      });
-      await expect(
-        service.delete('tenant-1', 'task-1', 'outsider-1'),
-      ).rejects.toThrow(NotFoundException);
-      expect(repository.delete).not.toHaveBeenCalled();
-    });
-
     it('returns the deleted task when the caller is the creator', async () => {
       repository.findById.mockResolvedValue({
         id: 'task-1',
@@ -163,15 +152,26 @@ describe('TasksService', () => {
       expect(result).toEqual({ id: 'task-1' });
     });
 
-    it('returns the deleted task when the caller is a task member', async () => {
+    it('throws ForbiddenException if the caller is not the creator', async () => {
+      repository.findById.mockResolvedValue({
+        id: 'task-1',
+        createdBy: 'owner-1',
+      });
+      await expect(
+        service.delete('tenant-1', 'task-1', 'outsider-1'),
+      ).rejects.toThrow(ForbiddenException);
+      expect(repository.delete).not.toHaveBeenCalled();
+    });
+    it('throws ForbiddenException when the caller is only a task member, not the creator', async () => {
       repository.findById.mockResolvedValue({
         id: 'task-1',
         createdBy: 'owner-1',
       });
       taskMembers.findByTaskAndUser.mockResolvedValue({ id: 'member-row' });
-      repository.delete.mockResolvedValue({ id: 'task-1' });
-      const result = await service.delete('tenant-1', 'task-1', 'member-1');
-      expect(result).toEqual({ id: 'task-1' });
+      await expect(
+        service.delete('tenant-1', 'task-1', 'member-1'),
+      ).rejects.toThrow(ForbiddenException);
+      expect(repository.delete).not.toHaveBeenCalled();
     });
   });
 

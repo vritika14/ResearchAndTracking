@@ -111,6 +111,6 @@ export class ModuleInvitationsController {
     @Req() req: AuthenticatedRequest,
   ) {
     await this.assertOwner(tenantId, moduleId, req);
-    return this.service.revoke(id);
+    return this.service.revoke(moduleId, id);
   }
 }
