@@ -6,6 +6,7 @@ import {
   Param,
   Patch,
   Post,
+  Query,
   Req,
   UseGuards,
 } from '@nestjs/common';
@@ -24,6 +25,8 @@ import { UpdateProjectDto } from '../dto/update-project.dto';
 import { ProjectsService } from '../services/projects.service';
 import { TenantMemberGuard } from '../../memberships/policies/tenant-member.guard';
 import { ProjectAccessGuard } from '../policies/project-access.guard';
+import { ConfigService } from '@nestjs/config';
+import { PaginationQueryDto } from '../../../common/dto/pagination-query.dto';
 interface AuthenticatedRequest extends Request {
   user: AuthenticatedPrincipal;
 }
@@ -35,6 +38,7 @@ export class ProjectsController {
   constructor(
     private readonly projectsService: ProjectsService,
     private readonly usersService: UsersService,
+    private readonly configService: ConfigService,
   ) {}
 
   @ApiOperation({
@@ -45,9 +49,16 @@ export class ProjectsController {
   async list(
     @Param('tenantId') tenantId: string,
     @Req() req: AuthenticatedRequest,
+    @Query() query: PaginationQueryDto,
   ) {
     const user = await this.usersService.findByExternalAuthId(req.user.sub);
-    return this.projectsService.listActive(tenantId, user.id);
+    const pageSize = this.configService.get<number>('PAGE_SIZE', 20);
+    return this.projectsService.listActive(
+      tenantId,
+      user.id,
+      query.page ?? 1,
+      pageSize,
+    );
   }
 
   @ApiOperation({ summary: 'Get a single project' })

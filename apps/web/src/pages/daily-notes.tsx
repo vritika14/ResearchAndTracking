@@ -105,6 +105,7 @@ export default function DailyNotesPage() {
 
   const notesQuery = useNotes(tenantId);
   const projectsQuery = useProjects(tenantId);
+  const projects = projectsQuery.data?.data ?? [];
   const modulesQuery = useModules(tenantId);
 
   const createNote = useCreateNote(tenantId);
@@ -138,9 +139,9 @@ export default function DailyNotesPage() {
 
   const projectById = useMemo(() => {
     const map = new Map<string, string>();
-    for (const project of projectsQuery.data ?? []) map.set(project.id, project.title);
+    for (const project of projects) map.set(project.id, project.title);
     return map;
-  }, [projectsQuery.data]);
+  }, [projects]);
 
   const moduleById = useMemo(() => {
     const map = new Map<string, string>();
@@ -471,7 +472,7 @@ export default function DailyNotesPage() {
                       <SelectValue placeholder="Select a project" />
                     </SelectTrigger>
                     <SelectContent>
-                      {(projectsQuery.data ?? []).map((project) => (
+                      {projects.map((project) => (
                         <SelectItem key={project.id} value={project.id}>
                           {project.title}
                         </SelectItem>

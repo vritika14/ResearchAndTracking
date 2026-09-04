@@ -55,6 +55,7 @@ export function PriorityTasksTable() {
   const tenantId = workspace.data?.id ?? "";
   const tasksQuery = useTasks(tenantId);
   const projectsQuery = useProjects(tenantId);
+  const projects = projectsQuery.data?.data ?? [];
   const modulesQuery = useModules(tenantId);
 
   const [search, setSearch] = useState("");
@@ -66,9 +67,9 @@ export function PriorityTasksTable() {
 
   const projectById = useMemo(() => {
     const map = new Map<string, string>();
-    for (const project of projectsQuery.data ?? []) map.set(project.id, project.title);
+    for (const project of projects) map.set(project.id, project.title);
     return map;
-  }, [projectsQuery.data]);
+  }, [projects]);
   const moduleById = useMemo(() => {
     const map = new Map<string, string>();
     for (const module of modulesQuery.data ?? []) map.set(module.id, module.title);

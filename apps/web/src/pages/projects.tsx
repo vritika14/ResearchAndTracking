@@ -271,7 +271,7 @@ export default function ProjectsPage() {
   }, [modulesQuery.data]);
 
   const visibleProjects = useMemo(() => {
-    const rows = projectsQuery.data ?? [];
+    const rows = projectsQuery.data?.data ?? [];
     const query = search.trim().toLowerCase();
     const filtered = rows.filter((project) => {
       if (status !== "All" && project.status !== status) return false;

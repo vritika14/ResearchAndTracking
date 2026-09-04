@@ -443,6 +443,7 @@ export default function MindMapPage() {
   const workspace = useCurrentWorkspace();
   const tenantId = workspace.data?.id ?? "";
   const projectsQuery = useProjects(tenantId);
+  const allProjects = projectsQuery.data?.data ?? [];
   const modulesQuery = useModules(tenantId);
   const tasksQuery = useTasks(tenantId);
   const notesQuery = useNotes(tenantId);
@@ -451,14 +452,14 @@ export default function MindMapPage() {
   const [view, setView] = useState<MapView>("tree");
   const normalizedSearch = search.trim().toLowerCase();
 
-  const projects = useMemo(() => (projectsQuery.data ?? []).filter((project) => {
+  const projects = useMemo(() => allProjects.filter((project) => {
     if (projectFilter !== "all" && project.id !== projectFilter) return false;
     if (!normalizedSearch || matchesSearch(project.title, normalizedSearch)) return true;
     const moduleIds = new Set((modulesQuery.data ?? []).filter((module) => module.projectId === project.id).map((module) => module.id));
     return (modulesQuery.data ?? []).some((module) => module.projectId === project.id && matchesSearch(module.title, normalizedSearch))
       || (tasksQuery.data ?? []).some((task) => (task.projectId === project.id || (task.moduleId && moduleIds.has(task.moduleId))) && matchesSearch(task.title, normalizedSearch))
       || (notesQuery.data ?? []).some((note) => (note.projectId === project.id || (note.moduleId && moduleIds.has(note.moduleId))) && matchesSearch(note.title, normalizedSearch));
-  }), [modulesQuery.data, normalizedSearch, notesQuery.data, projectFilter, projectsQuery.data, tasksQuery.data]);
+    }), [modulesQuery.data, normalizedSearch, notesQuery.data, projectFilter, allProjects, tasksQuery.data]);
 
   const independentModules = (modulesQuery.data ?? []).filter((module) => !module.projectId && (
     matchesSearch(module.title, normalizedSearch)
@@ -499,7 +500,7 @@ export default function MindMapPage() {
           </SelectTrigger>
           <SelectContent>
             <SelectItem value="all">All projects</SelectItem>
-            {(projectsQuery.data ?? []).map((project) => (
+            {allProjects.map((project) => (
               <SelectItem key={project.id} value={project.id}>{project.title}</SelectItem>
             ))}
           </SelectContent>
@@ -524,7 +525,7 @@ export default function MindMapPage() {
       {view === "bubbles" ? (
         <BubbleRelationshipMap
           workspaceName={workspace.data?.name ?? "Workspace"}
-          projects={projectsQuery.data ?? []}
+          projects={allProjects}
           modules={modulesQuery.data ?? []}
           tasks={tasksQuery.data ?? []}
           notes={notesQuery.data ?? []}

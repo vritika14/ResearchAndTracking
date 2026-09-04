@@ -1,6 +1,7 @@
 import { ProjectsController } from './projects.controller';
 import { ProjectsService } from '../services/projects.service';
 import { UsersService } from '../../users/users.service';
+import { ConfigService } from '@nestjs/config';
 
 describe('ProjectsController', () => {
   let controller: ProjectsController;
@@ -25,9 +26,13 @@ describe('ProjectsController', () => {
       findByExternalAuthId: jest.fn().mockResolvedValue({ id: 'user-1' }),
     };
 
+    const configService = {
+      get: jest.fn().mockReturnValue(20),
+    };
     controller = new ProjectsController(
       projectsService as unknown as ProjectsService,
       usersService as unknown as UsersService,
+      configService as unknown as ConfigService,
     );
   });
 
@@ -35,14 +40,19 @@ describe('ProjectsController', () => {
 
   describe('list', () => {
     it('resolves the caller and delegates to the service', async () => {
-      const projects = [{ id: 'p1' }];
+      const projects = {
+        data: [{ id: 'p1' }],
+        meta: { page: 1, pageSize: 20, totalItems: 1, totalPages: 1 },
+      };
       projectsService.listActive.mockResolvedValue(projects);
 
-      const result = await controller.list('tenant-1', req);
+      const result = await controller.list('tenant-1', req, { page: 1 });
 
       expect(projectsService.listActive).toHaveBeenCalledWith(
         'tenant-1',
         'user-1',
+        1,
+        20,
       );
       expect(result).toBe(projects);
     });

@@ -174,6 +174,7 @@ export default function DashboardPage() {
   const workspace = useCurrentWorkspace();
   const tenantId = workspace.data?.id ?? "";
   const projectsQuery = useProjects(tenantId);
+  const projects = projectsQuery.data?.data ?? [];
   const tasksQuery = useTasks(tenantId);
   const stagesQuery = usePipelineStages(tenantId);
   const [isCustomizeOpen, setIsCustomizeOpen] = useState(false);
@@ -185,16 +186,16 @@ export default function DashboardPage() {
   const summary = useMemo(
     () =>
       buildSummary({
-        activeProjects: (projectsQuery.data ?? []).filter((project) => project.status === "Active")
+        activeProjects: projects.filter((project) => project.status === "Active")
           .length,
-        totalProjects: (projectsQuery.data ?? []).length,
+        totalProjects: projects.length,
         openTasks: (tasksQuery.data ?? []).filter((task) => task.status !== "Complete").length,
         totalTasks: (tasksQuery.data ?? []).length,
-        reviewStage: (projectsQuery.data ?? []).filter(
+        reviewStage: projects.filter(
           (project) => project.pipelineStage === REVIEW_STAGE,
         ).length,
       }),
-    [projectsQuery.data, tasksQuery.data],
+    [projects, tasksQuery.data],
   );
   const visibleWidgets = new Set(
     layout.order.filter((id) => !layout.hidden.includes(id)),
@@ -354,7 +355,7 @@ export default function DashboardPage() {
         ))}
       </div>
       <DashboardInsights
-        projects={projectsQuery.data ?? []}
+        projects={projects}
         tasks={tasksQuery.data ?? []}
         stages={stagesQuery.data ?? []}
         order={insightOrder}

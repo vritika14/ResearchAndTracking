@@ -48,6 +48,7 @@ export default function ConferenceDetailPage() {
   const tenantId = workspace.data?.id ?? "";
   const conferenceQuery = useConference(tenantId, conferenceId);
   const projectsQuery = useProjects(tenantId);
+  const projects = projectsQuery.data?.data ?? [];
   const meQuery = useMe();
   const updateConference = useUpdateConference(tenantId);
   const deleteConference = useDeleteConference(tenantId);
@@ -55,10 +56,10 @@ export default function ConferenceDetailPage() {
   const [actionError, setActionError] = useState<string | null>(null);
 
   const ownedProjects = useMemo(
-    () => (projectsQuery.data ?? []).filter((project) =>
+    () => projects.filter((project) =>
       project.userId === meQuery.data?.id || project.role?.toLowerCase() === "owner",
     ),
-    [meQuery.data?.id, projectsQuery.data],
+    [meQuery.data?.id, projects],
   );
 
   if (workspace.isPending || conferenceQuery.isPending || projectsQuery.isPending || meQuery.isPending) {

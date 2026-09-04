@@ -50,7 +50,7 @@ const fixtures = vi.hoisted(() => {
 vi.mock("@/api/hooks", () => ({
   useCurrentWorkspace: () => ({ data: { id: "workspace-1" }, isPending: false }),
   useProjects: () => ({
-    data: fixtures.projects,
+    data: { data: fixtures.projects, meta: { page: 1, pageSize: 20, totalItems: fixtures.projects.length, totalPages: 1 } },
     isPending: false,
     isError: false,
     error: null,

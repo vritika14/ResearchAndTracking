@@ -278,6 +278,7 @@ export default function PipelinePage() {
   const tenantId = workspace.data?.id ?? "";
 
   const projectsQuery = useProjects(tenantId);
+  const projects = projectsQuery.data?.data ?? [];
   const modulesQuery = useModules(tenantId);
   const tasksQuery = useTasks(tenantId);
   const membersQuery = useMembers(tenantId);
@@ -439,12 +440,12 @@ export default function PipelinePage() {
 
   const roleOptions = useMemo(() => {
     const roles = new Set<string>();
-    for (const project of projectsQuery.data ?? []) {
+    for (const project of projects) {
       if (project.role) roles.add(project.role);
       else if (project.userId === me.data?.id) roles.add("Owner");
     }
     return ["All", ...Array.from(roles).sort()];
-  }, [projectsQuery.data, me.data?.id]);
+  }, [projects, me.data?.id]);
 
   const assigneeOptions = useMemo(() => {
     const ids = new Set<string>();
@@ -460,21 +461,21 @@ export default function PipelinePage() {
   }, [modulesQuery.data, memberNameById, me.data?.id]);
 
   const moduleProjectFilterOptions = useMemo(() => {
-    const projects = (projectsQuery.data ?? []).map((project) => ({
+    const projectsForMap = projects.map((project) => ({
       id: project.id,
       label: project.title,
     }));
-    projects.sort((a, b) => a.label.localeCompare(b.label));
+    projectsForMap.sort((a, b) => a.label.localeCompare(b.label));
     return [
       { id: ALL_ENTITIES, label: "All projects" },
       { id: "None", label: "No project" },
-      ...projects,
+      ...projectsForMap,
     ];
-  }, [projectsQuery.data]);
+  }, [projects]);
 
   const projectRows: PipelineRow[] = useMemo(
     () =>
-      (projectsQuery.data ?? []).map((project) => {
+      projects.map((project) => {
         const counts = taskCountByProject.get(project.id) ?? { completed: 0, total: 0 };
         return {
           id: project.id,
@@ -491,7 +492,7 @@ export default function PipelinePage() {
           stageIndex: project.pipelineStage ? stageIndexByValue.get(project.pipelineStage) : undefined,
         };
       }),
-    [projectsQuery.data, taskCountByProject, stageIndexByValue, me.data?.id],
+    [projects, taskCountByProject, stageIndexByValue, me.data?.id],
   );
 
   const moduleRows: PipelineRow[] = useMemo(
@@ -525,9 +526,9 @@ export default function PipelinePage() {
   const entityOptions = useMemo(
     () =>
       entityType === "Project"
-        ? (projectsQuery.data ?? []).map((project) => ({ id: project.id, label: project.title }))
+        ? projects.map((project) => ({ id: project.id, label: project.title }))
         : (modulesQuery.data ?? []).map((module) => ({ id: module.id, label: module.title })),
-    [entityType, projectsQuery.data, modulesQuery.data],
+    [entityType, projects, modulesQuery.data],
   );
 
   const unassignedCount = entityRows.filter((row) => row.stageIndex === undefined).length;

@@ -87,6 +87,7 @@ export function ConferenceSubmissionsTable({
   const tenantId = workspace.data?.id ?? "";
   const conferencesQuery = useConferences(tenantId);
   const projectsQuery = useProjects(tenantId);
+  const projects = projectsQuery.data?.data ?? [];
   const meQuery = useMe();
   const createConference = useCreateConference(tenantId);
   const updateConference = useUpdateConference(tenantId);
@@ -106,10 +107,10 @@ export function ConferenceSubmissionsTable({
   );
 
   const ownedProjects = useMemo(
-    () => (projectsQuery.data ?? []).filter((project) =>
+    () => projects.filter((project) =>
       project.userId === meQuery.data?.id || project.role?.toLowerCase() === "owner",
     ),
-    [meQuery.data?.id, projectsQuery.data],
+    [meQuery.data?.id, projects],
   );
 
   const filtered = useMemo(() => {

@@ -13,7 +13,7 @@ const fixtures = vi.hoisted(() => ({
 
 vi.mock("@/api/hooks", () => ({
   useCurrentWorkspace: () => ({ data: { id: "workspace-1", name: "Research lab" }, isPending: false }),
-  useProjects: () => ({ data: fixtures.projects, isPending: false, isError: false, refetch: vi.fn() }),
+  useProjects: () => ({ data: { data: fixtures.projects, meta: { page: 1, pageSize: 20, totalItems: fixtures.projects.length, totalPages: 1 } }, isPending: false, isError: false, refetch: vi.fn() }),
   useModules: () => ({ data: fixtures.modules, isPending: false, isError: false, refetch: vi.fn() }),
   useTasks: () => ({ data: fixtures.tasks, isPending: false, isError: false, refetch: vi.fn() }),
   useNotes: () => ({ data: fixtures.notes, isPending: false, isError: false, refetch: vi.fn() }),

@@ -78,7 +78,7 @@ vi.mock("@/api/hooks", async () => {
     useCurrentWorkspace: () => ({ data: { id: fixtures.tenantId }, isPending: false }),
     useMe: store.useMe,
     useMembers: () => ({ data: fixtures.members, isPending: false }),
-    useProjects: () => ({ data: fixtures.projects, isPending: false, isError: false }),
+    useProjects: () => ({ data: { data: fixtures.projects, meta: { page: 1, pageSize: 20, totalItems: fixtures.projects.length, totalPages: 1 } }, isPending: false, isError: false }),
     useModules: () => ({
       data: useStore(store.subscribe, store.getModules),
       isPending: false,

@@ -4,7 +4,7 @@ import {
   projectCollaborators,
   projects,
 } from '@research-tracker/migrations';
-import { and, eq, inArray, isNull } from 'drizzle-orm';
+import { and, eq, inArray, isNull, sql } from 'drizzle-orm';
 import { DrizzleService } from '../../../db/drizzle.service';
 
 @Injectable()
@@ -37,11 +37,24 @@ export class ProjectsRepository {
       .where(inArray(projects.id, ids));
   }
 
-  async findActiveByTenant(tenantId: string) {
-    return this.drizzle.db
-      .select()
-      .from(projects)
-      .where(and(eq(projects.tenantId, tenantId), isNull(projects.archivedAt)));
+  async findActiveByTenant(tenantId: string, offset: number, limit: number) {
+    const [data, countResult] = await Promise.all([
+      this.drizzle.db
+        .select()
+        .from(projects)
+        .where(
+          and(eq(projects.tenantId, tenantId), isNull(projects.archivedAt)),
+        )
+        .limit(limit)
+        .offset(offset),
+      this.drizzle.db
+        .select({ count: sql<number>`count(*)::int` })
+        .from(projects)
+        .where(
+          and(eq(projects.tenantId, tenantId), isNull(projects.archivedAt)),
+        ),
+    ]);
+    return { data, totalItems: countResult[0]?.count ?? 0 };
   }
 
   async create(

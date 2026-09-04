@@ -7,6 +7,10 @@ import { EnumRepository } from '../../enum/repositories/enum.repository';
 import { ProjectCollaboratorsRepository } from '../../project-collaborators/repositories/project-collaborators.repository';
 import { TenantSequencesRepository } from '../../tenant-sequences/repositories/tenant-sequences.repository';
 import { ProjectsRepository } from '../repositories/projects.repository';
+import {
+  buildPaginationMeta,
+  paginationOffset,
+} from '../../../common/pagination';
 
 const ARCHIVE_RETENTION_DAYS = 14;
 
@@ -19,13 +23,23 @@ export class ProjectsService {
     private readonly sequences: TenantSequencesRepository,
   ) {}
 
-  async listActive(tenantId: string, callerUserId: string) {
-    const rows = await this.repository.findActiveByTenant(tenantId);
-    const shaped = await this.withDisplayValues(rows, callerUserId);
-    return shaped.filter(
-      (project, index) =>
-        project.role !== null || rows[index]!.userId === callerUserId,
+  async listActive(
+    tenantId: string,
+    callerUserId: string,
+    page: number,
+    pageSize: number,
+  ) {
+    const offset = paginationOffset(page, pageSize);
+    const { data: rows, totalItems } = await this.repository.findActiveByTenant(
+      tenantId,
+      offset,
+      pageSize,
     );
+    const shaped = await this.withDisplayValues(rows, callerUserId);
+    return {
+      data: shaped,
+      meta: buildPaginationMeta(page, pageSize, totalItems),
+    };
   }
 
   /**
