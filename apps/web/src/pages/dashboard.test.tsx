@@ -19,7 +19,7 @@ vi.mock("@/api/hooks", () => ({
       { value: "Consolidation & Review", sortOrder: 2 },
     ],
   }),
-  useProjects: () => ({ data: [] }),
+  useProjects: () => ({ data: { data: [], meta: { page: 1, pageSize: 20, totalItems: 0, totalPages: 1 } } }),
   useTasks: () => ({ data: [] }),
 }));
 

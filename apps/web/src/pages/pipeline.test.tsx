@@ -125,13 +125,16 @@ vi.mock("@/api/hooks", async () => {
   return {
     useCurrentWorkspace: () => ({ data: { id: fixtures.tenantId }, isPending: false }),
     useMe: () => ({ data: { id: "user-owner", email: "owner@example.com", displayName: "Avi Researcher" } }),
-    useProjects: () => ({
-      data: useSyncExternalStore(projects.subscribe, projects.get),
-      isPending: false,
-      isError: false,
-      error: undefined,
-      refetch: vi.fn(),
-    }),
+    useProjects: () => {
+      const items = useSyncExternalStore(projects.subscribe, projects.get);
+      return {
+        data: { data: items, meta: { page: 1, pageSize: 20, totalItems: items.length, totalPages: 1 } },
+        isPending: false,
+        isError: false,
+        error: undefined,
+        refetch: vi.fn(),
+      };
+    },
     useTasks: () => ({ data: [] }),
     useMembers: () => ({ data: [] }),
     useModules: () => ({

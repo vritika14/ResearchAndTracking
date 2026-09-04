@@ -77,7 +77,7 @@ vi.mock("@/api/hooks", async () => {
   return {
     useCurrentWorkspace: () => ({ data: { id: fixtures.tenantId }, isPending: false }),
     useMembers: () => ({ data: fixtures.members, isPending: false }),
-    useProjects: () => ({ data: fixtures.projects, isPending: false, isError: false }),
+    useProjects: () => ({ data: { data: fixtures.projects, meta: { page: 1, pageSize: 20, totalItems: fixtures.projects.length, totalPages: 1 } }, isPending: false, isError: false }),
     useModules: () => ({ data: [] }),
     useUserSearch: (query: string) => ({
       data: query.trim()

@@ -54,7 +54,7 @@ vi.mock("@/api/hooks", async () => {
   return {
     useCurrentWorkspace: () => ({ data: { id: fixtures.tenantId }, isPending: false }),
     useMe: () => ({ data: { id: fixtures.userId }, isPending: false }),
-    useProjects: () => ({ data: [fixtures.project], isPending: false }),
+    useProjects: () => ({ data: { data: [fixtures.project], meta: { page: 1, pageSize: 20, totalItems: 1, totalPages: 1 } }, isPending: false }),
     useConferences: () => ({
       data: useSyncExternalStore(store.subscribe, store.get),
       isPending: false,
