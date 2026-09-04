@@ -1,7 +1,7 @@
 // apps/api/src/modules/project-collaborators/repositories/project-collaborators.repository.ts
 import { Injectable } from '@nestjs/common';
 import { projectCollaborators } from '@research-tracker/migrations';
-import { and, eq, sql } from 'drizzle-orm';
+import { and, eq, inArray, sql } from 'drizzle-orm';
 import { DrizzleService } from '../../../db/drizzle.service';
 
 @Injectable()
@@ -106,5 +106,28 @@ export class ProjectCollaboratorsRepository {
       sql`SELECT * FROM check_project_collaborator(${projectId}::uuid, ${userId}::uuid)`,
     );
     return result.rows[0] as { id: string; roleId: string } | undefined;
+  }
+  /**
+   * Batched version of findByProjectAndUser — looks up the caller's role
+   * across many projects in a single query, instead of one query per
+   * project (avoids the N+1 pattern when listing projects).
+   */
+  async findByProjectIdsAndUser(projectIds: string[], userId: string) {
+    if (projectIds.length === 0) return new Map<string, { roleId: string }>();
+
+    const rows = await this.drizzle.db
+      .select({
+        projectId: projectCollaborators.projectId,
+        roleId: projectCollaborators.roleId,
+      })
+      .from(projectCollaborators)
+      .where(
+        and(
+          inArray(projectCollaborators.projectId, projectIds),
+          eq(projectCollaborators.userId, userId),
+        ),
+      );
+
+    return new Map(rows.map((row) => [row.projectId, { roleId: row.roleId }]));
   }
 }

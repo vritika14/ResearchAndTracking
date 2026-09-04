@@ -28,6 +28,7 @@ describe('NotesService', () => {
     create: jest.Mock;
     deleteAllForNote: jest.Mock;
     findByNoteAndUser: jest.Mock;
+    findByNoteIdsAndUser: jest.Mock;
     findNoteIdsByUser: jest.Mock;
   };
   let modulesRepository: { findById: jest.Mock };
@@ -60,6 +61,7 @@ describe('NotesService', () => {
       create: jest.fn(),
       deleteAllForNote: jest.fn(),
       findByNoteAndUser: jest.fn().mockResolvedValue(undefined),
+      findByNoteIdsAndUser: jest.fn().mockResolvedValue(new Set()),
       findNoteIdsByUser: jest.fn().mockResolvedValue([]),
     };
     modulesRepository = { findById: jest.fn() };

@@ -1,7 +1,7 @@
 // apps/api/src/modules/module-collaborators/repositories/module-collaborators.repository.ts
 import { Injectable } from '@nestjs/common';
 import { moduleCollaborators } from '@research-tracker/migrations';
-import { and, eq, sql } from 'drizzle-orm';
+import { and, eq, inArray, sql } from 'drizzle-orm';
 import { DrizzleService } from '../../../db/drizzle.service';
 
 @Injectable()
@@ -103,5 +103,26 @@ export class ModuleCollaboratorsRepository {
       sql`SELECT * FROM check_module_collaborator(${moduleId}::uuid, ${userId}::uuid)`,
     );
     return result.rows[0] as { id: string; roleId: string } | undefined;
+  }
+
+  /**
+   * Batched version of findByModuleAndUser — checks membership across many
+   * modules in a single query, instead of one query per module (avoids the
+   * N+1 pattern when listing modules).
+   */
+  async findByModuleIdsAndUser(moduleIds: string[], userId: string) {
+    if (moduleIds.length === 0) return new Set<string>();
+
+    const rows = await this.drizzle.db
+      .select({ moduleId: moduleCollaborators.moduleId })
+      .from(moduleCollaborators)
+      .where(
+        and(
+          inArray(moduleCollaborators.moduleId, moduleIds),
+          eq(moduleCollaborators.userId, userId),
+        ),
+      );
+
+    return new Set(rows.map((row) => row.moduleId));
   }
 }

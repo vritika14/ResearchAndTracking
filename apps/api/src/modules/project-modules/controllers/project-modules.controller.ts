@@ -16,6 +16,7 @@ import {
   ApiOperation,
   ApiResponse,
   ApiTags,
+  ApiQuery,
 } from '@nestjs/swagger';
 import { Request } from 'express';
 import type { AuthenticatedPrincipal } from '../../auth/jwt.strategy';
@@ -43,6 +44,7 @@ export class ProjectModulesController {
     summary:
       'List active modules for a workspace, optionally filtered by project',
   })
+  @ApiQuery({ name: 'projectId', required: false })
   @UseGuards(JwtAuthGuard, TenantMemberGuard)
   @Get()
   async list(
