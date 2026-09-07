@@ -43,7 +43,7 @@ describe('AnalyticsService', () => {
     it('defaults to a 30-day window', async () => {
       await service.summary('tenant-1');
 
-      const [, since] = repository.countsByName.mock.calls[0];
+      const [, since] = repository.countsByName.mock.calls[0] as [string, Date];
       const expected = new Date();
       expected.setDate(expected.getDate() - 30);
       expect(since.toDateString()).toBe(expected.toDateString());
@@ -52,7 +52,7 @@ describe('AnalyticsService', () => {
     it('clamps an excessive window to 90 days', async () => {
       await service.summary('tenant-1', 365);
 
-      const [, since] = repository.countsByName.mock.calls[0];
+      const [, since] = repository.countsByName.mock.calls[0] as [string, Date];
       const expected = new Date();
       expected.setDate(expected.getDate() - 90);
       expect(since.toDateString()).toBe(expected.toDateString());

@@ -10,7 +10,8 @@ import {
 export class CreateAnalyticsEventDto {
   @ApiProperty({
     example: 'project_created',
-    description: 'A short, snake_case event name (e.g. "page_view", "task_completed").',
+    description:
+      'A short, snake_case event name (e.g. "page_view", "task_completed").',
   })
   @IsString()
   @Length(1, 100)
