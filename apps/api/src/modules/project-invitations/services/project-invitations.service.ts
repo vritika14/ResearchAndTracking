@@ -173,16 +173,22 @@ export class ProjectInvitationsService {
     const invitations = await this.repository.findByEmail(
       normaliseEmail(email),
     );
-    return Promise.all(
-      invitations.map(async ({ token: _token, ...rest }) => {
-        const titleResult = await this.drizzle.db.execute(
-          sql`SELECT find_project_title_for_invitation(${rest.projectId}) as title`,
-        );
-        const projectTitle =
-          (titleResult.rows[0] as { title: string | null } | undefined)
-            ?.title ?? null;
-        return { type: 'project' as const, ...rest, projectTitle };
-      }),
+    const projectIds = invitations.map((i) => i.projectId);
+
+    const titleResult = await this.drizzle.db.execute(
+      sql`SELECT project_id, title FROM find_project_titles_for_invitations(${projectIds}::uuid[])`,
     );
+
+    const titlesByProjectId = new Map(
+      (titleResult.rows as { project_id: string; title: string | null }[]).map(
+        (row) => [row.project_id, row.title],
+      ),
+    );
+
+    return invitations.map(({ token: _token, ...rest }) => ({
+      type: 'project' as const,
+      ...rest,
+      projectTitle: titlesByProjectId.get(rest.projectId) ?? null,
+    }));
   }
 }
