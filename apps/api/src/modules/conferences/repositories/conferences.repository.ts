@@ -183,6 +183,50 @@ export class ConferencesRepository {
   }
 
   /**
+   * Batched version of findLinkedProjects — fetches linked projects for
+   * many conferences in a single query, instead of one query per
+   * conference (avoids the N+1 pattern when listing conferences).
+   */
+  async findLinkedProjectsForConferences(
+    tenantId: string,
+    conferenceIds: string[],
+  ) {
+    if (conferenceIds.length === 0)
+      return new Map<
+        string,
+        { id: string; displayId: string | null; title: string }[]
+      >();
+
+    const rows = await this.drizzle.db
+      .select({
+        conferenceId: conferenceProjects.conferenceId,
+        id: projects.id,
+        displayId: projects.displayId,
+        title: projects.title,
+      })
+      .from(conferenceProjects)
+      .innerJoin(projects, eq(conferenceProjects.projectId, projects.id))
+      .where(
+        and(
+          eq(conferenceProjects.tenantId, tenantId),
+          inArray(conferenceProjects.conferenceId, conferenceIds),
+          eq(projects.tenantId, tenantId),
+        ),
+      );
+
+    const byConference = new Map<
+      string,
+      { id: string; displayId: string | null; title: string }[]
+    >();
+    for (const row of rows) {
+      const existing = byConference.get(row.conferenceId) ?? [];
+      existing.push({ id: row.id, displayId: row.displayId, title: row.title });
+      byConference.set(row.conferenceId, existing);
+    }
+    return byConference;
+  }
+
+  /**
    * Creates the conference and all project links in one transaction.
    */
   async create(values: CreateConferenceValues, projectIds: string[]) {

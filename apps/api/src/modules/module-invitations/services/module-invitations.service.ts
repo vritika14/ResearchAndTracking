@@ -170,16 +170,22 @@ export class ModuleInvitationsService {
     const invitations = await this.repository.findByEmail(
       normaliseEmail(email),
     );
-    return Promise.all(
-      invitations.map(async ({ token: _token, ...rest }) => {
-        const titleResult = await this.drizzle.db.execute(
-          sql`SELECT find_module_title_for_invitation(${rest.moduleId}) as title`,
-        );
-        const moduleTitle =
-          (titleResult.rows[0] as { title: string | null } | undefined)
-            ?.title ?? null;
-        return { type: 'module' as const, ...rest, moduleTitle };
-      }),
+    const moduleIds = invitations.map((i) => i.moduleId);
+
+    const titleResult = await this.drizzle.db.execute(
+      sql`SELECT module_id, title FROM find_module_titles_for_invitations(${moduleIds}::uuid[])`,
     );
+
+    const titlesByModuleId = new Map(
+      (titleResult.rows as { module_id: string; title: string | null }[]).map(
+        (row) => [row.module_id, row.title],
+      ),
+    );
+
+    return invitations.map(({ token: _token, ...rest }) => ({
+      type: 'module' as const,
+      ...rest,
+      moduleTitle: titlesByModuleId.get(rest.moduleId) ?? null,
+    }));
   }
 }

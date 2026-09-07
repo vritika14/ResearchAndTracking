@@ -169,6 +169,20 @@
       "when": 1788743609308,
       "tag": "0039_analytics_events_grants",
       "breakpoints": true
+    },
+    {
+      "idx": 40,
+      "version": "7",
+      "when": 1788823520137,
+      "tag": "0040_batch_invitation_title_lookup",
+      "breakpoints": true
+    },
+    {
+      "idx": 41,
+      "version": "7",
+      "when": 1788823731749,
+      "tag": "0041_batch_module_invitation_title_lookup",
+      "breakpoints": true
     }
   ]
 }

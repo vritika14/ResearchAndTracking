@@ -21,11 +21,18 @@ export class ConferencesService {
       callerUserId,
     );
 
-    return Promise.all(
-      conferences.map((conference) =>
-        this.withResponseValues(tenantId, conference),
-      ),
-    );
+    const conferenceIds = conferences.map((c) => c.id);
+    const projectsByConference =
+      await this.repository.findLinkedProjectsForConferences(
+        tenantId,
+        conferenceIds,
+      );
+
+    return conferences.map((conference) => ({
+      ...conference,
+      daysRemaining: calculateDaysRemaining(conference.submissionDue),
+      projects: projectsByConference.get(conference.id) ?? [],
+    }));
   }
 
   /**
