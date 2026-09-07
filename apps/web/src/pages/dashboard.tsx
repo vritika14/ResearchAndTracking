@@ -20,6 +20,8 @@ import type { DashboardInsightId } from "@/components/dashboard/dashboard-insigh
 import { PipelineOverviewTable } from "@/components/dashboard/pipeline-overview-table";
 import { PriorityTasksTable } from "@/components/dashboard/priority-tasks-table";
 // import { WorkOnThisNextBanner } from "@/components/dashboard/work-on-this-next-banner";
+import { ErrorState } from "@/components/shared/error-state";
+import { LoadingState } from "@/components/shared/loading-state";
 import { PageHeading } from "@/components/typography/heading";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
@@ -293,6 +295,32 @@ export default function DashboardPage() {
 
   function resetLayout() {
     setLayout({ order: [...DEFAULT_WIDGET_ORDER], hidden: [] });
+  }
+
+  if (
+    workspace.isPending ||
+    projectsQuery.isPending ||
+    tasksQuery.isPending ||
+    stagesQuery.isPending
+  ) {
+    return <LoadingState title="Loading dashboard" className="min-h-[50vh]" />;
+  }
+
+  if (projectsQuery.isError || tasksQuery.isError || stagesQuery.isError) {
+    const error = projectsQuery.error ?? tasksQuery.error ?? stagesQuery.error;
+    return (
+      <ErrorState
+        title="Dashboard could not be loaded"
+        description={error?.message ?? "Please try again."}
+        onRetry={() =>
+          void Promise.all([
+            projectsQuery.refetch(),
+            tasksQuery.refetch(),
+            stagesQuery.refetch(),
+          ])
+        }
+      />
+    );
   }
 
   return (

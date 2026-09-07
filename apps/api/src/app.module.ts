@@ -1,5 +1,5 @@
 import { Module } from '@nestjs/common';
-import { ConfigModule } from '@nestjs/config';
+import { ConfigModule, ConfigService } from '@nestjs/config';
 import { join } from 'path';
 import { LoggerModule } from 'nestjs-pino';
 import { AppController } from './app.controller';
@@ -28,6 +28,7 @@ import { ProjectInvitationsModule } from './modules/project-invitations/project-
 import { ConferencesModule } from './modules/conferences/conferences.module';
 import { FeedbackModule } from './modules/feedback/feedback.module';
 import { PreferencesModule } from './modules/preferences/preferences.module';
+import { AnalyticsModule } from './modules/analytics/analytics.module';
 import { APP_INTERCEPTOR } from '@nestjs/core';
 import { RequestContextInterceptor } from './db/request-context.interceptor';
 import { ScheduleModule } from '@nestjs/schedule';
@@ -41,33 +42,36 @@ import { ArchiveCleanupModule } from './modules/archive-cleanup/archive-cleanup.
       validationSchema: envValidationSchema,
     }),
     ScheduleModule.forRoot(),
-    LoggerModule.forRoot({
-      pinoHttp: {
-        level: 'info',
-        redact: {
-          paths: [
-            'req.headers.authorization',
-            'req.headers.cookie',
-            'req.body.password',
-            'req.body.confirmPassword',
-            'req.body.accessToken',
-            'req.body.refreshToken',
-            'req.body.apiKey',
-            'req.body.secret',
-            'res.headers["set-cookie"]',
-          ],
-          censor: '[Redacted]',
-        },
-        serializers: {
-          req(req: { method?: string; url?: string; id?: string }) {
-            return {
-              id: req.id,
-              method: req.method,
-              url: req.url,
-            };
+    LoggerModule.forRootAsync({
+      inject: [ConfigService],
+      useFactory: (configService: ConfigService) => ({
+        pinoHttp: {
+          level: configService.get<string>('LOG_LEVEL', 'info'),
+          redact: {
+            paths: [
+              'req.headers.authorization',
+              'req.headers.cookie',
+              'req.body.password',
+              'req.body.confirmPassword',
+              'req.body.accessToken',
+              'req.body.refreshToken',
+              'req.body.apiKey',
+              'req.body.secret',
+              'res.headers["set-cookie"]',
+            ],
+            censor: '[Redacted]',
+          },
+          serializers: {
+            req(req: { method?: string; url?: string; id?: string }) {
+              return {
+                id: req.id,
+                method: req.method,
+                url: req.url,
+              };
+            },
           },
         },
-      },
+      }),
     }),
     DbModule,
     AuthModule,
@@ -93,6 +97,7 @@ import { ArchiveCleanupModule } from './modules/archive-cleanup/archive-cleanup.
     FeedbackModule,
     PreferencesModule,
     ArchiveCleanupModule,
+    AnalyticsModule,
   ],
   controllers: [AppController],
   providers: [

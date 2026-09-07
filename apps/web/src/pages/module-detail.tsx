@@ -270,7 +270,12 @@ export default function ModuleDetailPage() {
               <FormField label="Due date" htmlFor="edit-module-due"><DatePickerInput id="edit-module-due" label="Due date" value={form.dueDate} onChange={(value) => setForm({ ...form, dueDate: value })} /></FormField>
               <FormField label="Assigned to" htmlFor="edit-module-assignee"><Select value={form.assignedToUserId || "__unassigned__"} onValueChange={(value) => setForm({ ...form, assignedToUserId: value === "__unassigned__" ? "" : value })}><SelectTrigger id="edit-module-assignee"><SelectValue /></SelectTrigger><SelectContent><SelectItem value="__unassigned__">Unassigned</SelectItem>{(membersQuery.data ?? []).map((member) => <SelectItem key={member.userId} value={member.userId}>{member.displayName}</SelectItem>)}</SelectContent></Select></FormField>
             </div>
-            <div className="flex justify-end gap-3 border-t pt-5"><Button type="button" variant="outline" onClick={() => setForm(null)}>Cancel</Button><Button type="submit" disabled={updateModule.isPending}><Save /> Save Changes</Button></div>
+            {updateModule.isError ? (
+              <p role="alert" className="text-sm text-destructive">
+                {updateModule.error.message}
+              </p>
+            ) : null}
+            <div className="flex justify-end gap-3 border-t pt-5"><Button type="button" variant="outline" onClick={() => setForm(null)}>Cancel</Button><Button type="submit" disabled={updateModule.isPending}><Save /> {updateModule.isPending ? "Saving…" : "Save Changes"}</Button></div>
           </form>
         </CardContent>
       </Card> : null}
@@ -342,6 +347,7 @@ export default function ModuleDetailPage() {
           isPending={stagesQuery.isPending}
           isError={stagesQuery.isError}
           isUpdating={updateModule.isPending}
+          updateError={updateModule.isError ? updateModule.error.message : null}
           onStageChange={changePipelineStage}
         />
       </div>

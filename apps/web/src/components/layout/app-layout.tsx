@@ -1,10 +1,14 @@
+import { useEffect } from "react";
 import { BookOpen, FlaskConical, GraduationCap, Sparkles, TrendingUp } from "lucide-react";
 import { Outlet, useLocation } from "react-router-dom";
 
+import { useCurrentWorkspace, useTrackEvent } from "@/api/hooks";
 import { CompactSidebar } from "@/components/layout/compact-sidebar";
 import { Sidebar } from "@/components/layout/sidebar";
 import { SiteHeader } from "@/components/layout/site-header";
 import { TopNav } from "@/components/layout/top-nav";
+import { AppErrorBoundary } from "@/components/shared/error-boundary";
+import { registerErrorReporter } from "@/lib/client-error-reporter";
 import { useDesignTheme } from "@/theme/design-theme";
 
 /**
@@ -35,6 +39,20 @@ function PageBackgroundArt() {
 export function AppLayout() {
   const { layout } = useDesignTheme();
   const location = useLocation();
+  const workspace = useCurrentWorkspace();
+  const trackEvent = useTrackEvent(workspace.data?.id ?? "");
+
+  useEffect(() => {
+    trackEvent({ name: "page_view", path: location.pathname });
+    // Only re-fire when the path actually changes, not on every trackEvent identity change.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [location.pathname]);
+
+  useEffect(() => {
+    registerErrorReporter(trackEvent);
+    return () => registerErrorReporter(null);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [workspace.data?.id]);
 
   if (layout === "topnav") {
     return (
@@ -43,7 +61,9 @@ export function AppLayout() {
         <main className="relative flex-1 bg-gradient-to-br from-muted/[0.65] via-background to-primary/[0.045] px-4 py-6 sm:px-6 sm:py-8 xl:px-10">
           <PageBackgroundArt />
           <div key={location.pathname} className="route-stage relative mx-auto w-full max-w-[1680px]">
-            <Outlet />
+            <AppErrorBoundary label="This page">
+              <Outlet />
+            </AppErrorBoundary>
           </div>
         </main>
         <footer className="border-t bg-card/50 py-5">
@@ -65,7 +85,9 @@ export function AppLayout() {
         <main className="relative flex-1 bg-gradient-to-br from-muted/[0.65] via-background to-primary/[0.045] px-4 py-6 sm:px-6 sm:py-8 xl:px-10">
           <PageBackgroundArt />
           <div key={location.pathname} className="route-stage relative mx-auto w-full max-w-[1680px]">
-            <Outlet />
+            <AppErrorBoundary label="This page">
+              <Outlet />
+            </AppErrorBoundary>
           </div>
         </main>
         <footer className="border-t bg-card/50 py-5">

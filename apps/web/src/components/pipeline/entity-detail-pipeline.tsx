@@ -21,6 +21,7 @@ interface EntityDetailPipelineProps {
   isPending: boolean;
   isError: boolean;
   isUpdating: boolean;
+  updateError: string | null;
   onStageChange: (stage: string) => void;
 }
 
@@ -31,6 +32,7 @@ export function EntityDetailPipeline({
   isPending,
   isError,
   isUpdating,
+  updateError,
   onStageChange,
 }: EntityDetailPipelineProps) {
   const orderedStages = [...stages].sort((a, b) => a.sortOrder - b.sortOrder);
@@ -101,6 +103,12 @@ export function EntityDetailPipeline({
             No pipeline stages are configured for this {entityLabel}.
           </p>
         ) : (
+          <>
+          {updateError ? (
+            <p role="alert" className="mb-4 text-sm text-destructive">
+              {updateError}
+            </p>
+          ) : null}
           <ol
             className="grid gap-4 overflow-x-auto pb-2 md:grid-flow-col md:auto-cols-[minmax(14rem,1fr)]"
             aria-label={`${label} pipeline stages`}
@@ -209,6 +217,7 @@ export function EntityDetailPipeline({
               );
             })}
           </ol>
+          </>
         )}
       </CardContent>
     </Card>

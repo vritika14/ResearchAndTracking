@@ -123,6 +123,7 @@ vi.mock("@/api/hooks", () => ({
   useProjects: () => ({ data: { data: [fixtures.project], meta: { page: 1, pageSize: 20, totalItems: 1, totalPages: 1 } }, isPending: false, isError: false }),
   useCreateProject: () => ({ mutateAsync: vi.fn(), isPending: false }),
   useArchiveProject: () => ({ mutateAsync: vi.fn(), isPending: false }),
+  useTrackEvent: () => vi.fn(),
   useModules: () => ({ data: [fixtures.module] }),
   useTasks: () => ({ data: [fixtures.task] }),
   useNotes: () => ({ data: [fixtures.note] }),

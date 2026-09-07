@@ -21,3 +21,4 @@ export * from './conferences';
 export * from './conference-projects';
 export * from './feedback';
 export * from './user-preferences';
+export * from './analytics-events';

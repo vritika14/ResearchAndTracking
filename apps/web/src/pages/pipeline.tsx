@@ -1046,8 +1046,8 @@ export default function PipelinePage() {
         stages={stages}
         visibleStages={new Set(stages.filter((stage) => !hiddenStageValues.has(stage.value)).map((stage) => stage.value))}
         onToggleVisibility={toggleStageVisibility}
-        onAdd={(value) => void addStage(value)}
-        onDelete={(stage) => void deleteStage(stage)}
+        onAdd={addStage}
+        onDelete={deleteStage}
       />
     </div>
   );

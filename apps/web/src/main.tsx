@@ -8,6 +8,8 @@ import { ApiAuthBridge } from "@/api/api-auth-bridge";
 import { createQueryClient } from "@/api/query-client";
 import { cognitoRedirectUri } from "@/auth/auth-config";
 import { AppAuthProvider } from "@/auth/auth-provider";
+import { AppErrorBoundary } from "@/components/shared/error-boundary";
+import { installGlobalErrorHandlers } from "@/lib/client-error-reporter";
 import { ColorThemeProvider } from "@/theme/color-theme";
 import { AppearanceThemeProvider } from "@/theme/appearance-theme";
 import { DesignThemeProvider } from "@/theme/design-theme";
@@ -16,25 +18,29 @@ import { PreferencesProvider } from "@/preferences/preferences-provider";
 import App from "./App";
 import "./index.css";
 
+installGlobalErrorHandlers();
+
 const configuredOrigin = new URL(cognitoRedirectUri).origin;
 
 if (window.location.origin !== configuredOrigin) {
   window.location.replace(`${configuredOrigin}${window.location.pathname}${window.location.search}`);
 } else {
   createRoot(document.getElementById("root")!).render(
-    <AppearanceThemeProvider>
-      <TextSizeProvider>
-        <DesignThemeProvider>
-          <ColorThemeProvider>
-            <BrowserRouter>
-              <AppAuthProvider>
-                <AuthenticatedQueryRoot />
-              </AppAuthProvider>
-            </BrowserRouter>
-          </ColorThemeProvider>
-        </DesignThemeProvider>
-      </TextSizeProvider>
-    </AppearanceThemeProvider>,
+    <AppErrorBoundary label="Research in Motion" className="min-h-screen">
+      <AppearanceThemeProvider>
+        <TextSizeProvider>
+          <DesignThemeProvider>
+            <ColorThemeProvider>
+              <BrowserRouter>
+                <AppAuthProvider>
+                  <AuthenticatedQueryRoot />
+                </AppAuthProvider>
+              </BrowserRouter>
+            </ColorThemeProvider>
+          </DesignThemeProvider>
+        </TextSizeProvider>
+      </AppearanceThemeProvider>
+    </AppErrorBoundary>,
   );
 }
 

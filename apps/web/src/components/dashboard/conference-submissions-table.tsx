@@ -10,6 +10,7 @@ import {
   useMe,
   useProjects,
   useUpdateConference,
+  useTrackEvent,
   type ApiConference,
 } from "@/api/hooks";
 import { ConferenceSubmissionDialog, type ConferenceSubmissionInput } from "@/components/dashboard/conference-submission-dialog";
@@ -92,6 +93,7 @@ export function ConferenceSubmissionsTable({
   const createConference = useCreateConference(tenantId);
   const updateConference = useUpdateConference(tenantId);
   const deleteConference = useDeleteConference(tenantId);
+  const trackEvent = useTrackEvent(tenantId);
   const [search, setSearch] = useState("");
   const [type, setType] = useState<TypeFilter>("All");
   const [deadline, setDeadline] = useState<DeadlineFilter>("All");
@@ -131,6 +133,7 @@ export function ConferenceSubmissionsTable({
 
   async function create(input: ConferenceSubmissionInput) {
     await createConference.mutateAsync(input);
+    trackEvent({ name: "conference_created" });
   }
 
   async function update(input: ConferenceSubmissionInput) {

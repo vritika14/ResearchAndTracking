@@ -65,7 +65,7 @@ interface TaskDialogProps {
   projects: ApiProject[];
   modules: ApiModule[];
   task?: ApiTask | null;
-  onSave: (input: TaskFormInput) => void;
+  onSave: (input: TaskFormInput) => Promise<void> | void;
 }
 
 const INITIAL_FORM: TaskFormInput = {
@@ -139,6 +139,8 @@ export function TaskDialog({
   const [memberSearch, setMemberSearch] = useState("");
   const [memberPickerOpen, setMemberPickerOpen] = useState(false);
   const [selectedMembers, setSelectedMembers] = useState<ApiUserSearchResult[]>([]);
+  const [isSaving, setIsSaving] = useState(false);
+  const [saveError, setSaveError] = useState<string | null>(null);
   const isEditing = Boolean(task);
 
   useEffect(() => {
@@ -147,6 +149,7 @@ export function TaskDialog({
     setMemberSearch("");
     setMemberPickerOpen(false);
     setSelectedMembers([]);
+    setSaveError(null);
   }, [open, task]);
 
   const userSearchQuery = useUserSearch(memberSearch, memberPickerOpen);
@@ -164,18 +167,26 @@ export function TaskDialog({
     }));
   }
 
-  function handleSubmit(event: FormEvent<HTMLFormElement>) {
+  async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     if (form.linkTarget === "project" && !form.projectId) return;
     if (form.linkTarget === "module" && !form.moduleId) return;
-    onSave({
-      ...form,
-      title: form.title.trim(),
-      description: form.description.trim(),
-      workingWith: form.visibility === "Shared" ? form.workingWith.trim() : "",
-      collaboratorUserIds: selectedMembers.map((member) => member.id),
-    });
-    onOpenChange(false);
+    setIsSaving(true);
+    setSaveError(null);
+    try {
+      await onSave({
+        ...form,
+        title: form.title.trim(),
+        description: form.description.trim(),
+        workingWith: form.visibility === "Shared" ? form.workingWith.trim() : "",
+        collaboratorUserIds: selectedMembers.map((member) => member.id),
+      });
+      onOpenChange(false);
+    } catch (error) {
+      setSaveError(error instanceof Error ? error.message : "The task could not be saved.");
+    } finally {
+      setIsSaving(false);
+    }
   }
 
   return (
@@ -189,7 +200,7 @@ export function TaskDialog({
           </DialogDescription>
         </DialogHeader>
 
-        <form onSubmit={handleSubmit} className="grid gap-5">
+        <form onSubmit={(event) => void handleSubmit(event)} className="grid gap-5">
           <FormField label="Task title" htmlFor="task-title" required>
             <Input
               id="task-title"
@@ -453,9 +464,17 @@ export function TaskDialog({
             </FormField>
           ) : null}
 
+          {saveError ? (
+            <p role="alert" className="rounded-lg border border-destructive/30 bg-destructive/10 p-3 text-sm text-destructive">
+              {saveError}
+            </p>
+          ) : null}
+
           <DialogFooter className="border-t pt-4">
-            <DialogClose asChild><Button type="button" variant="outline">Cancel</Button></DialogClose>
-            <Button type="submit">{isEditing ? "Save Changes" : "Create Task"}</Button>
+            <DialogClose asChild><Button type="button" variant="outline" disabled={isSaving}>Cancel</Button></DialogClose>
+            <Button type="submit" disabled={isSaving}>
+              {isSaving ? "Saving…" : isEditing ? "Save Changes" : "Create Task"}
+            </Button>
           </DialogFooter>
         </form>
       </DialogContent>

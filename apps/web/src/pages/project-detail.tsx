@@ -280,6 +280,7 @@ function ProjectPipeline({
   isPending,
   isError,
   isUpdating,
+  updateError,
   onStageChange,
 }: {
   project: ApiProject;
@@ -287,6 +288,7 @@ function ProjectPipeline({
   isPending: boolean;
   isError: boolean;
   isUpdating: boolean;
+  updateError: string | null;
   onStageChange: (stage: string) => void;
 }) {
   const orderedStages = [...stages].sort((a, b) => a.sortOrder - b.sortOrder);
@@ -356,6 +358,12 @@ function ProjectPipeline({
             No pipeline stages are configured for this project.
           </p>
         ) : (
+          <>
+          {updateError ? (
+            <p role="alert" className="mb-4 text-sm text-destructive">
+              {updateError}
+            </p>
+          ) : null}
           <ol
             className="grid gap-4 overflow-x-auto pb-2 md:grid-flow-col md:auto-cols-[minmax(14rem,1fr)]"
             aria-label="Project pipeline stages"
@@ -462,6 +470,7 @@ function ProjectPipeline({
               );
             })}
           </ol>
+          </>
         )}
       </CardContent>
     </Card>
@@ -841,13 +850,19 @@ export default function ProjectDetailPage() {
                 </FormField>
               </div>
 
+              {updateProject.isError ? (
+                <p role="alert" className="text-sm text-destructive">
+                  {updateProject.error.message}
+                </p>
+              ) : null}
+
               <div className="flex flex-col-reverse gap-3 border-t pt-5 sm:flex-row sm:justify-end">
                 <Button type="button" variant="outline" onClick={cancelEditing}>
                   Cancel
                 </Button>
                 <Button type="submit" disabled={updateProject.isPending}>
                   <Save />
-                  Save Changes
+                  {updateProject.isPending ? "Saving…" : "Save Changes"}
                 </Button>
               </div>
             </form>
@@ -924,6 +939,7 @@ export default function ProjectDetailPage() {
             isPending={pipelineStagesQuery.isPending}
             isError={pipelineStagesQuery.isError}
             isUpdating={updateProject.isPending}
+            updateError={updateProject.isError ? updateProject.error.message : null}
             onStageChange={changePipelineStage}
           />
         </div>

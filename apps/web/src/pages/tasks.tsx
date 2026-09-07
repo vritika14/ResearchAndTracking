@@ -10,6 +10,7 @@ import {
   useModules,
   useTasks,
   useProjects,
+  useTrackEvent,
   type ApiTask,
 } from "@/api/hooks";
 import { ColumnVisibilityMenu } from "@/components/dashboard/column-visibility-menu";
@@ -134,6 +135,7 @@ export default function TasksPage() {
 
   const createTask = useCreateTask(tenantId);
   const deleteTask = useDeleteTask(tenantId);
+  const trackEvent = useTrackEvent(tenantId);
 
   const [search, setSearch] = useState("");
   const [status, setStatus] = useState<StatusFilter>("All");
@@ -248,6 +250,7 @@ export default function TasksPage() {
         }),
       ),
     );
+    trackEvent({ name: "task_created" });
   }
 
   async function handleDeleteTask(task: ApiTask) {
@@ -287,7 +290,7 @@ export default function TasksPage() {
         tenantId={tenantId}
         projects={projects}
         modules={modulesQuery.data ?? []}
-        onSave={(input) => void handleCreateTask(input)}
+        onSave={handleCreateTask}
       />
 
       <div className="surface-toolbar flex flex-wrap items-center gap-3 border-amber-200/70 bg-amber-50/40 dark:border-amber-900/50 dark:bg-amber-950/10">

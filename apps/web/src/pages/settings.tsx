@@ -1,5 +1,6 @@
 import { useEffect, useState, type FormEvent } from "react";
 import { useForm } from "react-hook-form";
+import { Link } from "react-router-dom";
 import {
   AlertTriangle,
   ArrowRight,
@@ -8,6 +9,7 @@ import {
   Crown,
   LayoutTemplate,
   Mail,
+  Map,
   Moon,
   Palette,
   Plus,
@@ -151,6 +153,14 @@ export default function SettingsPage() {
           icon={SettingsIcon}
           title="Settings"
           description="Review your authenticated account and manage the active workspace."
+          actions={
+            <Button variant="outline" asChild>
+              <Link to="/site-map">
+                <Map className="h-4 w-4" />
+                Site map
+              </Link>
+            </Button>
+          }
         />
       </div>
 
@@ -659,6 +669,15 @@ export default function SettingsPage() {
       </div>
 
       <WorkspaceMembers />
+
+      <p className="mx-auto mt-2 flex w-full max-w-5xl flex-wrap gap-x-4 gap-y-1 text-xs text-muted-foreground">
+        <Link to="/terms" className="underline underline-offset-2 hover:text-foreground">
+          Terms of Service
+        </Link>
+        <Link to="/privacy" className="underline underline-offset-2 hover:text-foreground">
+          Privacy Policy
+        </Link>
+      </p>
     </div>
   );
 }

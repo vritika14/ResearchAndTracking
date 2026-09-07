@@ -12,6 +12,7 @@ import {
   useProjects,
   useUpdateNote,
   useUserSearch,
+  useTrackEvent,
   type ApiNote,
   type ApiUserSearchResult,
 } from "@/api/hooks";
@@ -111,6 +112,7 @@ export default function DailyNotesPage() {
   const createNote = useCreateNote(tenantId);
   const updateNote = useUpdateNote(tenantId);
   const deleteNote = useDeleteNote(tenantId);
+  const trackEvent = useTrackEvent(tenantId);
 
   const [selectedId, setSelectedId] = useState<string | null>(noteId ?? null);
   const [sortOrder, setSortOrder] = useState<"newest" | "oldest">("newest");
@@ -243,6 +245,7 @@ export default function DailyNotesPage() {
         );
       }
 
+      trackEvent({ name: "note_created" });
       setLinkFilter(ALL_NOTES);
       setSelectedId(note.id);
       navigate(`/daily-notes/${note.id}`, { replace: true });
