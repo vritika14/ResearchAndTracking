@@ -9,6 +9,7 @@ import {
   useProject,
   useProjects,
   useUpdateMyTask,
+  useTrackEvent,
   type ApiTask,
 } from "@/api/hooks";
 import type { TaskFormInput } from "@/components/tasks/task-dialog";
@@ -117,8 +118,8 @@ export default function TaskDetailPage() {
   const projects = projectsQuery.data?.data ?? [];
   const modulesQuery = useModules(tenantId);
   const updateTask = useUpdateMyTask();
-
   const task = taskQuery.data;
+  const trackEvent = useTrackEvent(task?.tenantId ?? "");
   const linkedProjectQuery = useProject(tenantId, task?.projectId ?? "", Boolean(task?.projectId));
   const sameTenant = Boolean(task && tenantId && task.tenantId === tenantId);
   const [form, setForm] = useState<TaskFormInput | null>(null);
@@ -178,6 +179,9 @@ export default function TaskDetailPage() {
         moduleId: form.linkTarget === "module" ? form.moduleId : "",
       },
     });
+    if (form.status === "Complete" && task?.status !== "Complete") {
+      trackEvent({ name: "task_completed" });
+    }
     setForm(null);
   }
 
@@ -235,7 +239,12 @@ export default function TaskDetailPage() {
                 <FormField label="Visibility" htmlFor="edit-task-visibility"><Select value={form.visibility} onValueChange={(value) => setForm({ ...form, visibility: value })}><SelectTrigger id="edit-task-visibility"><SelectValue /></SelectTrigger><SelectContent>{VISIBILITY_OPTIONS.map((value) => <SelectItem key={value} value={value}>{value}</SelectItem>)}</SelectContent></Select></FormField>
                 {form.visibility === "Shared" ? <FormField label="Working with" htmlFor="edit-task-working"><Input id="edit-task-working" value={form.workingWith} onChange={(event) => setForm({ ...form, workingWith: event.target.value })} /></FormField> : null}
               </div>
-              <div className="flex justify-end gap-3 border-t pt-5"><Button type="button" variant="outline" onClick={() => setForm(null)}>Cancel</Button><Button type="submit" disabled={updateTask.isPending}><Save /> Save Changes</Button></div>
+              {updateTask.isError ? (
+                <p role="alert" className="text-sm text-destructive">
+                  {updateTask.error.message}
+                </p>
+              ) : null}
+              <div className="flex justify-end gap-3 border-t pt-5"><Button type="button" variant="outline" onClick={() => setForm(null)}>Cancel</Button><Button type="submit" disabled={updateTask.isPending}><Save /> {updateTask.isPending ? "Saving…" : "Save Changes"}</Button></div>
             </form>
           </CardContent>
         </Card>

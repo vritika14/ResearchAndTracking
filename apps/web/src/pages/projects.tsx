@@ -13,6 +13,7 @@ import {
   usePipelineStages,
   useCreateProject,
   useTasks,
+  useTrackEvent,
   type ApiProject,
 } from "@/api/hooks";
 import { ColumnVisibilityMenu } from "@/components/dashboard/column-visibility-menu";
@@ -217,6 +218,7 @@ export default function ProjectsPage() {
 
   const createProject = useCreateProject(tenantId);
   const archiveProject = useArchiveProject(tenantId);
+  const trackEvent = useTrackEvent(tenantId);
 
   const [isNewProjectOpen, setIsNewProjectOpen] = useState(false);
   const [sharingProject, setSharingProject] = useState<ApiProject | null>(null);
@@ -319,7 +321,7 @@ export default function ProjectsPage() {
       totalBudget: input.totalBudget || undefined,
       targetJournals: input.targetJournals || undefined,
     });
-
+    trackEvent({ name: "project_created" });
   }
 
   async function handleDeleteProject(project: ApiProject) {
@@ -361,7 +363,7 @@ export default function ProjectsPage() {
       <NewProjectDialog
         open={isNewProjectOpen}
         onOpenChange={setIsNewProjectOpen}
-        onCreate={(input) => void handleCreateProject(input)}
+        onCreate={handleCreateProject}
         pipelineStages={pipelineStagesQuery.data ?? []}
       />
       <Dialog

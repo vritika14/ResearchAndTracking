@@ -622,20 +622,17 @@ export function useCreateProject(tenantId: string) {
         }),
       ),
     async onSuccess(project) {
-      const addProject = (current: ApiProject[] | undefined) => {
+      // The tenant-scoped list is paginated (`{ data, meta }`), so a new
+      // project's page/position depends on server-side sort order — just
+      // invalidate and let it refetch instead of guessing where to splice it
+      // in. The "my projects" list is a plain array, so it can be patched
+      // directly.
+      queryClient.setQueryData<ApiProject[]>(["api", "me", "projects"], (current) => {
         if (!current) return [project];
         return current.some((item) => item.id === project.id)
           ? current
           : [project, ...current];
-      };
-      queryClient.setQueryData<ApiProject[]>(
-        apiKeys.projects(tenantId),
-        addProject,
-      );
-      queryClient.setQueryData<ApiProject[]>(
-        ["api", "me", "projects"],
-        addProject,
-      );
+      });
       await Promise.all([
         queryClient.invalidateQueries({ queryKey: apiKeys.projects(tenantId) }),
         queryClient.invalidateQueries({ queryKey: ["api", "me", "projects"] }),
@@ -2176,6 +2173,52 @@ export function useUpdateModulePipelineStage(tenantId: string) {
         queryKey: modulePipelineStagePoolKey,
       });
     },
+  });
+}
+
+export interface ApiAnalyticsEventInput {
+  name: string;
+  path?: string;
+  properties?: Record<string, string | number | boolean | null>;
+}
+
+export interface ApiAnalyticsSummary {
+  windowDays: number;
+  totalEvents: number;
+  byName: { name: string; count: number }[];
+  byDay: { day: string; count: number }[];
+}
+
+/**
+ * Fire-and-forget: analytics must never disrupt the UI, so failures are
+ * swallowed rather than surfaced through `isError`/`error`.
+ */
+export function useTrackEvent(tenantId: string) {
+  const mutation = useMutation({
+    mutationFn: (input: ApiAnalyticsEventInput) =>
+      apiJson<unknown>(
+        `/api/v1/tenant/${encodeURIComponent(tenantId)}/analytics/events`,
+        { method: "POST", body: JSON.stringify(input) },
+      ),
+    retry: 0,
+  });
+
+  return (input: ApiAnalyticsEventInput) => {
+    if (!tenantId) return;
+    mutation.mutate(input, { onError: () => undefined });
+  };
+}
+
+export function useAnalyticsSummary(tenantId: string, days?: number, enabled = true) {
+  return useQuery({
+    queryKey: ["api", "tenant", tenantId, "analytics", "summary", days ?? 30] as const,
+    enabled: Boolean(tenantId) && enabled,
+    queryFn: async () =>
+      responseData<ApiAnalyticsSummary>(
+        await apiClient.GET("/api/v1/tenant/{tenantId}/analytics/summary", {
+          params: { path: { tenantId }, query: days ? { days } : {} },
+        }),
+      ),
   });
 }
 

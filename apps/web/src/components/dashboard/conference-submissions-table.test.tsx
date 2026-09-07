@@ -53,6 +53,7 @@ vi.mock("@/api/hooks", async () => {
   const { useSyncExternalStore } = await import("react");
   return {
     useCurrentWorkspace: () => ({ data: { id: fixtures.tenantId }, isPending: false }),
+    useTrackEvent: () => vi.fn(),
     useMe: () => ({ data: { id: fixtures.userId }, isPending: false }),
     useProjects: () => ({ data: { data: [fixtures.project], meta: { page: 1, pageSize: 20, totalItems: 1, totalPages: 1 } }, isPending: false }),
     useConferences: () => ({

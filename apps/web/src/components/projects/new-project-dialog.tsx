@@ -43,7 +43,7 @@ export interface NewProjectInput {
 interface NewProjectDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  onCreate: (project: NewProjectInput) => void;
+  onCreate: (project: NewProjectInput) => Promise<void> | void;
   pipelineStages: ApiPipelineStage[];
 }
 
@@ -86,6 +86,8 @@ export function NewProjectDialog({
 }: NewProjectDialogProps) {
   const [form, setForm] = useState<NewProjectInput>(INITIAL_FORM);
   const [stagesInitialized, setStagesInitialized] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
+  const [saveError, setSaveError] = useState<string | null>(null);
 
   useEffect(() => {
     if (!open || stagesInitialized || !pipelineStages.length) return;
@@ -103,6 +105,7 @@ export function NewProjectDialog({
   function resetForm() {
     setForm(INITIAL_FORM);
     setStagesInitialized(false);
+    setSaveError(null);
   }
 
   function handleOpenChange(nextOpen: boolean) {
@@ -110,18 +113,26 @@ export function NewProjectDialog({
     onOpenChange(nextOpen);
   }
 
-  function handleSubmit(event: FormEvent<HTMLFormElement>) {
+  async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    onCreate({
-      ...form,
-      title: form.title.trim(),
-      description: form.description.trim(),
-      researchArea: form.researchArea.trim(),
-      targetJournals: form.targetJournals.trim(),
-      pipelineStage: form.pipelineStage || form.pipelineStages[0] || "",
-    });
-    resetForm();
-    onOpenChange(false);
+    setIsSaving(true);
+    setSaveError(null);
+    try {
+      await onCreate({
+        ...form,
+        title: form.title.trim(),
+        description: form.description.trim(),
+        researchArea: form.researchArea.trim(),
+        targetJournals: form.targetJournals.trim(),
+        pipelineStage: form.pipelineStage || form.pipelineStages[0] || "",
+      });
+      resetForm();
+      onOpenChange(false);
+    } catch (error) {
+      setSaveError(error instanceof Error ? error.message : "The project could not be created.");
+    } finally {
+      setIsSaving(false);
+    }
   }
 
   return (
@@ -134,7 +145,7 @@ export function NewProjectDialog({
           </DialogDescription>
         </DialogHeader>
 
-        <form onSubmit={handleSubmit} className="grid gap-5">
+        <form onSubmit={(event) => void handleSubmit(event)} className="grid gap-5">
           <div className="grid gap-4 sm:grid-cols-2">
             <div className="sm:col-span-2">
               <FormField label="Project title" htmlFor="project-title" required>
@@ -286,9 +297,17 @@ export function NewProjectDialog({
             After creating the project, open it to invite collaborators by email using a secure acceptance link.
           </p>
 
+          {saveError ? (
+            <p role="alert" className="rounded-lg border border-destructive/30 bg-destructive/10 p-3 text-sm text-destructive">
+              {saveError}
+            </p>
+          ) : null}
+
           <DialogFooter className="border-t pt-4">
-            <DialogClose asChild><Button type="button" variant="outline">Cancel</Button></DialogClose>
-            <Button type="submit" disabled={!form.pipelineStages.length}>Create Project</Button>
+            <DialogClose asChild><Button type="button" variant="outline" disabled={isSaving}>Cancel</Button></DialogClose>
+            <Button type="submit" disabled={isSaving || !form.pipelineStages.length}>
+              {isSaving ? "Creating…" : "Create Project"}
+            </Button>
           </DialogFooter>
         </form>
       </DialogContent>

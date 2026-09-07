@@ -5,6 +5,7 @@ import { RequireAuth } from "@/auth/require-auth";
 import { RequireApiSession } from "@/auth/require-api-session";
 import { RequireWorkspace } from "@/auth/require-workspace";
 import { AppLayout } from "@/components/layout/app-layout";
+import { CookieNotice } from "@/components/shared/cookie-notice";
 import { LoadingState } from "@/components/shared/loading-state";
 
 const DashboardPage = lazy(() => import("@/pages/dashboard"));
@@ -30,7 +31,11 @@ const SessionExpiredPage = lazy(() => import("@/pages/session-expired"));
 const AccessDeniedPage = lazy(() => import("@/pages/access-denied"));
 const MembershipStatusPage = lazy(() => import("@/pages/membership-status"));
 const NotFoundPage = lazy(() => import("@/pages/not-found"));
+const SiteMapPage = lazy(() => import("@/pages/site-map"));
 const InvitationPage = lazy(() => import("@/pages/invitation"));
+const TermsPage = lazy(() => import("@/pages/terms"));
+const PrivacyPage = lazy(() => import("@/pages/privacy"));
+const UsagePage = lazy(() => import("@/pages/usage"));
 
 function routePage(page: ReactNode) {
   return (
@@ -50,12 +55,16 @@ function routePage(page: ReactNode) {
 
 export default function App() {
   return (
+    <>
+    <CookieNotice />
     <Routes>
       <Route path="sign-in" element={routePage(<SignInPage />)} />
       <Route path="auth/callback" element={routePage(<AuthCallbackPage />)} />
       <Route path="session-expired" element={routePage(<SessionExpiredPage />)} />
       <Route path="access-denied" element={routePage(<AccessDeniedPage />)} />
       <Route path="invitations/:token" element={routePage(<InvitationPage />)} />
+      <Route path="terms" element={routePage(<TermsPage />)} />
+      <Route path="privacy" element={routePage(<PrivacyPage />)} />
 
       <Route element={<RequireAuth />}>
         <Route element={<RequireApiSession />}>
@@ -91,11 +100,14 @@ export default function App() {
                 element={routePage(<AccountAuditPage />)}
               />
               <Route path="future/:feature" element={routePage(<FutureFeaturePage />)} />
+              <Route path="site-map" element={routePage(<SiteMapPage />)} />
+              <Route path="usage" element={routePage(<UsagePage />)} />
               <Route path="*" element={routePage(<NotFoundPage />)} />
             </Route>
           </Route>
         </Route>
       </Route>
     </Routes>
+    </>
   );
 }

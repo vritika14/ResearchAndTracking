@@ -20,8 +20,8 @@ interface ManageStagesDialogProps {
   stages: readonly ApiPipelineStage[];
   visibleStages: ReadonlySet<string>;
   onToggleVisibility: (stageValue: string) => void;
-  onAdd: (value: string) => void;
-  onDelete: (stage: ApiPipelineStage) => void;
+  onAdd: (value: string) => Promise<void> | void;
+  onDelete: (stage: ApiPipelineStage) => Promise<void> | void;
 }
 
 export function ManageStagesDialog({
@@ -34,16 +34,35 @@ export function ManageStagesDialog({
   onDelete,
 }: ManageStagesDialogProps) {
   const [name, setName] = useState("");
+  const [isAdding, setIsAdding] = useState(false);
+  const [actionError, setActionError] = useState<string | null>(null);
   const normalizedName = name.trim();
   const isDuplicate = stages.some(
     (stage) => stage.value.toLowerCase() === normalizedName.toLowerCase(),
   );
 
-  function addStage(event: FormEvent<HTMLFormElement>) {
+  async function addStage(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     if (!normalizedName || isDuplicate) return;
-    onAdd(normalizedName);
-    setName("");
+    setIsAdding(true);
+    setActionError(null);
+    try {
+      await onAdd(normalizedName);
+      setName("");
+    } catch (error) {
+      setActionError(error instanceof Error ? error.message : "The stage could not be added.");
+    } finally {
+      setIsAdding(false);
+    }
+  }
+
+  async function deleteStage(stage: ApiPipelineStage) {
+    setActionError(null);
+    try {
+      await onDelete(stage);
+    } catch (error) {
+      setActionError(error instanceof Error ? error.message : "The stage could not be deleted.");
+    }
   }
 
   return (
@@ -86,7 +105,7 @@ export function ManageStagesDialog({
                   disabled={!isCustom}
                   className="shrink-0 text-destructive hover:bg-destructive/10 hover:text-destructive disabled:text-muted-foreground"
                   aria-label={`Delete ${stage.value}`}
-                  onClick={() => onDelete(stage)}
+                  onClick={() => void deleteStage(stage)}
                 >
                   <Trash2 />
                 </Button>
@@ -95,7 +114,7 @@ export function ManageStagesDialog({
           })}
         </div>
 
-        <form onSubmit={addStage} className="grid gap-3 rounded-lg border border-dashed p-4">
+        <form onSubmit={(event) => void addStage(event)} className="grid gap-3 rounded-lg border border-dashed p-4">
           <span className="text-sm font-semibold">Add a new stage</span>
           <Input
             value={name}
@@ -105,11 +124,17 @@ export function ManageStagesDialog({
             required
           />
           {isDuplicate ? <p className="text-xs text-destructive">That stage already exists.</p> : null}
-          <Button type="submit" variant="outline" disabled={!normalizedName || isDuplicate}>
+          <Button type="submit" variant="outline" disabled={!normalizedName || isDuplicate || isAdding}>
             <Plus />
-            Add Stage
+            {isAdding ? "Adding…" : "Add Stage"}
           </Button>
         </form>
+
+        {actionError ? (
+          <p role="alert" className="rounded-lg border border-destructive/30 bg-destructive/10 p-3 text-sm text-destructive">
+            {actionError}
+          </p>
+        ) : null}
 
         <DialogFooter>
           <DialogClose asChild><Button type="button">Done</Button></DialogClose>

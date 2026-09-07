@@ -1,6 +1,7 @@
 import type { LucideIcon } from "lucide-react";
 import {
   Activity,
+  BarChart3,
   BookOpen,
   Boxes,
   Calendar,
@@ -66,6 +67,7 @@ export const navGroups: NavGroup[] = [
         to: "/settings/account-audit",
         icon: ShieldCheck,
       },
+      { label: "Usage", to: "/usage", icon: BarChart3 },
     ],
   },
   {

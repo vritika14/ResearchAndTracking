@@ -38,6 +38,23 @@ export interface paths {
         patch: operations["MeController_updateMe"];
         trace?: never;
     };
+    "/api/v1/users/search": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Search users by name or email, across all workspaces */
+        get: operations["UsersController_search"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/tenant/{tenantId}/members": {
         parameters: {
             query?: never;
@@ -127,9 +144,7 @@ export interface paths {
         parameters: {
             query?: never;
             header?: never;
-            path: {
-                workspaceId: string;
-            };
+            path?: never;
             cookie?: never;
         };
         get?: never;
@@ -159,57 +174,41 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/v1/users/search": {
+    "/api/v1/tenant/{tenantId}/projects": {
         parameters: {
             query?: never;
             header?: never;
             path?: never;
             cookie?: never;
         };
-        /** Search users by name or email, across all workspaces */
-        get: operations["UsersController_search"];
+        /** List active (non-archived) projects for a workspace */
+        get: operations["ProjectsController_list"];
         put?: never;
-        post?: never;
+        /** Create a project */
+        post: operations["ProjectsController_create"];
         delete?: never;
         options?: never;
         head?: never;
         patch?: never;
         trace?: never;
     };
-    "/api/v1/me/tasks": {
+    "/api/v1/tenant/{tenantId}/projects/{projectId}": {
         parameters: {
             query?: never;
             header?: never;
             path?: never;
             cookie?: never;
         };
-        /** List every task the caller can access, across all workspaces */
-        get: operations["MyTasksController_list"];
+        /** Get a single project */
+        get: operations["ProjectsController_findOne"];
         put?: never;
         post?: never;
-        delete?: never;
+        /** Archive a project (auto-deleted after 14 days) */
+        delete: operations["ProjectsController_archive"];
         options?: never;
         head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/v1/me/tasks/{taskId}": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /** Get a single task the caller can access */
-        get: operations["MyTasksController_findOne"];
-        put?: never;
-        post?: never;
-        /** Delete a task the caller can access */
-        delete: operations["MyTasksController_remove"];
-        options?: never;
-        head?: never;
-        /** Update a task the caller can access */
-        patch: operations["MyTasksController_update"];
+        /** Update a project */
+        patch: operations["ProjectsController_update"];
         trace?: never;
     };
     "/api/v1/me/projects": {
@@ -248,113 +247,21 @@ export interface paths {
         patch: operations["MyProjectsController_update"];
         trace?: never;
     };
-    "/api/v1/me/modules": {
+    "/api/v1/me/projects/{projectId}/pipeline-stages": {
         parameters: {
             query?: never;
             header?: never;
             path?: never;
             cookie?: never;
         };
-        /** List every module the caller can access, across all workspaces */
-        get: operations["MyModulesController_list"];
+        /** List the selected pipeline stages for an accessible project */
+        get: operations["MyProjectsController_listPipelineStages"];
         put?: never;
         post?: never;
         delete?: never;
         options?: never;
         head?: never;
         patch?: never;
-        trace?: never;
-    };
-    "/api/v1/me/modules/{moduleId}": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /** Get a single module the caller can access */
-        get: operations["MyModulesController_findOne"];
-        put?: never;
-        post?: never;
-        /** Archive a module the caller can access */
-        delete: operations["MyModulesController_archive"];
-        options?: never;
-        head?: never;
-        /** Update a module the caller can access */
-        patch: operations["MyModulesController_update"];
-        trace?: never;
-    };
-    "/api/v1/me/notes": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /** List every note the caller can access, across all workspaces */
-        get: operations["MyNotesController_list"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/v1/me/notes/{noteId}": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /** Get a single note the caller can access */
-        get: operations["MyNotesController_findOne"];
-        put?: never;
-        post?: never;
-        /** Delete a note the caller can access */
-        delete: operations["MyNotesController_remove"];
-        options?: never;
-        head?: never;
-        /** Update a note the caller can access */
-        patch: operations["MyNotesController_update"];
-        trace?: never;
-    };
-    "/api/v1/tenant/{tenantId}/projects": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /** List active (non-archived) projects for a workspace */
-        get: operations["ProjectsController_list"];
-        put?: never;
-        /** Create a project */
-        post: operations["ProjectsController_create"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/v1/tenant/{tenantId}/projects/{projectId}": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /** Get a single project */
-        get: operations["ProjectsController_findOne"];
-        put?: never;
-        post?: never;
-        /** Archive a project (auto-deleted after 14 days) */
-        delete: operations["ProjectsController_archive"];
-        options?: never;
-        head?: never;
-        /** Update a project */
-        patch: operations["ProjectsController_update"];
         trace?: never;
     };
     "/api/v1/tenant/{tenantId}/projects/{projectId}/collaborators": {
@@ -430,6 +337,59 @@ export interface paths {
         patch: operations["ProjectModulesController_update"];
         trace?: never;
     };
+    "/api/v1/me/modules": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List every module the caller can access, across all workspaces */
+        get: operations["MyModulesController_list"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/me/modules/{moduleId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get a single module the caller can access */
+        get: operations["MyModulesController_findOne"];
+        put?: never;
+        post?: never;
+        /** Archive a module the caller can access */
+        delete: operations["MyModulesController_archive"];
+        options?: never;
+        head?: never;
+        /** Update a module the caller can access */
+        patch: operations["MyModulesController_update"];
+        trace?: never;
+    };
+    "/api/v1/me/modules/{moduleId}/pipeline-stages": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List the selected pipeline stages for an accessible module */
+        get: operations["MyModulesController_listPipelineStages"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/tenant/{tenantId}/modules/{moduleId}/collaborators": {
         parameters: {
             query?: never;
@@ -501,6 +461,42 @@ export interface paths {
         head?: never;
         /** Update a note */
         patch: operations["NotesController_update"];
+        trace?: never;
+    };
+    "/api/v1/me/notes": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List every note the caller can access, across all workspaces */
+        get: operations["MyNotesController_list"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/me/notes/{noteId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get a single note the caller can access */
+        get: operations["MyNotesController_findOne"];
+        put?: never;
+        post?: never;
+        /** Delete a note the caller can access */
+        delete: operations["MyNotesController_remove"];
+        options?: never;
+        head?: never;
+        /** Update a note the caller can access */
+        patch: operations["MyNotesController_update"];
         trace?: never;
     };
     "/api/v1/tenant/{tenantId}/notes/{noteId}/members": {
@@ -575,6 +571,42 @@ export interface paths {
         patch: operations["TasksController_update"];
         trace?: never;
     };
+    "/api/v1/me/tasks": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List every task the caller can access, across all workspaces */
+        get: operations["MyTasksController_list"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/me/tasks/{taskId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get a single task the caller can access */
+        get: operations["MyTasksController_findOne"];
+        put?: never;
+        post?: never;
+        /** Delete a task the caller can access */
+        delete: operations["MyTasksController_remove"];
+        options?: never;
+        head?: never;
+        /** Update a task the caller can access */
+        patch: operations["MyTasksController_update"];
+        trace?: never;
+    };
     "/api/v1/tenant/{tenantId}/tasks/{taskId}/members": {
         parameters: {
             query?: never;
@@ -608,6 +640,78 @@ export interface paths {
         options?: never;
         head?: never;
         patch?: never;
+        trace?: never;
+    };
+    "/api/v1/tenant/{tenantId}/projects/{projectId}/pipeline-stages": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List pipeline stages available to this project (base + custom) */
+        get: operations["ProjectPipelineStagesController_list"];
+        put?: never;
+        /** Create a custom pipeline stage for this project (owner only) */
+        post: operations["ProjectPipelineStagesController_create"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/tenant/{tenantId}/projects/{projectId}/pipeline-stages/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /** Remove a custom pipeline stage (owner only) */
+        delete: operations["ProjectPipelineStagesController_remove"];
+        options?: never;
+        head?: never;
+        /** Rename or reorder a custom pipeline stage (owner only) */
+        patch: operations["ProjectPipelineStagesController_update"];
+        trace?: never;
+    };
+    "/api/v1/tenant/{tenantId}/modules/{moduleId}/pipeline-stages": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List pipeline stages available to this module (base + custom) */
+        get: operations["ModulePipelineStagesController_list"];
+        put?: never;
+        /** Create a custom pipeline stage for this module (owner only) */
+        post: operations["ModulePipelineStagesController_create"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/tenant/{tenantId}/modules/{moduleId}/pipeline-stages/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /** Remove a custom pipeline stage (owner only) */
+        delete: operations["ModulePipelineStagesController_remove"];
+        options?: never;
+        head?: never;
+        /** Rename or reorder a custom pipeline stage (owner only) */
+        patch: operations["ModulePipelineStagesController_update"];
         trace?: never;
     };
     "/api/v1/tenant/{tenantId}/pipeline-stages": {
@@ -680,6 +784,271 @@ export interface paths {
         head?: never;
         /** Rename or reorder a custom module pipeline stage (owner only) */
         patch: operations["ModulePipelineStagesPoolController_update"];
+        trace?: never;
+    };
+    "/api/v1/tenant/{tenantId}/projects/{projectId}/invitations": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List pending invitations for this project (owner only) */
+        get: operations["ProjectInvitationsController_list"];
+        put?: never;
+        /** Invite and email a project collaborator (owner only) */
+        post: operations["ProjectInvitationsController_invite"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/tenant/{tenantId}/projects/{projectId}/invitations/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /** Revoke a pending invitation (owner only) */
+        delete: operations["ProjectInvitationsController_revoke"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/invitations/{token}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Preview an invitation without needing to be logged in */
+        get: operations["InvitationAcceptanceController_preview"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/invitations/{token}/accept": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Accept an invitation */
+        post: operations["InvitationAcceptanceController_accept"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/me/invitations": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List every pending invitation addressed to my email */
+        get: operations["MyInvitationsController_list"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/tenant/{tenantId}/modules/{moduleId}/invitations": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List pending invitations for this module (owner only) */
+        get: operations["ModuleInvitationsController_list"];
+        put?: never;
+        /** Invite and email a module collaborator (owner only) */
+        post: operations["ModuleInvitationsController_invite"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/tenant/{tenantId}/modules/{moduleId}/invitations/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /** Revoke a pending invitation (owner only) */
+        delete: operations["ModuleInvitationsController_revoke"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/tenant/{tenantId}/conferences": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List conferences visible to the authenticated user */
+        get: operations["ConferencesController_list"];
+        put?: never;
+        /** Create a conference and link it to one or more projects */
+        post: operations["ConferencesController_create"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/tenant/{tenantId}/conferences/{conferenceId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get a single conference */
+        get: operations["ConferencesController_findOne"];
+        put?: never;
+        post?: never;
+        /** Delete a conference */
+        delete: operations["ConferencesController_remove"];
+        options?: never;
+        head?: never;
+        /** Update a conference */
+        patch: operations["ConferencesController_update"];
+        trace?: never;
+    };
+    "/api/v1/tenant/{tenantId}/feedback": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List feedback submitted by the authenticated user */
+        get: operations["FeedbackController_list"];
+        put?: never;
+        /** Submit feedback */
+        post: operations["FeedbackController_create"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/tenant/{tenantId}/feedback/{feedbackId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get feedback submitted by the authenticated user */
+        get: operations["FeedbackController_findOne"];
+        put?: never;
+        post?: never;
+        /** Delete feedback submitted by the authenticated user */
+        delete: operations["FeedbackController_remove"];
+        options?: never;
+        head?: never;
+        /** Update feedback submitted by the authenticated user */
+        patch: operations["FeedbackController_update"];
+        trace?: never;
+    };
+    "/api/v1/me/preferences": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get account-wide display preferences */
+        get: operations["PreferencesController_getAccount"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        /** Update account-wide display preferences */
+        patch: operations["PreferencesController_updateAccount"];
+        trace?: never;
+    };
+    "/api/v1/tenant/{tenantId}/me/preferences": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get preferences for the user in a workspace */
+        get: operations["PreferencesController_getWorkspace"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        /** Update preferences for the user in a workspace */
+        patch: operations["PreferencesController_updateWorkspace"];
+        trace?: never;
+    };
+    "/api/v1/tenant/{tenantId}/analytics/events": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Record a product-analytics event */
+        post: operations["AnalyticsController_recordEvent"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/tenant/{tenantId}/analytics/summary": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Usage summary for the workspace (owner only) */
+        get: operations["AnalyticsController_summary"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
         trace?: never;
     };
 }
@@ -787,6 +1156,11 @@ export interface components {
             /** @description Ordered pipeline stages configured specifically for this module */
             pipelineStages?: string[];
             assignedToUserId?: string;
+            /**
+             * @description Module due date in ISO date format
+             * @example 2027-06-01
+             */
+            dueDate?: string;
         };
         UpdateModuleDto: {
             /** @example Draft Manuscript */
@@ -802,6 +1176,11 @@ export interface components {
             /** @description Ordered pipeline stages configured specifically for this module */
             pipelineStages?: string[];
             assignedToUserId?: string;
+            /**
+             * @description Module due date in ISO date format
+             * @example 2027-06-01
+             */
+            dueDate?: string;
         };
         CreateNoteDto: {
             /** @example Meeting notes — kickoff */
@@ -858,16 +1237,126 @@ export interface components {
             dueDate?: string;
         };
         CreatePipelineStageDto: {
-            /** @example Peer Review */
+            /** @example Testing */
             value: string;
-            /** @example 5 */
+            /** @example 7 */
             sortOrder?: number;
         };
         UpdatePipelineStageDto: {
-            /** @example Peer Review */
+            /** @example Testing */
             value?: string;
-            /** @example 5 */
+            /** @example 7 */
             sortOrder?: number;
+        };
+        InviteCollaboratorDto: {
+            /** @example colleague@example.com */
+            email: string;
+        };
+        CreateConferenceDto: {
+            /** @example ASM */
+            acronym: string;
+            /** @example Australasian Society for Microbiology Conference 2027 */
+            name: string;
+            /** @example Sydney, Australia */
+            location: string;
+            /** @example 2026-08-01 */
+            submissionDue: string;
+            /** @example 2027-06-04 */
+            startDate: string;
+            /** @example 2027-06-08 */
+            endDate: string;
+            /** @example Abstract */
+            submissionType?: string;
+            /** @description Projects linked to this conference */
+            projectIds: string[];
+        };
+        UpdateConferenceDto: {
+            /** @example ASM */
+            acronym?: string;
+            /** @example Australasian Society for Microbiology Conference 2027 */
+            name?: string;
+            /** @example Sydney, Australia */
+            location?: string;
+            /** @example 2026-08-01 */
+            submissionDue?: string;
+            /** @example 2027-06-04 */
+            startDate?: string;
+            /** @example 2027-06-08 */
+            endDate?: string;
+            /** @example Abstract */
+            submissionType?: string;
+            /** @description Projects linked to this conference */
+            projectIds?: string[];
+        };
+        CreateFeedbackDto: {
+            /** @example The project dashboard is easy to use, but loading is sometimes slow. */
+            message: string;
+            /** @example 4 */
+            rating?: number;
+        };
+        UpdateFeedbackDto: {
+            /** @example The project dashboard is easy to use, but loading is sometimes slow. */
+            message?: string;
+            /** @example 4 */
+            rating?: number;
+        };
+        UpdateAccountPreferencesDto: {
+            /** @enum {string} */
+            appearanceTheme?: "light" | "dark";
+            /** @enum {string} */
+            designTheme?: "modern" | "minimal" | "executive";
+            /** @enum {string} */
+            colorTheme?: "ocean" | "violet" | "emerald" | "rose";
+            /** @enum {string} */
+            textSize?: "small" | "default" | "large";
+        };
+        UpdateWorkspacePreferencesDto: {
+            /**
+             * @example {
+             *       "order": [
+             *         "summary",
+             *         "tasks"
+             *       ],
+             *       "hidden": [
+             *         "conferences"
+             *       ]
+             *     }
+             */
+            dashboardLayout?: Record<string, never>;
+            /**
+             * @example {
+             *       "projects": [
+             *         "project",
+             *         "status",
+             *         "due"
+             *       ]
+             *     }
+             */
+            tableColumns?: Record<string, never>;
+            /**
+             * @example {
+             *       "projects:all": [
+             *         "Review"
+             *       ]
+             *     }
+             */
+            pipelineHiddenStages?: Record<string, never>;
+        };
+        CreateAnalyticsEventDto: {
+            /**
+             * @description A short, snake_case event name (e.g. "page_view", "task_completed").
+             * @example project_created
+             */
+            name: string;
+            /** @example /projects */
+            path?: string;
+            /**
+             * @description Small, flat set of extra properties describing the event.
+             * @example {
+             *       "projectId": "a1b2c3"
+             *     }
+             */
+            properties?: Record<string, never>;
         };
     };
     responses: never;
@@ -924,6 +1413,25 @@ export interface operations {
                 "application/json": components["schemas"]["UpdateProfileDto"];
             };
         };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    UsersController_search: {
+        parameters: {
+            query: {
+                q: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
         responses: {
             200: {
                 headers: {
@@ -1289,26 +1797,8 @@ export interface operations {
         parameters: {
             query: {
                 category: string;
+                /** @description Scopes the pool to shared defaults plus this tenant's own custom additions. Omit to get defaults only. */
                 tenantId?: string;
-            };
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
-        };
-    };
-    UsersController_search: {
-        parameters: {
-            query: {
-                q: string;
             };
             header?: never;
             path?: never;
@@ -1326,7 +1816,9 @@ export interface operations {
     };
     ProjectsController_list: {
         parameters: {
-            query?: never;
+            query?: {
+                page?: number;
+            };
             header?: never;
             path: {
                 tenantId: string;
@@ -1430,6 +1922,103 @@ export interface operations {
             };
         };
     };
+    MyProjectsController_list: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    MyProjectsController_findOne: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                projectId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    MyProjectsController_archive: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                projectId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    MyProjectsController_update: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                projectId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["UpdateProjectDto"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    MyProjectsController_listPipelineStages: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                projectId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
     ProjectCollaboratorsController_list: {
         parameters: {
             query?: never;
@@ -1522,8 +2111,8 @@ export interface operations {
     };
     ProjectModulesController_list: {
         parameters: {
-            query: {
-                projectId: string;
+            query?: {
+                projectId?: string;
             };
             header?: never;
             path: {
@@ -1619,6 +2208,103 @@ export interface operations {
                 "application/json": components["schemas"]["UpdateModuleDto"];
             };
         };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    MyModulesController_list: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    MyModulesController_findOne: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                moduleId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    MyModulesController_archive: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                moduleId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    MyModulesController_update: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                moduleId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["UpdateModuleDto"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    MyModulesController_listPipelineStages: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                moduleId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
         responses: {
             200: {
                 headers: {
@@ -1826,6 +2512,84 @@ export interface operations {
             };
         };
     };
+    MyNotesController_list: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    MyNotesController_findOne: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                noteId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    MyNotesController_remove: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                noteId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    MyNotesController_update: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                noteId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["UpdateNoteDto"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
     NoteMembersController_list: {
         parameters: {
             query?: never;
@@ -1935,318 +2699,6 @@ export interface operations {
             };
         };
     };
-    MyTasksController_list: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
-        };
-    };
-    MyTasksController_findOne: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                taskId: string;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
-        };
-    };
-    MyTasksController_update: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                taskId: string;
-            };
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["UpdateTaskDto"];
-            };
-        };
-        responses: {
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
-        };
-    };
-    MyTasksController_remove: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                taskId: string;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
-        };
-    };
-    MyProjectsController_list: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
-        };
-    };
-    MyProjectsController_findOne: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                projectId: string;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
-        };
-    };
-    MyProjectsController_update: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                projectId: string;
-            };
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["UpdateProjectDto"];
-            };
-        };
-        responses: {
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
-        };
-    };
-    MyProjectsController_archive: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                projectId: string;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
-        };
-    };
-    MyModulesController_list: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
-        };
-    };
-    MyModulesController_findOne: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                moduleId: string;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
-        };
-    };
-    MyModulesController_update: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                moduleId: string;
-            };
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["UpdateModuleDto"];
-            };
-        };
-        responses: {
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
-        };
-    };
-    MyModulesController_archive: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                moduleId: string;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
-        };
-    };
-    MyNotesController_list: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
-        };
-    };
-    MyNotesController_findOne: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                noteId: string;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
-        };
-    };
-    MyNotesController_update: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                noteId: string;
-            };
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["UpdateNoteDto"];
-            };
-        };
-        responses: {
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
-        };
-    };
-    MyNotesController_remove: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                noteId: string;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
-        };
-    };
     TasksController_findOne: {
         parameters: {
             query?: never;
@@ -2293,6 +2745,84 @@ export interface operations {
             header?: never;
             path: {
                 tenantId: string;
+                taskId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["UpdateTaskDto"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    MyTasksController_list: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    MyTasksController_findOne: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                taskId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    MyTasksController_remove: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                taskId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    MyTasksController_update: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
                 taskId: string;
             };
             cookie?: never;
@@ -2367,6 +2897,186 @@ export interface operations {
             cookie?: never;
         };
         requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    ProjectPipelineStagesController_list: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                tenantId: string;
+                projectId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    ProjectPipelineStagesController_create: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                tenantId: string;
+                projectId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CreatePipelineStageDto"];
+            };
+        };
+        responses: {
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    ProjectPipelineStagesController_remove: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                tenantId: string;
+                projectId: string;
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    ProjectPipelineStagesController_update: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                tenantId: string;
+                projectId: string;
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["UpdatePipelineStageDto"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    ModulePipelineStagesController_list: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                tenantId: string;
+                moduleId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    ModulePipelineStagesController_create: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                tenantId: string;
+                moduleId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CreatePipelineStageDto"];
+            };
+        };
+        responses: {
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    ModulePipelineStagesController_remove: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                tenantId: string;
+                moduleId: string;
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    ModulePipelineStagesController_update: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                tenantId: string;
+                moduleId: string;
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["UpdatePipelineStageDto"];
+            };
+        };
         responses: {
             200: {
                 headers: {
@@ -2539,6 +3249,595 @@ export interface operations {
                 "application/json": components["schemas"]["UpdatePipelineStageDto"];
             };
         };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    ProjectInvitationsController_list: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                tenantId: string;
+                projectId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    ProjectInvitationsController_invite: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                tenantId: string;
+                projectId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["InviteCollaboratorDto"];
+            };
+        };
+        responses: {
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Email delivery unavailable */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    ProjectInvitationsController_revoke: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                tenantId: string;
+                projectId: string;
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    InvitationAcceptanceController_preview: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                token: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    InvitationAcceptanceController_accept: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                token: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    MyInvitationsController_list: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    ModuleInvitationsController_list: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                tenantId: string;
+                moduleId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    ModuleInvitationsController_invite: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                tenantId: string;
+                moduleId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["InviteCollaboratorDto"];
+            };
+        };
+        responses: {
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Email delivery unavailable */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    ModuleInvitationsController_revoke: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                tenantId: string;
+                moduleId: string;
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    ConferencesController_list: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                tenantId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Conferences returned successfully */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    ConferencesController_create: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                tenantId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CreateConferenceDto"];
+            };
+        };
+        responses: {
+            /** @description Conference created successfully */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Caller does not own every selected project */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    ConferencesController_findOne: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                tenantId: string;
+                conferenceId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Conference returned successfully */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Conference not found or inaccessible */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    ConferencesController_remove: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                tenantId: string;
+                conferenceId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Conference deleted successfully */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Only the conference owner may delete the conference */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    ConferencesController_update: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                tenantId: string;
+                conferenceId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["UpdateConferenceDto"];
+            };
+        };
+        responses: {
+            /** @description Conference updated successfully */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Only the conference owner may update the conference */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    FeedbackController_list: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                tenantId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    FeedbackController_create: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                tenantId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CreateFeedbackDto"];
+            };
+        };
+        responses: {
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    FeedbackController_findOne: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                tenantId: string;
+                feedbackId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Feedback not found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    FeedbackController_remove: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                tenantId: string;
+                feedbackId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Feedback not found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    FeedbackController_update: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                tenantId: string;
+                feedbackId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["UpdateFeedbackDto"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Feedback not found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    PreferencesController_getAccount: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    PreferencesController_updateAccount: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["UpdateAccountPreferencesDto"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    PreferencesController_getWorkspace: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                tenantId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    PreferencesController_updateWorkspace: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                tenantId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["UpdateWorkspacePreferencesDto"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    AnalyticsController_recordEvent: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                tenantId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CreateAnalyticsEventDto"];
+            };
+        };
+        responses: {
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    AnalyticsController_summary: {
+        parameters: {
+            query?: {
+                days?: number;
+            };
+            header?: never;
+            path: {
+                tenantId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
         responses: {
             200: {
                 headers: {

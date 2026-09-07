@@ -1,5 +1,5 @@
 import { useAuth } from "react-oidc-context";
-import { useLocation } from "react-router-dom";
+import { Link, useLocation } from "react-router-dom";
 import {
   BookOpen,
   FlaskConical,
@@ -125,6 +125,17 @@ export default function SignInPage() {
           {auth.error ? (
             <p className="text-xs text-destructive">{auth.error.message}</p>
           ) : null}
+          <p className="text-xs text-muted-foreground">
+            By signing in, you agree to our{" "}
+            <Link to="/terms" className="font-medium underline underline-offset-2 hover:text-foreground">
+              Terms
+            </Link>{" "}
+            and{" "}
+            <Link to="/privacy" className="font-medium underline underline-offset-2 hover:text-foreground">
+              Privacy Policy
+            </Link>
+            .
+          </p>
         </div>
       </div>
     </div>

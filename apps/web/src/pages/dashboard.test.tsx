@@ -5,6 +5,18 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import DashboardPage from "@/pages/dashboard";
 import { PreferencesContext } from "@/preferences/preferences-context";
 
+const queryState = vi.hoisted(() => ({
+  projectsPending: false,
+  tasksPending: false,
+  stagesPending: false,
+  projectsError: null as Error | null,
+  tasksError: null as Error | null,
+  stagesError: null as Error | null,
+  projectsRefetch: vi.fn(),
+  tasksRefetch: vi.fn(),
+  stagesRefetch: vi.fn(),
+}));
+
 vi.mock("@/api/hooks", () => ({
   useCurrentWorkspace: () => ({
     data: {
@@ -12,15 +24,32 @@ vi.mock("@/api/hooks", () => ({
       name: "Research Operations",
       membershipRole: "owner",
     },
+    isPending: false,
   }),
   usePipelineStages: () => ({
     data: [
       { value: "Concept & Ideation", sortOrder: 1 },
       { value: "Consolidation & Review", sortOrder: 2 },
     ],
+    isPending: queryState.stagesPending,
+    isError: queryState.stagesError !== null,
+    error: queryState.stagesError,
+    refetch: queryState.stagesRefetch,
   }),
-  useProjects: () => ({ data: { data: [], meta: { page: 1, pageSize: 20, totalItems: 0, totalPages: 1 } } }),
-  useTasks: () => ({ data: [] }),
+  useProjects: () => ({
+    data: { data: [], meta: { page: 1, pageSize: 20, totalItems: 0, totalPages: 1 } },
+    isPending: queryState.projectsPending,
+    isError: queryState.projectsError !== null,
+    error: queryState.projectsError,
+    refetch: queryState.projectsRefetch,
+  }),
+  useTasks: () => ({
+    data: [],
+    isPending: queryState.tasksPending,
+    isError: queryState.tasksError !== null,
+    error: queryState.tasksError,
+    refetch: queryState.tasksRefetch,
+  }),
 }));
 
 vi.mock("@/components/dashboard/priority-tasks-table", () => ({
@@ -38,6 +67,40 @@ vi.mock("@/components/dashboard/conference-submissions-table", () => ({
 describe("DashboardPage", () => {
   beforeEach(() => {
     window.localStorage.clear();
+    queryState.projectsPending = false;
+    queryState.tasksPending = false;
+    queryState.stagesPending = false;
+    queryState.projectsError = null;
+    queryState.tasksError = null;
+    queryState.stagesError = null;
+    queryState.projectsRefetch.mockReset();
+    queryState.tasksRefetch.mockReset();
+    queryState.stagesRefetch.mockReset();
+  });
+
+  it("shows a loading state while dashboard data is pending", () => {
+    queryState.projectsPending = true;
+    render(
+      <MemoryRouter>
+        <DashboardPage />
+      </MemoryRouter>,
+    );
+
+    expect(screen.getByRole("status")).toHaveTextContent("Loading dashboard");
+    expect(screen.queryByRole("heading", { name: "Pipeline distribution" })).not.toBeInTheDocument();
+  });
+
+  it("shows an error state and retries when dashboard data fails to load", () => {
+    queryState.tasksError = new Error("Tasks endpoint is down");
+    render(
+      <MemoryRouter>
+        <DashboardPage />
+      </MemoryRouter>,
+    );
+
+    expect(screen.getByText("Tasks endpoint is down")).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "Try again" }));
+    expect(queryState.tasksRefetch).toHaveBeenCalledOnce();
   });
 
   it("shows live pipeline and task-health insight charts", () => {

@@ -6,6 +6,9 @@ export const envValidationSchema = Joi.object({
     .default('development'),
   PORT: Joi.number().integer().positive().default(3000),
   PAGE_SIZE: Joi.number().integer().positive().default(20),
+  LOG_LEVEL: Joi.string()
+    .valid('fatal', 'error', 'warn', 'info', 'debug', 'trace', 'silent')
+    .default('info'),
   APP_URL: Joi.string()
     .uri({ scheme: ['http', 'https'] })
     .required(),

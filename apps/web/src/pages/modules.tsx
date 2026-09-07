@@ -9,6 +9,7 @@ import {
   useMembers,
   useModules,
   useProjects,
+  useTrackEvent,
   type ApiModule,
 } from "@/api/hooks";
 import { ColumnVisibilityMenu } from "@/components/dashboard/column-visibility-menu";
@@ -86,6 +87,7 @@ export default function ModulesPage() {
 
   const createModule = useCreateModule(tenantId);
   const archiveModule = useArchiveModule(tenantId);
+  const trackEvent = useTrackEvent(tenantId);
 
   const [search, setSearch] = useState("");
   const [status, setStatus] = useState<StatusFilter>("All");
@@ -141,6 +143,7 @@ export default function ModulesPage() {
       dueDate: input.dueDate || undefined,
       assignedToUserId: input.assignedToUserId ?? undefined,
     });
+    trackEvent({ name: "module_created" });
   }
 
   async function archive(module: ApiModule) {

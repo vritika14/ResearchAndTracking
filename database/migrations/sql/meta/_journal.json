@@ -148,6 +148,27 @@
       "when": 1788328087743,
       "tag": "0036_module_guard_access_bypass",
       "breakpoints": true
+    },
+    {
+      "idx": 37,
+      "version": "7",
+      "when": 1788741702108,
+      "tag": "0037_large_smasher",
+      "breakpoints": true
+    },
+    {
+      "idx": 38,
+      "version": "7",
+      "when": 1788741730051,
+      "tag": "0038_analytics_events_rls",
+      "breakpoints": true
+    },
+    {
+      "idx": 39,
+      "version": "7",
+      "when": 1788743609308,
+      "tag": "0039_analytics_events_grants",
+      "breakpoints": true
     }
   ]
 }
