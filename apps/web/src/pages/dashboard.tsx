@@ -1,29 +1,50 @@
 // import { ActivityOverviewChart } from "@/components/dashboard/activity-overview-chart";
 import {
+  Boxes,
   FilePenLine,
   FolderKanban,
   LayoutDashboard,
   ListTodo,
-  Send,
+  Plus,
   SlidersHorizontal,
 } from "lucide-react";
 import { useEffect, useMemo, useRef, useState, type ComponentType } from "react";
+import { Link } from "react-router-dom";
 
-import { useCurrentWorkspace, usePipelineStages, useProjects, useTasks } from "@/api/hooks";
+import { apiClient } from "@/api/client";
+import {
+  useCreateConference,
+  useCreateProject,
+  useCreateTask,
+  useCurrentWorkspace,
+  useMe,
+  useModules,
+  usePipelineStages,
+  useProjects,
+  useTasks,
+  useTrackEvent,
+} from "@/api/hooks";
+import { ConferenceSubmissionDialog, type ConferenceSubmissionInput } from "@/components/dashboard/conference-submission-dialog";
 import { ConferenceSubmissionsTable } from "@/components/dashboard/conference-submissions-table";
-import { DashboardInsights } from "@/components/dashboard/dashboard-insights";
+import {
+  PipelineDistributionCard,
+  PriorityWorkloadCard,
+  ProjectProgressCard,
+  TaskHealthCard,
+} from "@/components/dashboard/dashboard-insights";
 import {
   CustomizeDashboardDialog,
   type DashboardWidgetOption,
 } from "@/components/dashboard/customize-dashboard-dialog";
-import type { DashboardInsightId } from "@/components/dashboard/dashboard-insights";
 import { PipelineOverviewTable } from "@/components/dashboard/pipeline-overview-table";
 import { PriorityTasksTable } from "@/components/dashboard/priority-tasks-table";
+import { NewProjectDialog, type NewProjectInput } from "@/components/projects/new-project-dialog";
 // import { WorkOnThisNextBanner } from "@/components/dashboard/work-on-this-next-banner";
 import { ErrorState } from "@/components/shared/error-state";
 import { LoadingState } from "@/components/shared/loading-state";
 import { PageHeading } from "@/components/typography/heading";
 import { Button } from "@/components/ui/button";
+import { TaskDialog, type TaskFormInput } from "@/components/tasks/task-dialog";
 import { cn } from "@/lib/utils";
 import { usePreferences } from "@/preferences/preferences-context";
 import {
@@ -42,6 +63,8 @@ function buildSummary(counts: {
   openTasks: number;
   totalTasks: number;
   reviewStage: number;
+  activeModules: number;
+  totalModules: number;
 }) {
   return [
     {
@@ -50,6 +73,7 @@ function buildSummary(counts: {
       value: `${counts.activeProjects} of ${counts.totalProjects}`,
       icon: FolderKanban,
       tone: "blue",
+      to: "/projects",
     },
     {
       label: "Open Tasks",
@@ -57,6 +81,7 @@ function buildSummary(counts: {
       value: `${counts.openTasks} of ${counts.totalTasks}`,
       icon: ListTodo,
       tone: "amber",
+      to: "/tasks",
     },
     {
       label: "In Review Stage",
@@ -64,21 +89,32 @@ function buildSummary(counts: {
       value: String(counts.reviewStage),
       icon: FilePenLine,
       tone: "violet",
+      to: "/pipeline",
     },
     {
-      label: "Year to Date Accepted",
-      description: "Submissions accepted this calendar year",
-      value: "—",
-      icon: Send,
+      label: "Active Modules",
+      description: "Active of all visible modules",
+      value: `${counts.activeModules} of ${counts.totalModules}`,
+      icon: Boxes,
       tone: "emerald",
+      to: "/modules",
     },
   ];
 }
 
-type DashboardWidgetId = DashboardInsightId | "tasks" | "pipeline" | "conferences";
+type DashboardWidgetId =
+  | "pipeline-distribution"
+  | "task-health"
+  | "priority-workload"
+  | "project-progress"
+  | "tasks"
+  | "pipeline"
+  | "conferences";
 
 interface DashboardWidgetDefinition extends DashboardWidgetOption<DashboardWidgetId> {
-  component?: ComponentType;
+  component: ComponentType;
+  /** Tailwind column-span class applied when widgets share the wide layout grid. */
+  span: string;
 }
 
 const DASHBOARD_WIDGETS: readonly DashboardWidgetDefinition[] = [
@@ -87,24 +123,32 @@ const DASHBOARD_WIDGETS: readonly DashboardWidgetDefinition[] = [
     label: "Pipeline distribution",
     description: "Project volume across research stages.",
     group: "Insights",
+    component: PipelineDistributionCard,
+    span: "xl:col-span-3",
   },
   {
     id: "task-health",
     label: "Task health",
     description: "Completion, deadlines, and delivery risk.",
     group: "Insights",
+    component: TaskHealthCard,
+    span: "xl:col-span-2",
   },
   {
     id: "priority-workload",
     label: "Priority workload",
     description: "Open work grouped by urgency.",
     group: "Insights",
+    component: PriorityWorkloadCard,
+    span: "xl:col-span-2",
   },
   {
     id: "project-progress",
     label: "Project progress",
     description: "Top project completion based on linked tasks.",
     group: "Insights",
+    component: ProjectProgressCard,
+    span: "xl:col-span-3",
   },
   {
     id: "tasks",
@@ -112,6 +156,7 @@ const DASHBOARD_WIDGETS: readonly DashboardWidgetDefinition[] = [
     description: "Priority work across projects.",
     group: "Tables",
     component: PriorityTasksTable,
+    span: "xl:col-span-5",
   },
   {
     id: "pipeline",
@@ -119,6 +164,7 @@ const DASHBOARD_WIDGETS: readonly DashboardWidgetDefinition[] = [
     description: "Projects arranged by pipeline stage.",
     group: "Tables",
     component: PipelineOverviewTable,
+    span: "xl:col-span-5",
   },
   {
     id: "conferences",
@@ -126,10 +172,19 @@ const DASHBOARD_WIDGETS: readonly DashboardWidgetDefinition[] = [
     description: "Submission deadlines and linked papers.",
     group: "Tables",
     component: () => <ConferenceSubmissionsTable dashboardView />,
+    span: "xl:col-span-5",
   },
 ] as const;
 
 const DEFAULT_WIDGET_ORDER = DASHBOARD_WIDGETS.map((widget) => widget.id);
+/** Widgets a first-time (or never-customized) dashboard starts with hidden — available to add back via Customise dashboard. */
+const DEFAULT_HIDDEN_WIDGETS: readonly DashboardWidgetId[] = [
+  "pipeline-distribution",
+  "task-health",
+  "priority-workload",
+  "project-progress",
+  "tasks",
+];
 const DASHBOARD_LAYOUT_KEY = "research-in-motion.dashboard-layout.v1";
 
 interface StoredDashboardLayout {
@@ -143,7 +198,7 @@ function isDashboardWidgetId(value: unknown): value is DashboardWidgetId {
 
 function loadDashboardLayout(storageKey = DASHBOARD_LAYOUT_KEY): StoredDashboardLayout {
   if (typeof window === "undefined") {
-    return { order: [...DEFAULT_WIDGET_ORDER], hidden: [] };
+    return { order: [...DEFAULT_WIDGET_ORDER], hidden: [...DEFAULT_HIDDEN_WIDGETS] };
   }
 
   try {
@@ -164,11 +219,11 @@ function loadDashboardLayout(storageKey = DASHBOARD_LAYOUT_KEY): StoredDashboard
     ];
     const hidden = Array.isArray(stored?.hidden)
       ? [...new Set(stored.hidden.filter(isDashboardWidgetId))]
-      : [];
+      : [...DEFAULT_HIDDEN_WIDGETS];
 
     return { order, hidden };
   } catch {
-    return { order: [...DEFAULT_WIDGET_ORDER], hidden: [] };
+    return { order: [...DEFAULT_WIDGET_ORDER], hidden: [...DEFAULT_HIDDEN_WIDGETS] };
   }
 }
 
@@ -178,13 +233,38 @@ export default function DashboardPage() {
   const projectsQuery = useProjects(tenantId);
   const projects = projectsQuery.data?.data ?? [];
   const tasksQuery = useTasks(tenantId);
+  const modulesQuery = useModules(tenantId);
   const tasks = tasksQuery.data?.data ?? [];
+  const modules = modulesQuery.data?.data ?? [];
   const stagesQuery = usePipelineStages(tenantId);
+  const me = useMe();
+  const createProject = useCreateProject(tenantId);
+  const createTask = useCreateTask(tenantId);
+  const createConference = useCreateConference(tenantId);
+  const trackEvent = useTrackEvent(tenantId);
   const [isCustomizeOpen, setIsCustomizeOpen] = useState(false);
+  const [isNewProjectOpen, setIsNewProjectOpen] = useState(false);
+  const [isNewTaskOpen, setIsNewTaskOpen] = useState(false);
+  const [isNewConferenceOpen, setIsNewConferenceOpen] = useState(false);
   const [layout, setLayout] = useState(loadDashboardLayout);
   const preferences = usePreferences();
   const hydratedWorkspace = useRef("");
   const lastSavedLayout = useRef("");
+  const isHydratingLayout = useRef(false);
+
+  const ownedProjects = useMemo(
+    () => projects.filter(
+      (project) => project.userId === me.data?.id || project.role?.toLowerCase() === "owner",
+    ),
+    [projects, me.data?.id],
+  );
+
+  const ownedModules = useMemo(() => {
+    const ownedProjectIds = new Set(ownedProjects.map((project) => project.id));
+    return modules.filter(
+      (module) => module.projectId && ownedProjectIds.has(module.projectId),
+    );
+  }, [modules, ownedProjects]);
 
   const summary = useMemo(
     () =>
@@ -199,21 +279,19 @@ export default function DashboardPage() {
         reviewStage: projects.filter(
           (project) => project.pipelineStage === REVIEW_STAGE,
         ).length,
+        activeModules: modules.filter(
+          (module) => module.status === "Active",
+        ).length,
+        totalModules: modules.length,
       }),
-    [projects, tasks],
+    [projects, tasks, modules],
   );
   const visibleWidgets = new Set(
     layout.order.filter((id) => !layout.hidden.includes(id)),
   );
-  const insightOrder = layout.order.filter((id): id is DashboardInsightId =>
-    DASHBOARD_WIDGETS.find((widget) => widget.id === id)?.group === "Insights",
-  );
-  const visibleInsights = new Set(
-    insightOrder.filter((id) => visibleWidgets.has(id)),
-  );
-  const orderedTables = layout.order
-    .map((id) => DASHBOARD_WIDGETS.find((widget) => widget.id === id)!)
-    .filter((widget) => widget.group === "Tables");
+  const visibleOrderedWidgets = layout.order
+    .filter((id) => visibleWidgets.has(id))
+    .map((id) => DASHBOARD_WIDGETS.find((widget) => widget.id === id)!);
 
   useEffect(() => {
     if (
@@ -222,6 +300,7 @@ export default function DashboardPage() {
       hydratedWorkspace.current === preferences.workspaceId
     ) return;
 
+    isHydratingLayout.current = true;
     hydratedWorkspace.current = preferences.workspaceId;
     const remote = preferences.workspacePreferences?.dashboardLayout;
     if (remote) {
@@ -249,6 +328,12 @@ export default function DashboardPage() {
       : DASHBOARD_LAYOUT_KEY;
     const serialized = JSON.stringify(layout);
     window.localStorage.setItem(storageKey, serialized);
+    // Skip the stale render that still holds the pre-hydration layout — the
+    // hydration effect above already scheduled the real value via setLayout.
+    if (isHydratingLayout.current) {
+      isHydratingLayout.current = false;
+      return;
+    }
     if (!preferences || hydratedWorkspace.current !== preferences.workspaceId) return;
     if (serialized === lastSavedLayout.current) return;
     lastSavedLayout.current = serialized;
@@ -266,15 +351,9 @@ export default function DashboardPage() {
 
   function moveWidget(widgetId: DashboardWidgetId, direction: "up" | "down") {
     setLayout((current) => {
-      const widgetGroup = DASHBOARD_WIDGETS.find((widget) => widget.id === widgetId)?.group;
-      const groupOrder = current.order.filter(
-        (id) => DASHBOARD_WIDGETS.find((widget) => widget.id === id)?.group === widgetGroup,
-      );
-      const groupIndex = groupOrder.indexOf(widgetId);
-      const targetId = groupOrder[direction === "up" ? groupIndex - 1 : groupIndex + 1];
-      if (!targetId) return current;
       const index = current.order.indexOf(widgetId);
-      const nextIndex = current.order.indexOf(targetId);
+      const nextIndex = direction === "up" ? index - 1 : index + 1;
+      if (nextIndex < 0 || nextIndex >= current.order.length) return current;
       const order = [...current.order];
       [order[index], order[nextIndex]] = [order[nextIndex], order[index]];
       return { ...current, order };
@@ -283,9 +362,6 @@ export default function DashboardPage() {
 
   function reorderWidgets(draggedId: DashboardWidgetId, targetId: DashboardWidgetId) {
     setLayout((current) => {
-      const draggedGroup = DASHBOARD_WIDGETS.find((widget) => widget.id === draggedId)?.group;
-      const targetGroup = DASHBOARD_WIDGETS.find((widget) => widget.id === targetId)?.group;
-      if (draggedGroup !== targetGroup) return current;
       const fromIndex = current.order.indexOf(draggedId);
       const toIndex = current.order.indexOf(targetId);
       if (fromIndex < 0 || toIndex < 0 || fromIndex === toIndex) return current;
@@ -297,20 +373,70 @@ export default function DashboardPage() {
   }
 
   function resetLayout() {
-    setLayout({ order: [...DEFAULT_WIDGET_ORDER], hidden: [] });
+    setLayout({ order: [...DEFAULT_WIDGET_ORDER], hidden: [...DEFAULT_HIDDEN_WIDGETS] });
+  }
+
+  async function handleCreateProject(input: NewProjectInput) {
+    const firstPipelineStage = [...(stagesQuery.data ?? [])]
+      .sort((a, b) => a.sortOrder - b.sortOrder)[0]?.value;
+    await createProject.mutateAsync({
+      title: input.title,
+      description: input.description || undefined,
+      researchArea: input.researchArea || undefined,
+      status: input.status,
+      importance: input.priority,
+      pipelineStage: input.pipelineStage || firstPipelineStage || undefined,
+      pipelineStages: input.pipelineStages,
+      scheduledFor: input.scheduledFor || undefined,
+      dueDate: input.dueDate || undefined,
+      totalBudget: input.totalBudget || undefined,
+      targetJournals: input.targetJournals || undefined,
+    });
+    trackEvent({ name: "project_created" });
+  }
+
+  async function handleCreateTask(input: TaskFormInput) {
+    const task = await createTask.mutateAsync({
+      title: input.title,
+      description: input.description || undefined,
+      projectId: input.linkTarget === "project" ? input.projectId : undefined,
+      moduleId: input.linkTarget === "module" ? input.moduleId : undefined,
+      status: input.status,
+      priority: input.priority,
+      visibility: input.visibility,
+      workingWith: input.workingWith || undefined,
+      estimatedHours: input.estimatedHours || undefined,
+      dueDate: input.dueDate || undefined,
+    });
+
+    await Promise.all(
+      input.collaboratorUserIds.map((userId) =>
+        apiClient.POST("/api/v1/tenant/{tenantId}/tasks/{taskId}/members", {
+          params: { path: { tenantId, taskId: task.id } },
+          body: { userId },
+        }),
+      ),
+    );
+    trackEvent({ name: "task_created" });
+  }
+
+  async function handleCreateConference(input: ConferenceSubmissionInput) {
+    await createConference.mutateAsync(input);
+    trackEvent({ name: "conference_created" });
   }
 
   if (
     workspace.isPending ||
     projectsQuery.isPending ||
     tasksQuery.isPending ||
+    modulesQuery.isPending ||
     stagesQuery.isPending
   ) {
     return <LoadingState title="Loading dashboard" className="min-h-[50vh]" />;
   }
 
-  if (projectsQuery.isError || tasksQuery.isError || stagesQuery.isError) {
-    const error = projectsQuery.error ?? tasksQuery.error ?? stagesQuery.error;
+  if (projectsQuery.isError || tasksQuery.isError || modulesQuery.isError || stagesQuery.isError) {
+    const error = projectsQuery.error ?? tasksQuery.error ?? modulesQuery.error ?? stagesQuery.error;
     return (
       <ErrorState
         title="Dashboard could not be loaded"
@@ -319,6 +445,7 @@ export default function DashboardPage() {
           void Promise.all([
             projectsQuery.refetch(),
             tasksQuery.refetch(),
+            modulesQuery.refetch(),
             stagesQuery.refetch(),
           ])
         }
@@ -335,79 +462,125 @@ export default function DashboardPage() {
         title="Dashboard"
         description="A snapshot of research activity across projects, tasks, daily notes, and project files."
         actions={
-          <Button variant="outline" onClick={() => setIsCustomizeOpen(true)}>
-            <SlidersHorizontal />
-            Customize dashboard
-          </Button>
+          <div className="flex flex-wrap items-center gap-3">
+            <Button variant="outline" onClick={() => setIsNewProjectOpen(true)}>
+              <Plus />
+              Add Project
+            </Button>
+            <Button variant="outline" onClick={() => setIsNewTaskOpen(true)}>
+              <Plus />
+              Add Task
+            </Button>
+            <Button variant="outline" onClick={() => setIsNewConferenceOpen(true)}>
+              <Plus />
+              Add Conference
+            </Button>
+            <Button variant="outline" onClick={() => setIsCustomizeOpen(true)}>
+              <SlidersHorizontal />
+              Customise dashboard
+            </Button>
+          </div>
         }
       />
-      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
-        {summary.map((item) => (
-          <Card
-            key={item.label}
-            className={cn(
-              "group relative overflow-hidden transition-all hover:-translate-y-0.5 hover:shadow-md",
-              item.tone === "blue" && "border-blue-200/70 bg-gradient-to-br from-blue-50/80 to-card dark:border-blue-900/50 dark:from-blue-950/20",
-              item.tone === "amber" && "border-amber-200/70 bg-gradient-to-br from-amber-50/80 to-card dark:border-amber-900/50 dark:from-amber-950/20",
-              item.tone === "violet" && "border-violet-200/70 bg-gradient-to-br from-violet-50/80 to-card dark:border-violet-900/50 dark:from-violet-950/20",
-              item.tone === "emerald" && "border-emerald-200/70 bg-gradient-to-br from-emerald-50/80 to-card dark:border-emerald-900/50 dark:from-emerald-950/20",
-            )}
-          >
-            <div className={cn(
-              "absolute inset-x-0 top-0 h-0.5 opacity-80",
-              item.tone === "blue" && "bg-blue-500",
-              item.tone === "amber" && "bg-amber-500",
-              item.tone === "violet" && "bg-violet-500",
-              item.tone === "emerald" && "bg-emerald-500",
-            )} />
-            <CardHeader className="gap-3 p-5 sm:p-6">
-              <div className="flex items-start justify-between gap-3">
-                <CardDescription className="font-medium">
-                  {item.label}
-                </CardDescription>
-                <span className={cn(
-                  "flex h-10 w-10 shrink-0 items-center justify-center rounded-xl ring-1 transition-transform group-hover:scale-105",
-                  item.tone === "blue" && "bg-blue-100 text-blue-700 ring-blue-200 dark:bg-blue-950 dark:text-blue-300 dark:ring-blue-900",
-                  item.tone === "amber" && "bg-amber-100 text-amber-700 ring-amber-200 dark:bg-amber-950 dark:text-amber-300 dark:ring-amber-900",
-                  item.tone === "violet" && "bg-violet-100 text-violet-700 ring-violet-200 dark:bg-violet-950 dark:text-violet-300 dark:ring-violet-900",
-                  item.tone === "emerald" && "bg-emerald-100 text-emerald-700 ring-emerald-200 dark:bg-emerald-950 dark:text-emerald-300 dark:ring-emerald-900",
-                )}>
-                  <item.icon className="h-4 w-4" />
-                </span>
-              </div>
-              <CardTitle className="text-4xl text-foreground">
-                {item.value}
-              </CardTitle>
-              <p className="text-xs text-muted-foreground">
-                {item.description}
-              </p>
-            </CardHeader>
-          </Card>
-        ))}
-      </div>
-      <DashboardInsights
-        projects={projects}
-        tasks={tasks}
-        stages={stagesQuery.data ?? []}
-        order={insightOrder}
-        visible={visibleInsights}
+
+      <NewProjectDialog
+        open={isNewProjectOpen}
+        onOpenChange={setIsNewProjectOpen}
+        onCreate={handleCreateProject}
+        pipelineStages={stagesQuery.data ?? []}
       />
+      <TaskDialog
+        open={isNewTaskOpen}
+        onOpenChange={setIsNewTaskOpen}
+        tenantId={tenantId}
+        projects={projects}
+        modules={modules}
+        onSave={handleCreateTask}
+      />
+      <ConferenceSubmissionDialog
+        open={isNewConferenceOpen}
+        onOpenChange={setIsNewConferenceOpen}
+        projects={ownedProjects}
+        modules={ownedModules}
+        onSave={handleCreateConference}
+      />
+
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
+        {summary.map((item) => {
+          const card = (
+            <Card
+              className={cn(
+                "group relative overflow-hidden transition-all hover:-translate-y-0.5 hover:shadow-md",
+                item.tone === "blue" && "border-blue-200/70 bg-gradient-to-br from-blue-50/80 to-card dark:border-blue-900/50 dark:from-blue-950/20",
+                item.tone === "amber" && "border-amber-200/70 bg-gradient-to-br from-amber-50/80 to-card dark:border-amber-900/50 dark:from-amber-950/20",
+                item.tone === "violet" && "border-violet-200/70 bg-gradient-to-br from-violet-50/80 to-card dark:border-violet-900/50 dark:from-violet-950/20",
+                item.tone === "emerald" && "border-emerald-200/70 bg-gradient-to-br from-emerald-50/80 to-card dark:border-emerald-900/50 dark:from-emerald-950/20",
+              )}
+            >
+              <div className={cn(
+                "absolute inset-x-0 top-0 h-0.5 opacity-80",
+                item.tone === "blue" && "bg-blue-500",
+                item.tone === "amber" && "bg-amber-500",
+                item.tone === "violet" && "bg-violet-500",
+                item.tone === "emerald" && "bg-emerald-500",
+              )} />
+              <CardHeader className="gap-3 p-5 sm:p-6">
+                <div className="flex items-start justify-between gap-3">
+                  <CardDescription className="font-medium">
+                    {item.label}
+                  </CardDescription>
+                  <span className={cn(
+                    "flex h-10 w-10 shrink-0 items-center justify-center rounded-xl ring-1 transition-transform group-hover:scale-105",
+                    item.tone === "blue" && "bg-blue-100 text-blue-700 ring-blue-200 dark:bg-blue-950 dark:text-blue-300 dark:ring-blue-900",
+                    item.tone === "amber" && "bg-amber-100 text-amber-700 ring-amber-200 dark:bg-amber-950 dark:text-amber-300 dark:ring-amber-900",
+                    item.tone === "violet" && "bg-violet-100 text-violet-700 ring-violet-200 dark:bg-violet-950 dark:text-violet-300 dark:ring-violet-900",
+                    item.tone === "emerald" && "bg-emerald-100 text-emerald-700 ring-emerald-200 dark:bg-emerald-950 dark:text-emerald-300 dark:ring-emerald-900",
+                  )}>
+                    <item.icon className="h-4 w-4" />
+                  </span>
+                </div>
+                <CardTitle className="text-4xl text-foreground">
+                  {item.value}
+                </CardTitle>
+                <p className="text-xs text-muted-foreground">
+                  {item.description}
+                </p>
+              </CardHeader>
+            </Card>
+          );
+
+          return item.to ? (
+            <Link
+              key={item.label}
+              to={item.to}
+              className="block rounded-xl focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+            >
+              {card}
+            </Link>
+          ) : (
+            <div key={item.label}>{card}</div>
+          );
+        })}
+      </div>
       {/* <WorkOnThisNextBanner /> */}
-      {orderedTables.map((table) => {
-        if (!visibleWidgets.has(table.id)) return null;
-        const DashboardTable = table.component;
-        return DashboardTable ? <DashboardTable key={table.id} /> : null;
-      })}
-      {visibleWidgets.size === 0 ? (
+      {visibleOrderedWidgets.length > 0 ? (
+        <div className="grid grid-cols-1 gap-4 xl:grid-cols-5">
+          {visibleOrderedWidgets.map((widget) => (
+            <div key={widget.id} className={widget.span}>
+              <widget.component />
+            </div>
+          ))}
+        </div>
+      ) : (
         <Card className="border-dashed">
           <CardContent className="flex flex-col items-center gap-3 py-10 text-center">
-            <p className="text-sm text-muted-foreground">All dashboard tables are hidden.</p>
+            <p className="text-sm text-muted-foreground">All dashboard widgets are hidden.</p>
             <Button variant="outline" onClick={() => setIsCustomizeOpen(true)}>
-              Customize dashboard
+              Customise dashboard
             </Button>
           </CardContent>
         </Card>
-      ) : null}
+      )}
       {/* <ActivityOverviewChart /> */}
       <CustomizeDashboardDialog
         open={isCustomizeOpen}

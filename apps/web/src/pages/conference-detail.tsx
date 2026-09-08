@@ -7,6 +7,7 @@ import {
   useCurrentWorkspace,
   useDeleteConference,
   useMe,
+  useModules,
   useProjects,
   useUpdateConference,
 } from "@/api/hooks";
@@ -49,6 +50,8 @@ export default function ConferenceDetailPage() {
   const conferenceQuery = useConference(tenantId, conferenceId);
   const projectsQuery = useProjects(tenantId);
   const projects = projectsQuery.data?.data ?? [];
+  const modulesQuery = useModules(tenantId);
+  const modules = modulesQuery.data?.data ?? [];
   const meQuery = useMe();
   const updateConference = useUpdateConference(tenantId);
   const deleteConference = useDeleteConference(tenantId);
@@ -62,7 +65,12 @@ export default function ConferenceDetailPage() {
     [meQuery.data?.id, projects],
   );
 
-  if (workspace.isPending || conferenceQuery.isPending || projectsQuery.isPending || meQuery.isPending) {
+  const ownedModules = useMemo(() => {
+    const ownedProjectIds = new Set(ownedProjects.map((project) => project.id));
+    return modules.filter((module) => module.projectId && ownedProjectIds.has(module.projectId));
+  }, [modules, ownedProjects]);
+
+  if (workspace.isPending || conferenceQuery.isPending || projectsQuery.isPending || modulesQuery.isPending || meQuery.isPending) {
     return <LoadingState title="Loading conference" className="min-h-[50vh]" />;
   }
 
@@ -116,6 +124,7 @@ export default function ConferenceDetailPage() {
         open={isEditing}
         onOpenChange={setIsEditing}
         projects={ownedProjects}
+        modules={ownedModules}
         conference={conference}
         onSave={update}
       />
@@ -142,7 +151,7 @@ export default function ConferenceDetailPage() {
         </Card>
 
         <Card className="lg:col-span-2">
-          <CardHeader><CardTitle>Linked projects</CardTitle></CardHeader>
+          <CardHeader><CardTitle>Linked projects or modules/papers</CardTitle></CardHeader>
           <CardContent>
             <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
               {conference.projects.map((project) => (

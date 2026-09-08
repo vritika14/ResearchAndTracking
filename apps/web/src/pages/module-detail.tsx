@@ -1,8 +1,10 @@
 import { useEffect, useState, type FormEvent, type ReactNode } from "react";
-import { Boxes, ChevronDown, ChevronUp, Pencil, Save, X } from "lucide-react";
-import { Link, useParams, useSearchParams } from "react-router-dom";
+import { Boxes, ChevronDown, ChevronUp, Pencil, Plus, Save, Unlink, X } from "lucide-react";
+import { Link, useLocation, useNavigate, useParams, useSearchParams } from "react-router-dom";
 
+import { apiClient } from "@/api/client";
 import {
+  useCreateTask,
   useCurrentWorkspace,
   useMembers,
   useEnumValues,
@@ -10,10 +12,15 @@ import {
   useMyModulePipelineStages,
   useNotes,
   useProject,
+  useProjects,
   useTasks,
+  useTrackEvent,
   useUpdateMyModule,
+  useUpdateNote,
+  useUpdateTask,
   type ApiNote,
   type ApiModule,
+  type ApiProject,
   type ApiTask,
 } from "@/api/hooks";
 import { ModuleCollaboratorsManager } from "@/components/modules/module-collaborators";
@@ -23,6 +30,7 @@ import { EmptyState } from "@/components/shared/empty-state";
 import { ErrorState } from "@/components/shared/error-state";
 import { LoadingState } from "@/components/shared/loading-state";
 import { StatusBadge } from "@/components/shared/status-badge";
+import { TaskDialog, type TaskFormInput } from "@/components/tasks/task-dialog";
 import { PageHeading } from "@/components/typography/heading";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -74,37 +82,66 @@ function FormField({ label, htmlFor, children, className = "" }: { label: string
   return <div className={`grid gap-1.5 ${className}`}><label htmlFor={htmlFor} className="text-sm font-medium">{label}</label>{children}</div>;
 }
 
-function ModuleTasksDetails({ tasks }: { tasks: ApiTask[] }) {
+function ModuleTasksDetails({
+  tasks,
+  onAddTask,
+  onUnlinkTask,
+}: {
+  tasks: ApiTask[];
+  onAddTask?: () => void;
+  onUnlinkTask?: (task: ApiTask) => void;
+}) {
   return (
     <Card>
       <CardHeader className="flex-row items-center justify-between gap-3 space-y-0">
         <CardTitle>Tasks ({tasks.length})</CardTitle>
-        <Button asChild variant="ghost" size="sm"><Link to="/tasks">View all</Link></Button>
+        <div className="flex items-center gap-2">
+          {onAddTask ? (
+            <Button variant="outline" size="sm" onClick={onAddTask}>
+              <Plus />
+              Add task
+            </Button>
+          ) : null}
+          <Button asChild variant="ghost" size="sm"><Link to="/tasks">View all</Link></Button>
+        </div>
       </CardHeader>
       <CardContent>{tasks.length === 0 ? (
         <p className="text-sm text-muted-foreground">No tasks are linked to this module.</p>
       ) : (
         <div className="grid gap-2">
           {tasks.map((task) => (
-            <Link key={task.id} to={`/tasks/${task.id}`} className="rounded-md border border-border bg-card p-3 transition-colors hover:border-primary/40 hover:bg-muted/40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring">
-              <div className="flex flex-wrap items-start justify-between gap-2">
-                <div className="min-w-0">
-                  {task.displayId ? (
-                    <span className="block font-mono text-[10px] text-muted-foreground">
-                      {task.displayId}
-                    </span>
-                  ) : null}
-                  <span className="block text-sm font-semibold">{task.title}</span>
+            <div key={task.id} className="flex items-start gap-1 rounded-md border border-border bg-card p-3 transition-colors hover:border-primary/40 hover:bg-muted/40">
+              <Link to={`/tasks/${task.id}`} className="min-w-0 flex-1 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring">
+                <div className="flex flex-wrap items-start justify-between gap-2">
+                  <div className="min-w-0">
+                    {task.displayId ? (
+                      <span className="block font-mono text-[10px] text-muted-foreground">
+                        {task.displayId}
+                      </span>
+                    ) : null}
+                    <span className="block text-sm font-semibold">{task.title}</span>
+                  </div>
+                  <div className="flex flex-wrap gap-1">
+                    <StatusBadge status={task.status ?? "—"} />
+                    <StatusBadge status={task.priority ?? "—"} />
+                  </div>
                 </div>
-                <div className="flex flex-wrap gap-1">
-                  <StatusBadge status={task.status ?? "—"} />
-                  <StatusBadge status={task.priority ?? "—"} />
+                <div className="mt-2 flex flex-wrap gap-x-4 gap-y-1 text-xs text-muted-foreground">
+                  <span>Due {formatDate(task.dueDate)}</span>
                 </div>
-              </div>
-              <div className="mt-2 flex flex-wrap gap-x-4 gap-y-1 text-xs text-muted-foreground">
-                <span>Due {formatDate(task.dueDate)}</span>
-              </div>
-            </Link>
+              </Link>
+              {onUnlinkTask ? (
+                <button
+                  type="button"
+                  onClick={() => onUnlinkTask(task)}
+                  aria-label={`Unlink ${task.title} from this module`}
+                  title="Unlink"
+                  className="shrink-0 rounded-md p-1.5 text-muted-foreground transition-colors hover:bg-destructive/10 hover:text-destructive focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                >
+                  <Unlink className="h-3.5 w-3.5" />
+                </button>
+              ) : null}
+            </div>
           ))}
         </div>
       )}</CardContent>
@@ -112,24 +149,55 @@ function ModuleTasksDetails({ tasks }: { tasks: ApiTask[] }) {
   );
 }
 
-function ModuleNotesDetails({ notes }: { notes: ApiNote[] }) {
+function ModuleNotesDetails({
+  notes,
+  addNoteHref,
+  onUnlinkNote,
+}: {
+  notes: ApiNote[];
+  addNoteHref?: string;
+  onUnlinkNote?: (note: ApiNote) => void;
+}) {
   return (
     <Card>
       <CardHeader className="flex-row items-center justify-between gap-3 space-y-0">
         <CardTitle>Notes ({notes.length})</CardTitle>
-        <Button asChild variant="ghost" size="sm"><Link to="/daily-notes">View all</Link></Button>
+        <div className="flex items-center gap-2">
+          {addNoteHref ? (
+            <Button asChild variant="outline" size="sm">
+              <Link to={addNoteHref}>
+                <Plus />
+                Add note
+              </Link>
+            </Button>
+          ) : null}
+          <Button asChild variant="ghost" size="sm"><Link to="/daily-notes">View all</Link></Button>
+        </div>
       </CardHeader>
       <CardContent>{notes.length === 0 ? (
         <p className="text-sm text-muted-foreground">No notes are linked to this module.</p>
       ) : (
         <div className="grid gap-2">
           {notes.map((note) => (
-            <Link key={note.id} to={`/daily-notes/${note.id}`} className="rounded-md border border-border bg-card p-3 transition-colors hover:border-primary/40 hover:bg-muted/40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring">
-              <span className="text-sm font-semibold">{note.title}</span>
-              {note.content ? (
-                <p className="mt-1 line-clamp-2 text-xs text-muted-foreground">{note.content}</p>
+            <div key={note.id} className="flex items-start gap-1 rounded-md border border-border bg-card p-3 transition-colors hover:border-primary/40 hover:bg-muted/40">
+              <Link to={`/daily-notes/${note.id}`} className="min-w-0 flex-1 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring">
+                <span className="text-sm font-semibold">{note.title}</span>
+                {note.content ? (
+                  <p className="mt-1 line-clamp-2 text-xs text-muted-foreground">{note.content}</p>
+                ) : null}
+              </Link>
+              {onUnlinkNote ? (
+                <button
+                  type="button"
+                  onClick={() => onUnlinkNote(note)}
+                  aria-label={`Unlink ${note.title} from this module`}
+                  title="Unlink"
+                  className="shrink-0 rounded-md p-1.5 text-muted-foreground transition-colors hover:bg-destructive/10 hover:text-destructive focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                >
+                  <Unlink className="h-3.5 w-3.5" />
+                </button>
               ) : null}
-            </Link>
+            </div>
           ))}
         </div>
       )}</CardContent>
@@ -137,8 +205,127 @@ function ModuleNotesDetails({ notes }: { notes: ApiNote[] }) {
   );
 }
 
+function LinkedProjectCard({
+  module,
+  canChangeProject,
+  availableProjects,
+  linkedProject,
+  isSaving,
+  onChangeProject,
+}: {
+  module: ApiModule;
+  canChangeProject: boolean;
+  availableProjects: ApiProject[];
+  linkedProject: { title?: string; isError: boolean };
+  isSaving: boolean;
+  onChangeProject: (projectId: string | null) => Promise<void>;
+}) {
+  const [isEditing, setIsEditing] = useState(false);
+  const [isIndependent, setIsIndependent] = useState(module.projectId === null);
+  const [projectId, setProjectId] = useState(module.projectId ?? "");
+
+  function startEditing() {
+    setIsIndependent(module.projectId === null);
+    setProjectId(module.projectId ?? "");
+    setIsEditing(true);
+  }
+
+  async function handleSave() {
+    if (!isIndependent && !projectId) return;
+    await onChangeProject(isIndependent ? null : projectId);
+    setIsEditing(false);
+  }
+
+  async function handleUnlink() {
+    if (!window.confirm("Unlink this module from its project? It will become an independent module.")) {
+      return;
+    }
+    await onChangeProject(null);
+  }
+
+  return (
+    <Card>
+      <CardHeader className="flex-row items-center justify-between gap-3 space-y-0">
+        <CardTitle>Linked project</CardTitle>
+        {canChangeProject && !isEditing ? (
+          <div className="flex items-center gap-2">
+            {module.projectId ? (
+              <Button variant="ghost" size="sm" onClick={() => void handleUnlink()} disabled={isSaving}>
+                <Unlink />
+                Unlink
+              </Button>
+            ) : null}
+            <Button variant="ghost" size="sm" onClick={startEditing}>
+              <Pencil />
+              Change project
+            </Button>
+          </div>
+        ) : null}
+      </CardHeader>
+      <CardContent>
+        {isEditing ? (
+          <div className="flex flex-col gap-3">
+            <label className="flex items-start gap-3">
+              <input
+                type="checkbox"
+                checked={isIndependent}
+                onChange={(event) => {
+                  setIsIndependent(event.target.checked);
+                  if (event.target.checked) setProjectId("");
+                }}
+                className="mt-0.5 h-4 w-4 accent-primary"
+              />
+              <span>
+                <span className="block text-sm font-medium">Independent module</span>
+                <span className="block text-xs text-muted-foreground">
+                  Only explicitly added collaborators can see an independent module.
+                  Project-linked modules are visible to anyone who can see the project.
+                </span>
+              </span>
+            </label>
+            {!isIndependent ? (
+              <Select value={projectId} onValueChange={setProjectId}>
+                <SelectTrigger aria-label="Project"><SelectValue placeholder="Select a project" /></SelectTrigger>
+                <SelectContent>
+                  {availableProjects.map((project) => (
+                    <SelectItem key={project.id} value={project.id}>{project.title}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            ) : null}
+            <div className="flex justify-end gap-2">
+              <Button type="button" variant="outline" size="sm" onClick={() => setIsEditing(false)}>
+                Cancel
+              </Button>
+              <Button
+                type="button"
+                size="sm"
+                onClick={() => void handleSave()}
+                disabled={isSaving || (!isIndependent && !projectId)}
+              >
+                {isSaving ? "Saving…" : "Save"}
+              </Button>
+            </div>
+          </div>
+        ) : module.projectId ? (
+          <Link to={`/projects/${module.projectId}`} className="block rounded-md border border-border p-4 transition-colors hover:border-primary/40 hover:bg-muted/40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring">
+            <span className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Project</span>
+            <span className="mt-1 block font-semibold text-primary">
+              {linkedProject.title ?? (linkedProject.isError ? "Unknown project" : "Loading…")}
+            </span>
+          </Link>
+        ) : (
+          <p className="text-sm text-muted-foreground">This is an independent module.</p>
+        )}
+      </CardContent>
+    </Card>
+  );
+}
+
 export default function ModuleDetailPage() {
   const { moduleId = "" } = useParams();
+  const navigate = useNavigate();
+  const location = useLocation();
   const [searchParams] = useSearchParams();
   const workspace = useCurrentWorkspace();
   const tenantId = workspace.data?.id ?? "";
@@ -154,15 +341,26 @@ export default function ModuleDetailPage() {
   const membersQuery = useMembers(tenantId);
   const members = membersQuery.data?.data ?? [];
   const updateModule = useUpdateMyModule();
+  const createTask = useCreateTask(tenantId);
+  const updateTask = useUpdateTask(tenantId);
+  const updateNote = useUpdateNote(tenantId);
+  const trackEvent = useTrackEvent(tenantId);
   const tagValuesQuery = useEnumValues("module_type");
 
   const module = moduleQuery.data;
   const sameTenant = Boolean(module && tenantId && module.tenantId === tenantId);
   const linkedProjectQuery = useProject(tenantId, module?.projectId ?? "", Boolean(module?.projectId));
+  // Relinking is only offered when the module lives in the caller's active
+  // workspace — a module shared from another tenant can't list that
+  // tenant's projects without full membership there (same boundary as the
+  // collaborators section below).
+  const projectsQuery = useProjects(tenantId, sameTenant);
+  const availableProjects = projectsQuery.data?.data ?? [];
   const stagesQuery = useMyModulePipelineStages(moduleId);
   const [form, setForm] = useState<EditableModule | null>(null);
   const [openedRequestedEdit, setOpenedRequestedEdit] = useState(false);
   const [isCollaboratorsVisible, setIsCollaboratorsVisible] = useState(false);
+  const [isAddTaskOpen, setIsAddTaskOpen] = useState(false);
 
   useEffect(() => {
     if (!openedRequestedEdit && searchParams.get("edit") === "true" && module) {
@@ -217,11 +415,74 @@ export default function ModuleDetailPage() {
     setForm(null);
   }
 
+  async function handleChangeProject(projectId: string | null) {
+    await updateModule.mutateAsync({
+      moduleId,
+      input: { projectId },
+    });
+  }
+
+  async function handleUnlinkTask(task: ApiTask) {
+    if (!window.confirm(`Unlink "${task.title}" from this module? The task itself won't be deleted.`)) {
+      return;
+    }
+    await updateTask.mutateAsync({
+      taskId: task.id,
+      input: { moduleId: null },
+    });
+  }
+
+  async function handleUnlinkNote(note: ApiNote) {
+    if (!window.confirm(`Unlink "${note.title}" from this module? The note itself won't be deleted.`)) {
+      return;
+    }
+    await updateNote.mutateAsync({
+      noteId: note.id,
+      input: { moduleId: null },
+    });
+  }
+
+  function cancelEditing() {
+    setForm(null);
+    if (searchParams.get("edit") === "true") {
+      if (location.key === "default") {
+        navigate(`/modules/${moduleId}`, { replace: true });
+      } else {
+        navigate(-1);
+      }
+    }
+  }
+
   function changePipelineStage(stage: string) {
     void updateModule.mutateAsync({
       moduleId,
       input: { pipelineStage: stage },
     });
+  }
+
+  async function handleCreateTask(input: TaskFormInput) {
+    const task = await createTask.mutateAsync({
+      title: input.title,
+      description: input.description || undefined,
+      projectId: input.linkTarget === "project" ? input.projectId : undefined,
+      moduleId: input.linkTarget === "module" ? input.moduleId : undefined,
+      status: input.status,
+      priority: input.priority,
+      visibility: input.visibility,
+      workingWith: input.workingWith || undefined,
+      estimatedHours: input.estimatedHours || undefined,
+      dueDate: input.dueDate || undefined,
+    });
+
+    await Promise.all(
+      input.collaboratorUserIds.map((userId) =>
+        apiClient.POST("/api/v1/tenant/{tenantId}/tasks/{taskId}/members", {
+          params: { path: { tenantId, taskId: task.id } },
+          body: { userId },
+        }),
+      ),
+    );
+    trackEvent({ name: "task_created" });
   }
 
   const assignee = module.assignedToUserId
@@ -245,7 +506,7 @@ export default function ModuleDetailPage() {
         actions={
           <div className="flex flex-wrap items-center gap-3">
             <StatusBadge status={module.status ?? "—"} />
-            {form ? <Button type="button" variant="outline" onClick={() => setForm(null)}><X /> Cancel Editing</Button>
+            {form ? <Button type="button" variant="outline" onClick={cancelEditing}><X /> Cancel Editing</Button>
               : <Button type="button" onClick={() => setForm(editableValues(module))}><Pencil /> Edit Module</Button>}
           </div>
         }
@@ -268,7 +529,6 @@ export default function ModuleDetailPage() {
             <div className="grid gap-5 sm:grid-cols-2">
               <FormField label="Module title" htmlFor="edit-module-title" className="sm:col-span-2"><Input id="edit-module-title" value={form.title} onChange={(event) => setForm({ ...form, title: event.target.value })} required autoFocus /></FormField>
               <FormField label="Description" htmlFor="edit-module-description" className="sm:col-span-2"><Textarea id="edit-module-description" value={form.description} onChange={(event) => setForm({ ...form, description: event.target.value })} rows={3} /></FormField>
-              <FormField label="Linked project" htmlFor="edit-module-project"><Input id="edit-module-project" value={module.projectId ? (linkedProjectQuery.data?.title ?? "Loading…") : "Independent module"} readOnly className="bg-muted/30" /></FormField>
               <FormField label="Status" htmlFor="edit-module-status"><Select value={form.status} onValueChange={(value) => setForm({ ...form, status: value })}><SelectTrigger id="edit-module-status"><SelectValue /></SelectTrigger><SelectContent>{MODULE_STATUSES.map((value) => <SelectItem key={value} value={value}>{value}</SelectItem>)}</SelectContent></Select></FormField>
               <FormField label="Type" htmlFor="edit-module-type"><Select value={form.tag} onValueChange={(value) => setForm({ ...form, tag: value })}><SelectTrigger id="edit-module-type"><SelectValue placeholder="Select a type" /></SelectTrigger><SelectContent>{(tagValuesQuery.data ?? []).map((value) => <SelectItem key={value.id} value={value.value}>{value.value}</SelectItem>)}</SelectContent></Select></FormField>
               <FormField label="Pipeline stage" htmlFor="edit-module-stage"><Select value={form.pipelineStage} onValueChange={(value) => setForm({ ...form, pipelineStage: value })}><SelectTrigger id="edit-module-stage"><SelectValue placeholder="Select a stage" /></SelectTrigger><SelectContent>{(stagesQuery.data ?? []).map((value) => <SelectItem key={value.id} value={value.value}>{value.value}</SelectItem>)}</SelectContent></Select></FormField>
@@ -280,7 +540,7 @@ export default function ModuleDetailPage() {
                 {updateModule.error.message}
               </p>
             ) : null}
-            <div className="flex justify-end gap-3 border-t pt-5"><Button type="button" variant="outline" onClick={() => setForm(null)}>Cancel</Button><Button type="submit" disabled={updateModule.isPending}><Save /> {updateModule.isPending ? "Saving…" : "Save Changes"}</Button></div>
+            <div className="flex justify-end gap-3 border-t pt-5"><Button type="button" variant="outline" onClick={cancelEditing}>Cancel</Button><Button type="submit" disabled={updateModule.isPending}><Save /> {updateModule.isPending ? "Saving…" : "Save Changes"}</Button></div>
           </form>
         </CardContent>
       </Card> : null}
@@ -326,24 +586,35 @@ export default function ModuleDetailPage() {
         </section>
 
         <section className="grid gap-6 lg:grid-cols-3" aria-label="Linked work">
-          <Card>
-            <CardHeader><CardTitle>Linked project</CardTitle></CardHeader>
-            <CardContent>
-              {module.projectId ? (
-                <Link to={`/projects/${module.projectId}`} className="block rounded-md border border-border p-4 transition-colors hover:border-primary/40 hover:bg-muted/40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring">
-                  <span className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Project</span>
-                  <span className="mt-1 block font-semibold text-primary">
-                    {linkedProjectQuery.data?.title ?? (linkedProjectQuery.isError ? "Unknown project" : "Loading…")}
-                  </span>
-                </Link>
-              ) : (
-                <p className="text-sm text-muted-foreground">This is an independent module.</p>
-              )}
-            </CardContent>
-          </Card>
-          <ModuleTasksDetails tasks={moduleTasks} />
-          <ModuleNotesDetails notes={moduleNotes} />
+          <LinkedProjectCard
+            module={module}
+            canChangeProject={sameTenant}
+            availableProjects={availableProjects}
+            linkedProject={{ title: linkedProjectQuery.data?.title, isError: linkedProjectQuery.isError }}
+            isSaving={updateModule.isPending}
+            onChangeProject={handleChangeProject}
+          />
+          <ModuleTasksDetails
+            tasks={moduleTasks}
+            onAddTask={sameTenant ? () => setIsAddTaskOpen(true) : undefined}
+            onUnlinkTask={sameTenant ? (task) => void handleUnlinkTask(task) : undefined}
+          />
+          <ModuleNotesDetails
+            notes={moduleNotes}
+            addNoteHref={sameTenant ? `/daily-notes?moduleId=${module.id}&new=true` : undefined}
+            onUnlinkNote={sameTenant ? (note) => void handleUnlinkNote(note) : undefined}
+          />
         </section>
+
+        <TaskDialog
+          open={isAddTaskOpen}
+          onOpenChange={setIsAddTaskOpen}
+          tenantId={tenantId}
+          projects={availableProjects}
+          modules={[module]}
+          initialModuleId={module.id}
+          onSave={handleCreateTask}
+        />
 
         <EntityDetailPipeline
           entityLabel="module"

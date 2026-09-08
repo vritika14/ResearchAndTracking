@@ -1,4 +1,4 @@
-import { fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { MemoryRouter } from "react-router-dom";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
@@ -65,6 +65,8 @@ const fixtures = vi.hoisted(() => ({
 const sharingMutations = vi.hoisted(() => ({
   addNoteMember: vi.fn(),
 }));
+
+const updateNoteMock = vi.hoisted(() => vi.fn());
 
 vi.mock("@/api/client", () => ({
   apiClient: {
@@ -152,7 +154,7 @@ vi.mock("@/api/hooks", async () => {
       }),
     }),
     useUpdateNote: () => ({
-      mutateAsync: vi.fn(
+      mutateAsync: updateNoteMock.mockImplementation(
         async ({ noteId, input }: { noteId: string; input: Record<string, unknown> }) => {
           const updated = store.getNotes().map((item) =>
             item.id === noteId
@@ -160,9 +162,13 @@ vi.mock("@/api/hooks", async () => {
                   ...item,
                   ...input,
                   projectId:
-                    input.projectId === "" ? null : (input.projectId as string | undefined) ?? item.projectId,
+                    input.projectId === "" || input.projectId === null
+                      ? null
+                      : (input.projectId as string | undefined) ?? item.projectId,
                   moduleId:
-                    input.moduleId === "" ? null : (input.moduleId as string | undefined) ?? item.moduleId,
+                    input.moduleId === "" || input.moduleId === null
+                      ? null
+                      : (input.moduleId as string | undefined) ?? item.moduleId,
                 }
               : item,
           );
@@ -185,6 +191,7 @@ vi.mock("@/api/hooks", async () => {
 describe("DailyNotesPage", () => {
   beforeEach(() => {
     sharingMutations.addNoteMember.mockClear();
+    updateNoteMock.mockClear();
     store.setNotes([
       {
         id: "note-1",
@@ -297,6 +304,141 @@ describe("DailyNotesPage", () => {
 
     await waitFor(() =>
       expect(screen.getByRole("heading", { name: "Updated observations" })).toBeInTheDocument(),
+    );
+  });
+
+  it("sorts notes alphabetically by title", () => {
+    store.setNotes([
+      {
+        id: "note-1",
+        displayId: "NTE-001",
+        tenantId: fixtures.tenantId,
+        projectId: null,
+        moduleId: null,
+        createdBy: "user-owner",
+        title: "Charlie note",
+        content: null,
+        visibility: "Private",
+        createdAt: "2026-01-01T00:00:00.000Z",
+        updatedAt: "2026-01-01T00:00:00.000Z",
+      },
+      {
+        id: "note-2",
+        displayId: "NTE-002",
+        tenantId: fixtures.tenantId,
+        projectId: null,
+        moduleId: null,
+        createdBy: "user-owner",
+        title: "Alpha note",
+        content: null,
+        visibility: "Private",
+        createdAt: "2026-01-02T00:00:00.000Z",
+        updatedAt: "2026-01-02T00:00:00.000Z",
+      },
+      {
+        id: "note-3",
+        displayId: "NTE-003",
+        tenantId: fixtures.tenantId,
+        projectId: null,
+        moduleId: null,
+        createdBy: "user-owner",
+        title: "Bravo note",
+        content: null,
+        visibility: "Private",
+        createdAt: "2026-01-03T00:00:00.000Z",
+        updatedAt: "2026-01-03T00:00:00.000Z",
+      },
+    ]);
+    render(
+      <MemoryRouter>
+        <DailyNotesPage />
+      </MemoryRouter>,
+    );
+
+    const sidebar = screen.getByRole("heading", { level: 3, name: "Daily Notes" }).closest("aside")!;
+    const titleOrder = () =>
+      within(sidebar)
+        .getAllByText(/^(Alpha|Bravo|Charlie) note$/)
+        .map((el) => el.textContent);
+
+    // Default sort is newest first (by createdAt).
+    expect(titleOrder()).toEqual(["Bravo note", "Alpha note", "Charlie note"]);
+
+    fireEvent.click(screen.getByRole("combobox", { name: "Sort notes by" }));
+    fireEvent.click(screen.getByRole("option", { name: "Title (A–Z)" }));
+
+    expect(titleOrder()).toEqual(["Alpha note", "Bravo note", "Charlie note"]);
+
+    fireEvent.click(screen.getByRole("combobox", { name: "Sort notes by" }));
+    fireEvent.click(screen.getByRole("option", { name: "Title (Z–A)" }));
+
+    expect(titleOrder()).toEqual(["Charlie note", "Bravo note", "Alpha note"]);
+  });
+
+  it("unlinks a note from its project via the Unlink button", async () => {
+    vi.spyOn(window, "confirm").mockReturnValue(true);
+    store.setNotes([
+      {
+        id: "note-1",
+        displayId: "NTE-001",
+        tenantId: fixtures.tenantId,
+        projectId: "project-1",
+        moduleId: null,
+        createdBy: "user-owner",
+        title: "Initial observations",
+        content: "Baseline readings look consistent.",
+        visibility: "Private",
+        createdAt: "2026-01-01T00:00:00.000Z",
+        updatedAt: "2026-01-01T00:00:00.000Z",
+      },
+    ]);
+    render(
+      <MemoryRouter>
+        <DailyNotesPage />
+      </MemoryRouter>,
+    );
+
+    fireEvent.click(screen.getByRole("button", { name: "Unlink" }));
+
+    await waitFor(() =>
+      expect(
+        screen.getByText("This is a general note with no linked project or module."),
+      ).toBeInTheDocument(),
+    );
+  });
+
+  it("sends null (not empty string) to clear a note's module link when switching to General", async () => {
+    store.setNotes([
+      {
+        id: "note-1",
+        displayId: "NTE-001",
+        tenantId: fixtures.tenantId,
+        projectId: null,
+        moduleId: "module-1",
+        createdBy: "user-owner",
+        title: "Linked to a module",
+        content: null,
+        visibility: "Private",
+        createdAt: "2026-01-01T00:00:00.000Z",
+        updatedAt: "2026-01-01T00:00:00.000Z",
+      },
+    ]);
+    render(
+      <MemoryRouter>
+        <DailyNotesPage />
+      </MemoryRouter>,
+    );
+
+    fireEvent.click(screen.getByRole("button", { name: "Edit note" }));
+    fireEvent.click(screen.getByRole("button", { name: "General" }));
+    fireEvent.click(screen.getByRole("button", { name: "Save note" }));
+
+    await waitFor(() => expect(updateNoteMock).toHaveBeenCalled());
+    expect(updateNoteMock).toHaveBeenCalledWith(
+      expect.objectContaining({
+        noteId: "note-1",
+        input: expect.objectContaining({ projectId: null, moduleId: null }),
+      }),
     );
   });
 

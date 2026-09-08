@@ -56,6 +56,7 @@ vi.mock("@/api/hooks", async () => {
     useTrackEvent: () => vi.fn(),
     useMe: () => ({ data: { id: fixtures.userId }, isPending: false }),
     useProjects: () => ({ data: { data: [fixtures.project], meta: { page: 1, pageSize: 20, totalItems: 1, totalPages: 1 } }, isPending: false }),
+    useModules: () => ({ data: [], isPending: false }),
     useConferences: () => {
       const conferences = useSyncExternalStore(
         store.subscribe,
@@ -142,7 +143,8 @@ describe("ConferenceSubmissionsTable", () => {
     fireEvent.change(dateInputs[0], { target: { value: "2026-12-01" } });
     fireEvent.change(dateInputs[1], { target: { value: "2027-03-04" } });
     fireEvent.change(dateInputs[2], { target: { value: "2027-03-06" } });
-    fireEvent.click(screen.getByRole("checkbox", { name: /Genome Project/ }));
+    fireEvent.focus(screen.getByRole("combobox", { name: "Linked project or module/paper" }));
+    fireEvent.click(screen.getByRole("option", { name: /Genome Project/ }));
     fireEvent.click(screen.getByRole("button", { name: "Add Conference" }));
 
     await waitFor(() => expect(screen.getByText("Test Research Conference 2027")).toBeInTheDocument());

@@ -65,6 +65,10 @@ interface TaskDialogProps {
   projects: ApiProject[];
   modules: ApiModule[];
   task?: ApiTask | null;
+  /** Pre-links a new task to this project when the dialog is opened for creation. */
+  initialProjectId?: string;
+  /** Pre-links a new task to this module when the dialog is opened for creation. */
+  initialModuleId?: string;
   onSave: (input: TaskFormInput) => Promise<void> | void;
 }
 
@@ -133,6 +137,8 @@ export function TaskDialog({
   projects,
   modules,
   task,
+  initialProjectId,
+  initialModuleId,
   onSave,
 }: TaskDialogProps) {
   const [form, setForm] = useState<TaskFormInput>(INITIAL_FORM);
@@ -145,12 +151,20 @@ export function TaskDialog({
 
   useEffect(() => {
     if (!open) return;
-    setForm(task ? formFromTask(task) : INITIAL_FORM);
+    if (task) {
+      setForm(formFromTask(task));
+    } else if (initialModuleId) {
+      setForm({ ...INITIAL_FORM, linkTarget: "module", moduleId: initialModuleId });
+    } else if (initialProjectId) {
+      setForm({ ...INITIAL_FORM, linkTarget: "project", projectId: initialProjectId });
+    } else {
+      setForm(INITIAL_FORM);
+    }
     setMemberSearch("");
     setMemberPickerOpen(false);
     setSelectedMembers([]);
     setSaveError(null);
-  }, [open, task]);
+  }, [open, task, initialProjectId, initialModuleId]);
 
   const userSearchQuery = useUserSearch(memberSearch, memberPickerOpen);
   const matchingMembers = useMemo(() => {

@@ -1,6 +1,6 @@
 import { useEffect, useState, type FormEvent, type ReactNode } from "react";
-import { ChevronDown, ChevronUp, ListTodo, Pencil, Save, X } from "lucide-react";
-import { Link, useParams, useSearchParams } from "react-router-dom";
+import { ChevronDown, ChevronUp, ListTodo, Pencil, Save, Unlink, X } from "lucide-react";
+import { Link, useLocation, useNavigate, useParams, useSearchParams } from "react-router-dom";
 
 import {
   useCurrentWorkspace,
@@ -10,6 +10,8 @@ import {
   useProjects,
   useUpdateMyTask,
   useTrackEvent,
+  type ApiModule,
+  type ApiProject,
   type ApiTask,
 } from "@/api/hooks";
 import type { TaskFormInput } from "@/components/tasks/task-dialog";
@@ -107,8 +109,152 @@ function FormField({ label, htmlFor, children, className = "" }: { label: string
   return <div className={`grid gap-1.5 ${className}`}><label htmlFor={htmlFor} className="text-sm font-medium">{label}</label>{children}</div>;
 }
 
+function linkTargetPillClass(selected: boolean) {
+  return selected
+    ? "rounded-full border border-primary bg-primary px-3 py-1 text-xs font-medium text-primary-foreground"
+    : "rounded-full border px-3 py-1 text-xs font-medium text-muted-foreground";
+}
+
+function LinkedWorkCard({
+  task,
+  projects,
+  modules,
+  linkedProjectTitle,
+  linkedProjectError,
+  linkedModuleTitle,
+  isSaving,
+  onChangeLink,
+}: {
+  task: ApiTask;
+  projects: ApiProject[];
+  modules: ApiModule[];
+  linkedProjectTitle?: string;
+  linkedProjectError: boolean;
+  linkedModuleTitle?: string;
+  isSaving: boolean;
+  onChangeLink: (linkTarget: LinkTargetType, projectId: string, moduleId: string) => Promise<void>;
+}) {
+  const [isEditing, setIsEditing] = useState(false);
+  const [linkTarget, setLinkTarget] = useState<LinkTargetType>(resolveLinkTargetType(task));
+  const [projectId, setProjectId] = useState(task.projectId ?? "");
+  const [moduleId, setModuleId] = useState(task.moduleId ?? "");
+
+  function startEditing() {
+    setLinkTarget(resolveLinkTargetType(task));
+    setProjectId(task.projectId ?? "");
+    setModuleId(task.moduleId ?? "");
+    setIsEditing(true);
+  }
+
+  async function handleSave() {
+    if (linkTarget === "project" && !projectId) return;
+    if (linkTarget === "module" && !moduleId) return;
+    await onChangeLink(linkTarget, projectId, moduleId);
+    setIsEditing(false);
+  }
+
+  async function handleUnlink() {
+    if (!window.confirm("Unlink this task from its project or module? It will become a general task.")) {
+      return;
+    }
+    await onChangeLink("none", "", "");
+  }
+
+  const hasLink = Boolean(task.projectId || task.moduleId);
+
+  return (
+    <Card>
+      <CardHeader className="flex-row items-center justify-between gap-3 space-y-0">
+        <CardTitle>Linked work</CardTitle>
+        {!isEditing ? (
+          <div className="flex items-center gap-2">
+            {hasLink ? (
+              <Button variant="ghost" size="sm" onClick={() => void handleUnlink()} disabled={isSaving}>
+                <Unlink />
+                Unlink
+              </Button>
+            ) : null}
+            <Button variant="ghost" size="sm" onClick={startEditing}>
+              <Pencil />
+              Change link
+            </Button>
+          </div>
+        ) : null}
+      </CardHeader>
+      <CardContent>
+        {isEditing ? (
+          <div className="flex flex-col gap-3">
+            <div className="flex flex-wrap gap-2">
+              {LINK_TARGETS.map((option) => (
+                <button
+                  key={option.value}
+                  type="button"
+                  aria-pressed={linkTarget === option.value}
+                  onClick={() => setLinkTarget(option.value)}
+                  className={linkTargetPillClass(linkTarget === option.value)}
+                >
+                  {option.label}
+                </button>
+              ))}
+            </div>
+            {linkTarget === "project" ? (
+              <Select value={projectId} onValueChange={setProjectId}>
+                <SelectTrigger aria-label="Project"><SelectValue placeholder="Select a project" /></SelectTrigger>
+                <SelectContent>
+                  {projects.map((project) => (
+                    <SelectItem key={project.id} value={project.id}>{project.title}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            ) : null}
+            {linkTarget === "module" ? (
+              <Select value={moduleId} onValueChange={setModuleId}>
+                <SelectTrigger aria-label="Module"><SelectValue placeholder="Select a module" /></SelectTrigger>
+                <SelectContent>
+                  {modules.map((module) => (
+                    <SelectItem key={module.id} value={module.id}>{module.title}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            ) : null}
+            <div className="flex justify-end gap-2">
+              <Button type="button" variant="outline" size="sm" onClick={() => setIsEditing(false)}>
+                Cancel
+              </Button>
+              <Button
+                type="button"
+                size="sm"
+                onClick={() => void handleSave()}
+                disabled={isSaving || (linkTarget === "project" && !projectId) || (linkTarget === "module" && !moduleId)}
+              >
+                {isSaving ? "Saving…" : "Save"}
+              </Button>
+            </div>
+          </div>
+        ) : task.projectId ? (
+          <Link to={`/projects/${task.projectId}`} className="block rounded-md border border-border p-4 transition-colors hover:border-primary/40 hover:bg-muted/40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring">
+            <span className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Project</span>
+            <span className="mt-1 block font-semibold text-primary">
+              {linkedProjectTitle ?? (linkedProjectError ? "Unknown project" : "Loading…")}
+            </span>
+          </Link>
+        ) : task.moduleId ? (
+          <Link to={`/modules/${task.moduleId}`} className="block rounded-md border border-border p-4 transition-colors hover:border-primary/40 hover:bg-muted/40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring">
+            <span className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Module</span>
+            <span className="mt-1 block font-semibold text-primary">{linkedModuleTitle ?? "Loading…"}</span>
+          </Link>
+        ) : (
+          <p className="text-sm text-muted-foreground">This is a general task with no linked project or module.</p>
+        )}
+      </CardContent>
+    </Card>
+  );
+}
+
 export default function TaskDetailPage() {
   const { taskId = "" } = useParams();
+  const navigate = useNavigate();
+  const location = useLocation();
   const [searchParams] = useSearchParams();
   const workspace = useCurrentWorkspace();
   const tenantId = workspace.data?.id ?? "";
@@ -176,14 +322,33 @@ export default function TaskDetailPage() {
         workingWith: form.workingWith.trim() || undefined,
         estimatedHours: form.estimatedHours || undefined,
         dueDate: form.dueDate || undefined,
-        projectId: form.linkTarget === "project" ? form.projectId : undefined,
-        moduleId: form.linkTarget === "module" ? form.moduleId : "",
       },
     });
     if (form.status === "Complete" && task?.status !== "Complete") {
       trackEvent({ name: "task_completed" });
     }
     setForm(null);
+  }
+
+  async function handleChangeLink(linkTarget: LinkTargetType, newProjectId: string, newModuleId: string) {
+    const input =
+      linkTarget === "project"
+        ? { projectId: newProjectId, moduleId: null }
+        : linkTarget === "module"
+          ? { moduleId: newModuleId, projectId: null }
+          : { projectId: null, moduleId: null };
+    await updateTask.mutateAsync({ taskId, input });
+  }
+
+  function cancelEditing() {
+    setForm(null);
+    if (searchParams.get("edit") === "true") {
+      if (location.key === "default") {
+        navigate(`/tasks/${taskId}`, { replace: true });
+      } else {
+        navigate(-1);
+      }
+    }
   }
 
   const linkedModule = task.moduleId
@@ -208,7 +373,7 @@ export default function TaskDetailPage() {
             <Badge variant="outline" className={priorityPillClass(task.priority)}>
               {task.priority ?? "—"}
             </Badge>
-            {form ? <Button type="button" variant="outline" onClick={() => setForm(null)}><X /> Cancel Editing</Button>
+            {form ? <Button type="button" variant="outline" onClick={cancelEditing}><X /> Cancel Editing</Button>
               : <Button type="button" onClick={() => setForm(formValues(task))}><Pencil /> Edit Task</Button>}
           </div>
         }
@@ -245,7 +410,7 @@ export default function TaskDetailPage() {
                   {updateTask.error.message}
                 </p>
               ) : null}
-              <div className="flex justify-end gap-3 border-t pt-5"><Button type="button" variant="outline" onClick={() => setForm(null)}>Cancel</Button><Button type="submit" disabled={updateTask.isPending}><Save /> {updateTask.isPending ? "Saving…" : "Save Changes"}</Button></div>
+              <div className="flex justify-end gap-3 border-t pt-5"><Button type="button" variant="outline" onClick={cancelEditing}>Cancel</Button><Button type="submit" disabled={updateTask.isPending}><Save /> {updateTask.isPending ? "Saving…" : "Save Changes"}</Button></div>
             </form>
           </CardContent>
         </Card>
@@ -308,26 +473,16 @@ export default function TaskDetailPage() {
           </div> : null}
         </section>
 
-        <Card>
-          <CardHeader><CardTitle>Linked work</CardTitle></CardHeader>
-          <CardContent>
-            {task.projectId ? (
-              <Link to={`/projects/${task.projectId}`} className="block rounded-md border border-border p-4 transition-colors hover:border-primary/40 hover:bg-muted/40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring">
-                <span className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Project</span>
-                <span className="mt-1 block font-semibold text-primary">
-                  {linkedProjectQuery.data?.title ?? (linkedProjectQuery.isError ? "Unknown project" : "Loading…")}
-                </span>
-              </Link>
-            ) : task.moduleId ? (
-              <Link to={`/modules/${task.moduleId}`} className="block rounded-md border border-border p-4 transition-colors hover:border-primary/40 hover:bg-muted/40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring">
-                <span className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Module</span>
-                <span className="mt-1 block font-semibold text-primary">{linkedModule?.title ?? "Loading…"}</span>
-              </Link>
-            ) : (
-              <p className="text-sm text-muted-foreground">This is a general task with no linked project or module.</p>
-            )}
-          </CardContent>
-        </Card>
+        <LinkedWorkCard
+          task={task}
+          projects={projects}
+          modules={modules}
+          linkedProjectTitle={linkedProjectQuery.data?.title}
+          linkedProjectError={linkedProjectQuery.isError}
+          linkedModuleTitle={linkedModule?.title}
+          isSaving={updateTask.isPending}
+          onChangeLink={handleChangeLink}
+        />
       </div>
     </div>
   );

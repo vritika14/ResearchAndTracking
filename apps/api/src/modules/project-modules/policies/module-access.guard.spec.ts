@@ -31,7 +31,9 @@ describe('ModuleAccessGuard', () => {
     modulesRepository.checkAccessForGuard.mockResolvedValue(true);
 
     await expect(
-      guard.canActivate(context({ tenantId: 'tenant-1', moduleId: 'module-1' })),
+      guard.canActivate(
+        context({ tenantId: 'tenant-1', moduleId: 'module-1' }),
+      ),
     ).resolves.toBe(true);
     expect(modulesRepository.checkAccessForGuard).toHaveBeenCalledWith(
       'tenant-1',
@@ -44,7 +46,9 @@ describe('ModuleAccessGuard', () => {
     modulesRepository.checkAccessForGuard.mockResolvedValue(false);
 
     await expect(
-      guard.canActivate(context({ tenantId: 'tenant-1', moduleId: 'module-1' })),
+      guard.canActivate(
+        context({ tenantId: 'tenant-1', moduleId: 'module-1' }),
+      ),
     ).rejects.toThrow(ForbiddenException);
   });
 

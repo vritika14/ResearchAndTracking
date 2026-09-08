@@ -1,6 +1,7 @@
-import { useEffect, useState, type FormEvent, type ReactNode } from "react";
+import { Search, X } from "lucide-react";
+import { useEffect, useMemo, useState, type FormEvent, type ReactNode } from "react";
 
-import type { ApiConference, ApiProject, ConferenceInput } from "@/api/hooks";
+import type { ApiConference, ApiModule, ApiProject, ConferenceInput } from "@/api/hooks";
 import { Button } from "@/components/ui/button";
 import { DatePickerInput } from "@/components/ui/date-picker-input";
 import {
@@ -12,10 +13,20 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 
 export type ConferenceSubmissionInput = ConferenceInput;
 
+const NO_LINK_LABEL = "No linked project or module/paper";
+
+interface LinkOption {
+  key: string;
+  projectId: string;
+  label: string;
+  meta: string;
+}
+
 interface ConferenceSubmissionDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   projects: ApiProject[];
+  modules: ApiModule[];
   conference?: ApiConference | null;
   onSave: (input: ConferenceSubmissionInput) => Promise<void> | void;
 }
@@ -39,16 +50,21 @@ function FormField({ label, htmlFor, required, children }: {
 }
 
 export function ConferenceSubmissionDialog({
-  open, onOpenChange, projects, conference, onSave,
+  open, onOpenChange, projects, modules, conference, onSave,
 }: ConferenceSubmissionDialogProps) {
   const [form, setForm] = useState<ConferenceSubmissionInput>(INITIAL_FORM);
   const [formError, setFormError] = useState<string | null>(null);
   const [isSaving, setIsSaving] = useState(false);
+  const [linkedLabel, setLinkedLabel] = useState(NO_LINK_LABEL);
+  const [linkQuery, setLinkQuery] = useState("");
+  const [linkPickerOpen, setLinkPickerOpen] = useState(false);
   const isEditing = Boolean(conference);
 
   useEffect(() => {
     if (!open) return;
     setFormError(null);
+    setLinkQuery("");
+    setLinkPickerOpen(false);
     setForm(conference ? {
       acronym: conference.acronym,
       name: conference.name,
@@ -59,25 +75,52 @@ export function ConferenceSubmissionDialog({
       submissionType: conference.submissionType ?? "Abstract",
       projectIds: conference.projects.map((project) => project.id),
     } : INITIAL_FORM);
+    setLinkedLabel(conference?.projects[0]?.title ?? NO_LINK_LABEL);
   }, [conference, open]);
 
-  function toggleProject(projectId: string) {
-    setForm((current) => ({
-      ...current,
-      projectIds: current.projectIds.includes(projectId)
-        ? current.projectIds.filter((id) => id !== projectId)
-        : [...current.projectIds, projectId],
+  const projectById = useMemo(() => new Map(projects.map((project) => [project.id, project])), [projects]);
+
+  const linkOptions = useMemo<LinkOption[]>(() => {
+    const projectOptions: LinkOption[] = projects.map((project) => ({
+      key: `project:${project.id}`,
+      projectId: project.id,
+      label: project.title,
+      meta: project.displayId ? `Project · ${project.displayId}` : "Project",
     }));
+    const moduleOptions: LinkOption[] = modules
+      .filter((module): module is ApiModule & { projectId: string } => Boolean(module.projectId))
+      .map((module) => {
+        const parentProject = projectById.get(module.projectId);
+        const kind = module.tag === "Research Paper" ? "Paper" : "Module";
+        return {
+          key: `module:${module.id}`,
+          projectId: module.projectId,
+          label: module.title,
+          meta: parentProject ? `${kind} · via ${parentProject.title}` : kind,
+        };
+      });
+    return [...projectOptions, ...moduleOptions];
+  }, [modules, projectById, projects]);
+
+  const filteredLinkOptions = useMemo(() => {
+    const query = linkQuery.trim().toLowerCase();
+    if (!query) return linkOptions;
+    return linkOptions.filter(
+      (option) => option.label.toLowerCase().includes(query) || option.meta.toLowerCase().includes(query),
+    );
+  }, [linkOptions, linkQuery]);
+
+  function selectLink(projectId: string, label: string) {
+    setForm((current) => ({ ...current, projectIds: projectId ? [projectId] : [] }));
+    setLinkedLabel(label);
+    setLinkQuery("");
+    setLinkPickerOpen(false);
   }
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     if (!form.submissionDue || !form.startDate || !form.endDate) {
       setFormError("Enter the submission, start, and end dates.");
-      return;
-    }
-    if (form.projectIds.length === 0) {
-      setFormError("Select at least one project.");
       return;
     }
     if (form.endDate < form.startDate) {
@@ -109,7 +152,7 @@ export function ConferenceSubmissionDialog({
         <DialogHeader>
           <DialogTitle>{isEditing ? "Edit conference" : "Add a conference"}</DialogTitle>
           <DialogDescription>
-            Track submission and event dates, then link the conference to one or more projects you own.
+            Track submission and event dates, and optionally link the conference to a project you own.
           </DialogDescription>
         </DialogHeader>
 
@@ -135,17 +178,23 @@ export function ConferenceSubmissionDialog({
 
           <div className="grid gap-4 sm:grid-cols-3">
             <FormField label="Submission due" htmlFor="conference-submission-due" required>
-              <DatePickerInput id="conference-submission-due" label="Submission due"
+              <DatePickerInput id="conference-submission-due" label="Submission due" allowTyped
                 value={form.submissionDue}
                 onChange={(value) => setForm((current) => ({ ...current, submissionDue: value }))} />
             </FormField>
             <FormField label="Starts" htmlFor="conference-start-date" required>
-              <DatePickerInput id="conference-start-date" label="Conference start date"
+              <DatePickerInput id="conference-start-date" label="Conference start date" allowTyped
                 value={form.startDate}
-                onChange={(value) => setForm((current) => ({ ...current, startDate: value }))} />
+                onChange={(value) =>
+                  setForm((current) => ({
+                    ...current,
+                    startDate: value,
+                    endDate: current.endDate || value,
+                  }))
+                } />
             </FormField>
             <FormField label="Ends" htmlFor="conference-end-date" required>
-              <DatePickerInput id="conference-end-date" label="Conference end date"
+              <DatePickerInput id="conference-end-date" label="Conference end date" allowTyped
                 value={form.endDate}
                 onChange={(value) => setForm((current) => ({ ...current, endDate: value }))} />
             </FormField>
@@ -163,33 +212,85 @@ export function ConferenceSubmissionDialog({
             </Select>
           </FormField>
 
-          <fieldset className="grid gap-2">
-            <legend className="text-sm font-medium">Linked projects <span className="text-destructive">*</span></legend>
-            {projects.length === 0 ? (
-              <p className="rounded-lg border border-dashed p-3 text-sm text-muted-foreground">
-                You need to own at least one project before creating a conference.
-              </p>
-            ) : (
-              <div className="grid max-h-40 gap-2 overflow-y-auto rounded-lg border border-border p-3 sm:grid-cols-2">
-                {projects.map((project) => (
-                  <label key={project.id} className="flex cursor-pointer items-start gap-2 rounded-md p-2 hover:bg-accent">
-                    <input type="checkbox" checked={form.projectIds.includes(project.id)}
-                      onChange={() => toggleProject(project.id)} className="mt-0.5 h-4 w-4 accent-primary" />
-                    <span className="text-sm">
-                      <span className="block font-medium">{project.title}</span>
-                      {project.displayId ? <span className="font-mono text-xs text-muted-foreground">{project.displayId}</span> : null}
-                    </span>
-                  </label>
-                ))}
-              </div>
-            )}
-          </fieldset>
+          <FormField label="Linked project or module/paper" htmlFor="conference-link">
+            <div
+              className="relative"
+              onBlur={(event) => {
+                if (!event.currentTarget.contains(event.relatedTarget)) setLinkPickerOpen(false);
+              }}
+            >
+              <Search className="pointer-events-none absolute left-3 top-2.5 h-4 w-4 text-muted-foreground" />
+              <Input
+                id="conference-link"
+                role="combobox"
+                aria-expanded={linkPickerOpen}
+                aria-controls="conference-link-options"
+                aria-autocomplete="list"
+                value={linkPickerOpen ? linkQuery : linkedLabel}
+                onFocus={() => {
+                  setLinkQuery("");
+                  setLinkPickerOpen(true);
+                }}
+                onChange={(event) => setLinkQuery(event.target.value)}
+                placeholder="Search a project, module or paper…"
+                autoComplete="off"
+                className="pl-9 pr-8"
+              />
+              {!linkPickerOpen && form.projectIds.length > 0 ? (
+                <button
+                  type="button"
+                  onClick={() => selectLink("", NO_LINK_LABEL)}
+                  aria-label="Clear linked project or module/paper"
+                  className="absolute right-1 top-1/2 inline-flex h-8 w-8 -translate-y-1/2 items-center justify-center rounded-md text-muted-foreground hover:bg-accent hover:text-foreground"
+                >
+                  <X className="h-4 w-4" />
+                </button>
+              ) : null}
+              {linkPickerOpen ? (
+                <div
+                  id="conference-link-options"
+                  role="listbox"
+                  aria-label="Available projects, modules and papers"
+                  className="absolute z-50 mt-1 max-h-60 w-full overflow-y-auto rounded-lg border bg-popover p-1 text-popover-foreground shadow-lg"
+                >
+                  <button
+                    type="button"
+                    role="option"
+                    aria-selected={form.projectIds.length === 0}
+                    onMouseDown={(event) => event.preventDefault()}
+                    onClick={() => selectLink("", NO_LINK_LABEL)}
+                    className="flex w-full items-center rounded-md px-3 py-2 text-left text-sm text-muted-foreground hover:bg-accent focus:bg-accent focus:outline-none"
+                  >
+                    {NO_LINK_LABEL}
+                  </button>
+                  {filteredLinkOptions.length ? (
+                    filteredLinkOptions.map((option) => (
+                      <button
+                        key={option.key}
+                        type="button"
+                        role="option"
+                        aria-selected={form.projectIds[0] === option.projectId && linkedLabel === option.label}
+                        onMouseDown={(event) => event.preventDefault()}
+                        onClick={() => selectLink(option.projectId, option.label)}
+                        className="flex w-full flex-col items-start gap-0.5 rounded-md px-3 py-2 text-left hover:bg-accent focus:bg-accent focus:outline-none"
+                      >
+                        <span className="text-sm font-medium">{option.label}</span>
+                        <span className="text-xs text-muted-foreground">{option.meta}</span>
+                      </button>
+                    ))
+                  ) : (
+                    <p className="px-3 py-2 text-sm text-muted-foreground">No matches.</p>
+                  )}
+                </div>
+              ) : null}
+            </div>
+          </FormField>
 
           {formError ? <p role="alert" className="rounded-lg border border-destructive/30 bg-destructive/5 p-3 text-sm text-destructive">{formError}</p> : null}
 
           <DialogFooter className="border-t pt-4">
             <DialogClose asChild><Button type="button" variant="outline">Cancel</Button></DialogClose>
-            <Button type="submit" disabled={isSaving || projects.length === 0}>
+            <Button type="submit" disabled={isSaving}>
               {isSaving ? "Saving…" : isEditing ? "Save Changes" : "Add Conference"}
             </Button>
           </DialogFooter>

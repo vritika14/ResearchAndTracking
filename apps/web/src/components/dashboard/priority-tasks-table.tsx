@@ -1,4 +1,5 @@
 import { useMemo, useState } from "react";
+import { Link } from "react-router-dom";
 
 import { useCurrentWorkspace, useModules, useProjects, useTasks } from "@/api/hooks";
 import { ColumnVisibilityMenu } from "@/components/dashboard/column-visibility-menu";
@@ -85,6 +86,8 @@ export function PriorityTasksTable() {
       .filter((task) => task.status !== "Complete")
       .map((task) => ({
         id: task.id,
+        projectId: task.projectId,
+        moduleId: task.moduleId,
         project: task.moduleId
           ? (moduleById.get(task.moduleId) ?? "Unknown module")
           : task.projectId
@@ -196,10 +199,35 @@ export function PriorityTasksTable() {
               filtered.map((row) => (
                 <TableRow key={row.id}>
                   {columns.isColumnVisible("project") ? (
-                    <TableCell className="font-medium">{row.project}</TableCell>
+                    <TableCell className="font-medium">
+                      {row.moduleId ? (
+                        <Link
+                          to={`/modules/${row.moduleId}`}
+                          className="text-primary hover:underline"
+                        >
+                          {row.project}
+                        </Link>
+                      ) : row.projectId ? (
+                        <Link
+                          to={`/projects/${row.projectId}`}
+                          className="text-primary hover:underline"
+                        >
+                          {row.project}
+                        </Link>
+                      ) : (
+                        row.project
+                      )}
+                    </TableCell>
                   ) : null}
                   {columns.isColumnVisible("task") ? (
-                    <TableCell className="text-muted-foreground">{row.task}</TableCell>
+                    <TableCell className="text-muted-foreground">
+                      <Link
+                        to={`/tasks/${row.id}`}
+                        className="text-foreground hover:text-primary hover:underline"
+                      >
+                        {row.task}
+                      </Link>
+                    </TableCell>
                   ) : null}
                   {columns.isColumnVisible("due") ? (
                     <TableCell

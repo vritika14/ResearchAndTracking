@@ -6,6 +6,18 @@ import ProjectDetailPage from "@/pages/project-detail";
 
 const fixtures = vi.hoisted(() => ({
   updateProject: vi.fn(),
+  updateModule: vi.fn(),
+  updateTask: vi.fn(),
+  updateNote: vi.fn(),
+  modules: [
+    { id: "module-1", displayId: "MOD-001", title: "Assay optimization", status: "Active" },
+  ],
+  tasks: [
+    { id: "task-1", displayId: "TSK-001", title: "Run inhibition assay", status: "To do", priority: "Medium", dueDate: null },
+  ],
+  notes: [
+    { id: "note-1", title: "Kickoff notes", content: "Discussed scope" },
+  ],
   project: {
     id: "PRJ-101",
     displayId: "PRJ-101",
@@ -92,35 +104,43 @@ vi.mock("@/api/hooks", () => ({
     isPending: false,
   }),
   useArchiveMyProject: () => ({ mutateAsync: vi.fn(), isPending: false }),
+  useCreateTask: () => ({ mutateAsync: vi.fn(), isPending: false }),
+  useCreateModule: () => ({ mutateAsync: vi.fn(), isPending: false }),
+  useUpdateModule: () => ({ mutateAsync: fixtures.updateModule, isPending: false }),
+  useUpdateTask: () => ({ mutateAsync: fixtures.updateTask, isPending: false }),
+  useUpdateNote: () => ({ mutateAsync: fixtures.updateNote, isPending: false }),
+  useTrackEvent: () => vi.fn(),
+  useEnumValues: () => ({ data: [], isPending: false }),
+  useModulePipelineStages: () => ({ data: [], isPending: false }),
   useModules: () => ({
     data: {
-      data: [],
+      data: fixtures.modules,
       meta: {
         page: 1,
         pageSize: 20,
-        totalItems: 0,
+        totalItems: fixtures.modules.length,
         totalPages: 1,
       },
     },
   }),
   useTasks: () => ({
     data: {
-      data: [],
+      data: fixtures.tasks,
       meta: {
         page: 1,
         pageSize: 20,
-        totalItems: 0,
+        totalItems: fixtures.tasks.length,
         totalPages: 1,
       },
     },
   }),
   useNotes: () => ({
     data: {
-      data: [],
+      data: fixtures.notes,
       meta: {
         page: 1,
         pageSize: 20,
-        totalItems: 0,
+        totalItems: fixtures.notes.length,
         totalPages: 1,
       },
     },
@@ -159,6 +179,12 @@ describe("ProjectDetailPage", () => {
         return fixtures.project;
       },
     );
+    fixtures.updateModule.mockReset();
+    fixtures.updateModule.mockResolvedValue(fixtures.modules[0]);
+    fixtures.updateTask.mockReset();
+    fixtures.updateTask.mockResolvedValue(fixtures.tasks[0]);
+    fixtures.updateNote.mockReset();
+    fixtures.updateNote.mockResolvedValue(fixtures.notes[0]);
   });
 
   it("edits project details in place", async () => {
@@ -215,10 +241,11 @@ describe("ProjectDetailPage", () => {
     ).toBeInTheDocument();
   });
 
-  it("returns to the pipeline when pipeline editing is cancelled", () => {
+  it("returns to whatever page linked into edit mode when editing is cancelled", () => {
     render(
       <MemoryRouter
-        initialEntries={["/projects/PRJ-101?edit=true&from=pipeline"]}
+        initialEntries={["/pipeline", "/projects/PRJ-101?edit=true"]}
+        initialIndex={1}
       >
         <Routes>
           <Route path="projects/:projectId" element={<ProjectDetailPage />} />
@@ -231,6 +258,23 @@ describe("ProjectDetailPage", () => {
 
     expect(
       screen.getByRole("heading", { name: "Pipeline" }),
+    ).toBeInTheDocument();
+  });
+
+  it("falls back to the read-only project view when there is no previous page to return to", () => {
+    render(
+      <MemoryRouter initialEntries={["/projects/PRJ-101?edit=true"]}>
+        <Routes>
+          <Route path="projects/:projectId" element={<ProjectDetailPage />} />
+          <Route path="pipeline" element={<h1>Pipeline</h1>} />
+        </Routes>
+      </MemoryRouter>,
+    );
+
+    fireEvent.click(screen.getByRole("button", { name: "Cancel Editing" }));
+
+    expect(
+      screen.getByRole("button", { name: "Edit Project" }),
     ).toBeInTheDocument();
   });
 
@@ -247,7 +291,7 @@ describe("ProjectDetailPage", () => {
       screen.queryByRole("heading", { name: "Project collaborators" }),
     ).not.toBeInTheDocument();
     expect(
-      screen.getByRole("heading", { name: "Modules (0)" }),
+      screen.getByRole("heading", { name: "Modules (1)" }),
     ).toBeInTheDocument();
     expect(
       screen.getByRole("button", { name: "Show collaborators" }),
@@ -259,7 +303,7 @@ describe("ProjectDetailPage", () => {
       screen.getByRole("heading", { name: "Project collaborators" }),
     ).toBeInTheDocument();
     expect(
-      screen.getByRole("heading", { name: "Modules (0)" }),
+      screen.getByRole("heading", { name: "Modules (1)" }),
     ).toBeInTheDocument();
     expect(
       screen.getByRole("button", { name: "Hide collaborators" }),
@@ -313,6 +357,72 @@ describe("ProjectDetailPage", () => {
       expect(fixtures.updateProject).toHaveBeenCalledWith({
         projectId: "PRJ-101",
         input: { pipelineStage: "Publication" },
+      }),
+    );
+  });
+
+  it("unlinks a module from this project", async () => {
+    vi.spyOn(window, "confirm").mockReturnValue(true);
+    render(
+      <MemoryRouter initialEntries={["/projects/PRJ-101"]}>
+        <Routes>
+          <Route path="projects/:projectId" element={<ProjectDetailPage />} />
+        </Routes>
+      </MemoryRouter>,
+    );
+
+    fireEvent.click(
+      screen.getByRole("button", { name: "Unlink Assay optimization from this project" }),
+    );
+
+    await waitFor(() =>
+      expect(fixtures.updateModule).toHaveBeenCalledWith({
+        moduleId: "module-1",
+        input: { projectId: null },
+      }),
+    );
+  });
+
+  it("unlinks a task from this project", async () => {
+    vi.spyOn(window, "confirm").mockReturnValue(true);
+    render(
+      <MemoryRouter initialEntries={["/projects/PRJ-101"]}>
+        <Routes>
+          <Route path="projects/:projectId" element={<ProjectDetailPage />} />
+        </Routes>
+      </MemoryRouter>,
+    );
+
+    fireEvent.click(
+      screen.getByRole("button", { name: "Unlink Run inhibition assay from this project" }),
+    );
+
+    await waitFor(() =>
+      expect(fixtures.updateTask).toHaveBeenCalledWith({
+        taskId: "task-1",
+        input: { projectId: null },
+      }),
+    );
+  });
+
+  it("unlinks a note from this project", async () => {
+    vi.spyOn(window, "confirm").mockReturnValue(true);
+    render(
+      <MemoryRouter initialEntries={["/projects/PRJ-101"]}>
+        <Routes>
+          <Route path="projects/:projectId" element={<ProjectDetailPage />} />
+        </Routes>
+      </MemoryRouter>,
+    );
+
+    fireEvent.click(
+      screen.getByRole("button", { name: "Unlink Kickoff notes from this project" }),
+    );
+
+    await waitFor(() =>
+      expect(fixtures.updateNote).toHaveBeenCalledWith({
+        noteId: "note-1",
+        input: { projectId: null },
       }),
     );
   });

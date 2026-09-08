@@ -1,4 +1,5 @@
 import { useMemo, useState } from "react";
+import { Link } from "react-router-dom";
 
 import { useCurrentWorkspace, usePipelineStages, useProjects, useTasks } from "@/api/hooks";
 import {
@@ -38,7 +39,7 @@ const PRIORITY_FILTERS = ["All", "Critical", "High", "Medium", "Low"] as const;
 const PIPELINE_COLUMNS = [
   { id: "project", label: "Project" },
   { id: "pipeline", label: "Stage Bar" },
-  { id: "completion", label: "Completion" },
+  { id: "completion", label: "Progress" },
   { id: "priority", label: "Priority" },
 ] as const;
 
@@ -196,7 +197,7 @@ export function PipelineOverviewTable() {
                 </TableHead>
               ) : null}
               {columns.isColumnVisible("completion") ? (
-                <TableHead>Completion</TableHead>
+                <TableHead>Progress</TableHead>
               ) : null}
               {columns.isColumnVisible("priority") ? <TableHead>Priority</TableHead> : null}
             </TableRow>
@@ -220,7 +221,12 @@ export function PipelineOverviewTable() {
                       className={cn("max-w-[220px] truncate font-medium")}
                       title={row.name}
                     >
-                      {row.name}
+                      <Link
+                        to={`/projects/${row.id}`}
+                        className="text-primary hover:underline"
+                      >
+                        {row.name}
+                      </Link>
                     </TableCell>
                   ) : null}
 

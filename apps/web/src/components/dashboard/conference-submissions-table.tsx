@@ -8,6 +8,7 @@ import {
   useCurrentWorkspace,
   useDeleteConference,
   useMe,
+  useModules,
   useProjects,
   useUpdateConference,
   useTrackEvent,
@@ -31,7 +32,7 @@ const CONFERENCE_COLUMNS = [
   { id: "submissionDue", label: "Submission Due" },
   { id: "conferenceDates", label: "Conference Dates" },
   { id: "type", label: "Type" },
-  { id: "linkedProjects", label: "Linked Projects" },
+  { id: "linkedProjects", label: "Linked Projects or Modules/Papers" },
   { id: "actions", label: "Actions" },
 ] as const;
 
@@ -90,6 +91,8 @@ export function ConferenceSubmissionsTable({
   const conferences = conferencesQuery.data?.data ?? [];
   const projectsQuery = useProjects(tenantId);
   const projects = projectsQuery.data?.data ?? [];
+  const modulesQuery = useModules(tenantId);
+  const modules = modulesQuery.data?.data ?? [];
   const meQuery = useMe();
   const createConference = useCreateConference(tenantId);
   const updateConference = useUpdateConference(tenantId);
@@ -115,6 +118,11 @@ export function ConferenceSubmissionsTable({
     ),
     [meQuery.data?.id, projects],
   );
+
+  const ownedModules = useMemo(() => {
+    const ownedProjectIds = new Set(ownedProjects.map((project) => project.id));
+    return modules.filter((module) => module.projectId && ownedProjectIds.has(module.projectId));
+  }, [modules, ownedProjects]);
 
   const filtered = useMemo(() => {
     const query = search.trim().toLowerCase();
@@ -161,7 +169,7 @@ export function ConferenceSubmissionsTable({
         <div className="flex flex-wrap items-start justify-between gap-3">
           <div>
             <CardTitle>{showPast ? "Conference Submissions" : "Upcoming Conference Submissions"}</CardTitle>
-            <CardDescription>Submission deadlines, event dates, and linked projects.</CardDescription>
+            <CardDescription>Submission deadlines, event dates, and linked projects or modules/papers.</CardDescription>
           </div>
           {dashboardView ? null : (
             <Button onClick={() => setIsCreateOpen(true)} disabled={ownedProjects.length === 0 || isLoading}>
@@ -194,7 +202,7 @@ export function ConferenceSubmissionsTable({
             {columns.isColumnVisible("submissionDue") ? <TableHead>Submission Due</TableHead> : null}
             {columns.isColumnVisible("conferenceDates") ? <TableHead>Conference Dates</TableHead> : null}
             {columns.isColumnVisible("type") ? <TableHead>Type</TableHead> : null}
-            {columns.isColumnVisible("linkedProjects") ? <TableHead>Linked Projects</TableHead> : null}
+            {columns.isColumnVisible("linkedProjects") ? <TableHead>Linked Projects or Modules/Papers</TableHead> : null}
             {columns.isColumnVisible("actions") ? <TableHead className="text-right">Actions</TableHead> : null}
           </TableRow></TableHeader>
           <TableBody>
@@ -212,8 +220,9 @@ export function ConferenceSubmissionsTable({
                     <span className={cn("text-xs", urgencyClass(row.daysRemaining))}>{urgencyLabel(row.daysRemaining)}</span></div></TableCell> : null}
                   {columns.isColumnVisible("conferenceDates") ? <TableCell className="text-muted-foreground">{formatConferenceDates(row.startDate, row.endDate)}</TableCell> : null}
                   {columns.isColumnVisible("type") ? <TableCell><Badge variant="outline" className={typeBadgeClass(row.submissionType)}>{row.submissionType ?? "—"}</Badge></TableCell> : null}
-                  {columns.isColumnVisible("linkedProjects") ? <TableCell><div className="flex flex-wrap gap-1">{row.projects.map((project) => <span key={project.id}
-                    className="rounded-md bg-primary/10 px-1.5 py-0.5 text-[11px] font-medium text-primary ring-1 ring-inset ring-primary/15">{project.displayId ?? project.title}</span>)}</div></TableCell> : null}
+                  {columns.isColumnVisible("linkedProjects") ? <TableCell><div className="flex flex-wrap gap-1">{row.projects.length === 0 ? <span className="text-xs text-muted-foreground">—</span> : row.projects.map((project) => <Link key={project.id}
+                    to={`/projects/${project.id}`}
+                    className="rounded-md bg-primary/10 px-1.5 py-0.5 text-[11px] font-medium text-primary ring-1 ring-inset ring-primary/15 hover:bg-primary/15 hover:underline">{project.displayId ?? project.title}</Link>)}</div></TableCell> : null}
                   {columns.isColumnVisible("actions") ? <TableCell><div className="flex justify-end gap-1">
                     {canManage ? <><Button type="button" variant="ghost" size="icon" aria-label={`Edit ${row.name}`} onClick={() => setEditingConference(row)}><Pencil /></Button>
                       <Button type="button" variant="ghost" size="icon" className="text-destructive hover:text-destructive" aria-label={`Delete ${row.name}`} onClick={() => void remove(row)}><Trash2 /></Button></>
@@ -224,9 +233,9 @@ export function ConferenceSubmissionsTable({
           </TableBody>
         </Table>
       </CardContent>
-      <ConferenceSubmissionDialog open={isCreateOpen} onOpenChange={setIsCreateOpen} projects={ownedProjects} onSave={create} />
+      <ConferenceSubmissionDialog open={isCreateOpen} onOpenChange={setIsCreateOpen} projects={ownedProjects} modules={ownedModules} onSave={create} />
       <ConferenceSubmissionDialog open={editingConference !== null} onOpenChange={(open) => { if (!open) setEditingConference(null); }}
-        projects={ownedProjects} conference={editingConference} onSave={update} />
+        projects={ownedProjects} modules={ownedModules} conference={editingConference} onSave={update} />
     </Card>
   );
 }

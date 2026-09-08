@@ -1,4 +1,4 @@
-import { useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import { CalendarDays, X } from "lucide-react";
 
 import { Input } from "@/components/ui/input";
@@ -8,6 +8,8 @@ interface DatePickerInputProps {
   label: string;
   value: string;
   onChange: (value: string) => void;
+  /** Lets the user type a DD/MM/YYYY date directly, instead of only picking one from the calendar. */
+  allowTyped?: boolean;
 }
 
 function formatDisplayDate(iso: string) {
@@ -16,8 +18,25 @@ function formatDisplayDate(iso: string) {
   return `${day}/${month}/${year}`;
 }
 
-export function DatePickerInput({ id, label, value, onChange }: DatePickerInputProps) {
+function parseDisplayDate(display: string): string | null {
+  const match = /^(\d{2})\/(\d{2})\/(\d{4})$/.exec(display.trim());
+  if (!match) return null;
+  const [, day, month, year] = match;
+  const date = new Date(Number(year), Number(month) - 1, Number(day));
+  const isRealDate =
+    date.getFullYear() === Number(year) &&
+    date.getMonth() === Number(month) - 1 &&
+    date.getDate() === Number(day);
+  return isRealDate ? `${year}-${month}-${day}` : null;
+}
+
+export function DatePickerInput({ id, label, value, onChange, allowTyped }: DatePickerInputProps) {
   const pickerRef = useRef<HTMLInputElement>(null);
+  const [typedText, setTypedText] = useState(formatDisplayDate(value));
+
+  useEffect(() => {
+    setTypedText(formatDisplayDate(value));
+  }, [value]);
 
   function openPicker() {
     const picker = pickerRef.current;
@@ -30,24 +49,52 @@ export function DatePickerInput({ id, label, value, onChange }: DatePickerInputP
     }
   }
 
+  function handleTypedChange(next: string) {
+    setTypedText(next);
+    if (next.trim() === "") {
+      onChange("");
+      return;
+    }
+    const iso = parseDisplayDate(next);
+    if (iso) onChange(iso);
+  }
+
+  function handleTypedBlur() {
+    if (parseDisplayDate(typedText) === null && typedText.trim() !== "") {
+      setTypedText(formatDisplayDate(value));
+    }
+  }
+
   return (
     <div className="relative">
-      <Input
-        id={id}
-        type="text"
-        inputMode="none"
-        value={formatDisplayDate(value)}
-        placeholder="DD/MM/YYYY"
-        onClick={openPicker}
-        onKeyDown={(event) => {
-          if (event.key === "Enter" || event.key === " ") {
-            event.preventDefault();
-            openPicker();
-          }
-        }}
-        readOnly
-        className="cursor-pointer pr-16 tabular-nums"
-      />
+      {allowTyped ? (
+        <Input
+          id={id}
+          type="text"
+          value={typedText}
+          placeholder="DD/MM/YYYY"
+          onChange={(event) => handleTypedChange(event.target.value)}
+          onBlur={handleTypedBlur}
+          className="pr-16 tabular-nums"
+        />
+      ) : (
+        <Input
+          id={id}
+          type="text"
+          inputMode="none"
+          value={formatDisplayDate(value)}
+          placeholder="DD/MM/YYYY"
+          onClick={openPicker}
+          onKeyDown={(event) => {
+            if (event.key === "Enter" || event.key === " ") {
+              event.preventDefault();
+              openPicker();
+            }
+          }}
+          readOnly
+          className="cursor-pointer pr-16 tabular-nums"
+        />
+      )}
 
       {value ? (
         <button

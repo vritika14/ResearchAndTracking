@@ -64,7 +64,7 @@ export class EnumRepository {
         ),
       )
       .orderBy(asc(enumTable.sortOrder));
-  
+
     const customStages = await this.drizzle.db
       .select()
       .from(enumTable)
@@ -75,7 +75,7 @@ export class EnumRepository {
         ),
       )
       .orderBy(asc(enumTable.sortOrder));
-  
+
     return { baseStages, customStages };
   }
 

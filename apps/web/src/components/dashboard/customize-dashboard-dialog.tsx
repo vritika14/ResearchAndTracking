@@ -75,87 +75,85 @@ export function CustomizeDashboardDialog<T extends string>({
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <SlidersHorizontal className="h-5 w-5" />
-            Customize dashboard
+            Customise dashboard
           </DialogTitle>
           <DialogDescription>
-            Choose which insights and tables are visible, then arrange each section to fit your workflow.
+            Choose which insights and tables are visible, then drag or reorder any widget anywhere on the dashboard.
           </DialogDescription>
         </DialogHeader>
 
-        <div className="max-h-[65vh] space-y-5 overflow-y-auto pr-1">
-          {(["Insights", "Tables"] as const).map((group) => {
-            const groupedWidgets = widgets.filter((widget) => widget.group === group);
-            return (
-            <section key={group} aria-labelledby={`dashboard-${group.toLowerCase()}-heading`}>
-              <div className="mb-2 flex items-center justify-between">
-                <h3 id={`dashboard-${group.toLowerCase()}-heading`} className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-                  {group}
-                </h3>
-                <span className="text-xs tabular-nums text-muted-foreground">
-                  {groupedWidgets.filter((widget) => visibleWidgets.has(widget.id)).length}/{groupedWidgets.length} visible
-                </span>
-              </div>
-              <div className="grid gap-2">
-          {groupedWidgets.map((widget, index) => (
-            <div
-              key={widget.id}
-              draggable
-              onDragStart={(event) => handleDragStart(event, widget.id)}
-              onDragOver={(event) => handleDragOver(event, widget.id)}
-              onDrop={(event) => handleDrop(event, widget.id)}
-              onDragEnd={handleDragEnd}
-              className={cn(
-                "flex cursor-grab items-center gap-3 rounded-lg border border-border bg-muted/20 p-3 transition-colors active:cursor-grabbing",
-                draggedId === widget.id && "opacity-45",
-                dragOverId === widget.id && "border-primary bg-primary/5 ring-2 ring-primary/30",
-              )}
-            >
-              <GripVertical
-                className="h-4 w-4 shrink-0 text-muted-foreground"
-                aria-hidden="true"
-              />
-              <label className="flex min-w-0 flex-1 cursor-pointer items-start gap-3">
-                <input
-                  type="checkbox"
-                  checked={visibleWidgets.has(widget.id)}
-                  onChange={() => onToggle(widget.id)}
-                  className="mt-1 h-4 w-4 shrink-0 accent-primary"
+        <div className="max-h-[65vh] space-y-2 overflow-y-auto pr-1">
+          <div className="mb-1 flex items-center justify-between">
+            <h3 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+              Dashboard widgets
+            </h3>
+            <span className="text-xs tabular-nums text-muted-foreground">
+              {widgets.filter((widget) => visibleWidgets.has(widget.id)).length}/{widgets.length} visible
+            </span>
+          </div>
+          <div className="grid gap-2">
+            {widgets.map((widget, index) => (
+              <div
+                key={widget.id}
+                draggable
+                onDragStart={(event) => handleDragStart(event, widget.id)}
+                onDragOver={(event) => handleDragOver(event, widget.id)}
+                onDrop={(event) => handleDrop(event, widget.id)}
+                onDragEnd={handleDragEnd}
+                className={cn(
+                  "flex cursor-grab items-center gap-3 rounded-lg border border-border bg-muted/20 p-3 transition-colors active:cursor-grabbing",
+                  draggedId === widget.id && "opacity-45",
+                  dragOverId === widget.id && "border-primary bg-primary/5 ring-2 ring-primary/30",
+                )}
+              >
+                <GripVertical
+                  className="h-4 w-4 shrink-0 text-muted-foreground"
+                  aria-hidden="true"
                 />
-                <span className="min-w-0">
-                  <span className="block text-sm font-medium">{widget.label}</span>
-                  <span className="block text-xs text-muted-foreground">
-                    {widget.description}
+                <label className="flex min-w-0 flex-1 cursor-pointer items-start gap-3">
+                  <input
+                    type="checkbox"
+                    checked={visibleWidgets.has(widget.id)}
+                    onChange={() => onToggle(widget.id)}
+                    className="mt-1 h-4 w-4 shrink-0 accent-primary"
+                  />
+                  <span className="min-w-0">
+                    <span className="flex items-center gap-2">
+                      <span className="text-sm font-medium">{widget.label}</span>
+                      <span className="shrink-0 rounded-full border border-border bg-background px-1.5 py-0.5 text-[10px] font-medium uppercase tracking-wide text-muted-foreground">
+                        {widget.group === "Insights" ? "Insight" : "Table"}
+                      </span>
+                    </span>
+                    <span className="block text-xs text-muted-foreground">
+                      {widget.description}
+                    </span>
                   </span>
-                </span>
-              </label>
-              <div className="flex shrink-0 gap-1">
-                <Button
-                  type="button"
-                  variant="outline"
-                  size="icon"
-                  disabled={index === 0}
-                  aria-label={`Move ${widget.label} up`}
-                  onClick={() => onMove(widget.id, "up")}
-                >
-                  <ChevronUp />
-                </Button>
-                <Button
-                  type="button"
-                  variant="outline"
-                  size="icon"
-                  disabled={index === groupedWidgets.length - 1}
-                  aria-label={`Move ${widget.label} down`}
-                  onClick={() => onMove(widget.id, "down")}
-                >
-                  <ChevronDown />
-                </Button>
+                </label>
+                <div className="flex shrink-0 gap-1">
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="icon"
+                    disabled={index === 0}
+                    aria-label={`Move ${widget.label} up`}
+                    onClick={() => onMove(widget.id, "up")}
+                  >
+                    <ChevronUp />
+                  </Button>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="icon"
+                    disabled={index === widgets.length - 1}
+                    aria-label={`Move ${widget.label} down`}
+                    onClick={() => onMove(widget.id, "down")}
+                  >
+                    <ChevronDown />
+                  </Button>
+                </div>
               </div>
-            </div>
-          ))}
-              </div>
-            </section>
-            );
-          })}
+            ))}
+          </div>
         </div>
 
         <DialogFooter className="border-t pt-4 sm:justify-between">

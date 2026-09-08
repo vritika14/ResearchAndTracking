@@ -1,5 +1,5 @@
 import { useMemo, useState } from "react";
-import { ChevronDown, ListTodo, Pencil, Trash2 } from "lucide-react";
+import { ArrowDown, ArrowUp, ArrowUpDown, ListTodo, Pencil, Trash2 } from "lucide-react";
 import { Link } from "react-router-dom";
 
 import { apiClient } from "@/api/client";
@@ -100,6 +100,7 @@ interface SortableHeaderProps {
 
 function SortableHeader({ label, column, sortColumn, sortDirection, onSort }: SortableHeaderProps) {
   const active = column === sortColumn;
+  const Icon = active ? (sortDirection === "asc" ? ArrowUp : ArrowDown) : ArrowUpDown;
   return (
     <button
       type="button"
@@ -111,13 +112,7 @@ function SortableHeader({ label, column, sortColumn, sortDirection, onSort }: So
       )}
     >
       {label}
-      <ChevronDown
-        className={cn(
-          "h-3 w-3 transition-transform",
-          active ? "text-primary" : "opacity-30",
-          active && sortDirection === "desc" && "rotate-180",
-        )}
-      />
+      <Icon className={cn("h-3 w-3", active ? "text-primary" : "opacity-30")} />
     </button>
   );
 }

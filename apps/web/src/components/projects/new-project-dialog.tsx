@@ -266,7 +266,7 @@ export function NewProjectDialog({
               />
             </FormField>
 
-            <FormField label="Total budget" htmlFor="project-budget">
+            <FormField label="Budget" htmlFor="project-budget">
               <Input
                 id="project-budget"
                 type="number"

@@ -1,5 +1,5 @@
 import { useMemo, useState } from "react";
-import { ChevronRight, FolderKanban, Pencil, Trash2, UserPlus } from "lucide-react";
+import { ArrowDown, ArrowUp, ArrowUpDown, ChevronRight, FolderKanban, Pencil, Trash2, UserPlus } from "lucide-react";
 import { Link } from "react-router-dom";
 
 import {
@@ -47,11 +47,9 @@ import { useColumnVisibility } from "@/hooks/use-column-visibility";
 
 const STATUS_FILTERS = ["All", "Active", "Review", "Stalled", "Complete"] as const;
 const ROLE_FILTERS = ["All roles", "owner", "collaborator", "supervisor", "lead"] as const;
-const SORT_OPTIONS = ["Due date", "Stage", "Tasks outstanding"] as const;
 
 type StatusFilter = (typeof STATUS_FILTERS)[number];
 type RoleFilter = (typeof ROLE_FILTERS)[number];
-type SortOption = (typeof SORT_OPTIONS)[number];
 
 const PROJECT_COLUMNS = [
   { id: "project", label: "Project", width: "minmax(280px,2.2fr)" },
@@ -64,6 +62,12 @@ const PROJECT_COLUMNS = [
   { id: "scheduled", label: "Scheduled For", width: "110px" },
   { id: "due", label: "Due Date", width: "110px" },
 ] as const;
+
+type SortColumn = (typeof PROJECT_COLUMNS)[number]["id"];
+type SortDirection = "asc" | "desc";
+
+const PROJECT_STATUS_ORDER: Record<string, number> = { Active: 0, Review: 1, Stalled: 2, Complete: 3 };
+const PROJECT_IMPORTANCE_ORDER: Record<string, number> = { Low: 0, Medium: 1, High: 2, Critical: 3 };
 
 function priorityPillClass(priority: string | null) {
   switch (priority) {
@@ -105,20 +109,21 @@ function rolePillClass(role: string | null) {
   }
 }
 
-/** Selected = solid blue. Inactive = white pill, light-grey border. */
-function controlPillClass(selected: boolean) {
-  return cn(
-    "rounded-full border px-3 py-1 text-xs font-medium transition-colors",
-    selected
-      ? "border-primary bg-primary text-primary-foreground"
-      : "border-border bg-background text-muted-foreground hover:bg-accent hover:text-accent-foreground",
-  );
-}
-
 function formatDate(iso: string | null) {
   if (!iso) return "—";
   const [year, month, day] = iso.split("-");
   return `${day}/${month}/${year}`;
+}
+
+function formatCurrency(value: string | null) {
+  if (!value) return "—";
+  const amount = Number(value);
+  if (Number.isNaN(amount)) return "—";
+  return new Intl.NumberFormat("en-AU", {
+    style: "currency",
+    currency: "AUD",
+    maximumFractionDigits: 0,
+  }).format(amount);
 }
 
 function ProgressCell({ completed, total }: { completed: number; total: number }) {
@@ -149,7 +154,7 @@ function ProjectOverviewDetails({
     { label: "Modules", value: String(moduleCount) },
     { label: "Tasks", value: String(taskCount) },
     { label: "Notes", value: String(noteCount) },
-    { label: "Total budget", value: project.totalBudget ? `$${project.totalBudget}` : "—" },
+    { label: "Budget", value: formatCurrency(project.totalBudget) },
     { label: "Target journal(s)", value: project.targetJournals ?? "—" },
   ];
 
@@ -178,24 +183,31 @@ function isOverdue(project: ApiProject) {
   return project.dueDate < new Date().toISOString().slice(0, 10);
 }
 
-function sortProjects(rows: ApiProject[], sortBy: SortOption, stageOrder: Map<string, number>) {
-  const sorted = [...rows];
-  switch (sortBy) {
-    case "Due date":
-      sorted.sort((a, b) => (a.dueDate ?? "").localeCompare(b.dueDate ?? ""));
-      break;
-    case "Stage":
-      sorted.sort(
-        (a, b) =>
-          (stageOrder.get(a.pipelineStage ?? "") ?? Number.MAX_SAFE_INTEGER) -
-          (stageOrder.get(b.pipelineStage ?? "") ?? Number.MAX_SAFE_INTEGER),
-      );
-      break;
-    case "Tasks outstanding":
-      // Handled by the caller, which has live task counts per project.
-      break;
-  }
-  return sorted;
+interface SortableHeaderProps {
+  label: string;
+  column: SortColumn;
+  sortColumn: SortColumn;
+  sortDirection: SortDirection;
+  onSort: (column: SortColumn) => void;
+}
+
+function SortableHeader({ label, column, sortColumn, sortDirection, onSort }: SortableHeaderProps) {
+  const active = column === sortColumn;
+  const Icon = active ? (sortDirection === "asc" ? ArrowUp : ArrowDown) : ArrowUpDown;
+  return (
+    <button
+      type="button"
+      onClick={() => onSort(column)}
+      aria-label={`Sort by ${label}`}
+      className={cn(
+        "flex items-center gap-1 text-left transition-colors",
+        active ? "text-foreground" : "hover:text-foreground",
+      )}
+    >
+      {label}
+      <Icon className={cn("h-3 w-3", active ? "text-primary" : "opacity-30")} />
+    </button>
+  );
 }
 
 export default function ProjectsPage() {
@@ -234,7 +246,8 @@ export default function ProjectsPage() {
   const [search, setSearch] = useState("");
   const [status, setStatus] = useState<StatusFilter>("All");
   const [role, setRole] = useState<RoleFilter>("All roles");
-  const [sortBy, setSortBy] = useState<SortOption>("Due date");
+  const [sortColumn, setSortColumn] = useState<SortColumn>("due");
+  const [sortDirection, setSortDirection] = useState<SortDirection>("asc");
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const columns = useColumnVisibility(
     PROJECT_COLUMNS.map((column) => column.id),
@@ -280,6 +293,49 @@ export default function ProjectsPage() {
     return counts;
   }, [modules]);
 
+  function handleSort(column: SortColumn) {
+    if (column === sortColumn) {
+      setSortDirection((prev) => (prev === "asc" ? "desc" : "asc"));
+    } else {
+      setSortColumn(column);
+      setSortDirection("asc");
+    }
+  }
+
+  function compareProjects(a: ApiProject, b: ApiProject, column: SortColumn) {
+    switch (column) {
+      case "project":
+        return a.title.localeCompare(b.title);
+      case "role":
+        return (a.role ?? "").localeCompare(b.role ?? "");
+      case "importance":
+        return (
+          (PROJECT_IMPORTANCE_ORDER[a.importance ?? ""] ?? 99) -
+          (PROJECT_IMPORTANCE_ORDER[b.importance ?? ""] ?? 99)
+        );
+      case "status":
+        return (PROJECT_STATUS_ORDER[a.status ?? ""] ?? 99) - (PROJECT_STATUS_ORDER[b.status ?? ""] ?? 99);
+      case "stage":
+        return (
+          (stageOrder.get(a.pipelineStage ?? "") ?? Number.MAX_SAFE_INTEGER) -
+          (stageOrder.get(b.pipelineStage ?? "") ?? Number.MAX_SAFE_INTEGER)
+        );
+      case "progress": {
+        const aCounts = taskCountByProject.get(a.id) ?? { completed: 0, total: 0 };
+        const bCounts = taskCountByProject.get(b.id) ?? { completed: 0, total: 0 };
+        const aPercent = aCounts.total > 0 ? aCounts.completed / aCounts.total : 0;
+        const bPercent = bCounts.total > 0 ? bCounts.completed / bCounts.total : 0;
+        return aPercent - bPercent;
+      }
+      case "notes":
+        return (noteCountByProject.get(a.id) ?? 0) - (noteCountByProject.get(b.id) ?? 0);
+      case "scheduled":
+        return (a.scheduledFor ?? "").localeCompare(b.scheduledFor ?? "");
+      case "due":
+        return (a.dueDate ?? "").localeCompare(b.dueDate ?? "");
+    }
+  }
+
   const visibleProjects = useMemo(() => {
     const rows = projectsQuery.data?.data ?? [];
     const query = search.trim().toLowerCase();
@@ -295,15 +351,21 @@ export default function ProjectsPage() {
       }
       return true;
     });
-    if (sortBy === "Tasks outstanding") {
-      return [...filtered].sort((a, b) => {
-        const aCounts = taskCountByProject.get(a.id) ?? { completed: 0, total: 0 };
-        const bCounts = taskCountByProject.get(b.id) ?? { completed: 0, total: 0 };
-        return (bCounts.total - bCounts.completed) - (aCounts.total - aCounts.completed);
-      });
-    }
-    return sortProjects(filtered, sortBy, stageOrder);
-  }, [projectsQuery.data, search, status, role, sortBy, stageOrder, taskCountByProject]);
+    return [...filtered].sort(
+      (a, b) => compareProjects(a, b, sortColumn) * (sortDirection === "asc" ? 1 : -1),
+    );
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [
+    projectsQuery.data,
+    search,
+    status,
+    role,
+    sortColumn,
+    sortDirection,
+    stageOrder,
+    taskCountByProject,
+    noteCountByProject,
+  ]);
 
   const hasActiveFilters = search !== "" || status !== "All" || role !== "All roles";
 
@@ -363,7 +425,7 @@ export default function ProjectsPage() {
         icon={FolderKanban}
         tone="blue"
         eyebrow="Workflows"
-        title="Projects"
+        title="Major Projects"
         description="Track research work by stage, dates, collaborators and outstanding tasks."
         actions={<Button onClick={() => setIsNewProjectOpen(true)}>New Project</Button>}
       />
@@ -447,24 +509,6 @@ export default function ProjectsPage() {
             </button>
           ) : null}
         </div>
-        <div className="flex flex-col gap-2 lg:items-end">
-          <span className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-            Sort by
-          </span>
-          <div className="flex flex-wrap gap-2">
-            {SORT_OPTIONS.map((option) => (
-              <button
-                key={option}
-                type="button"
-                onClick={() => setSortBy(option)}
-                aria-pressed={option === sortBy}
-                className={controlPillClass(option === sortBy)}
-              >
-                {option}
-              </button>
-            ))}
-          </div>
-        </div>
       </div>
 
       <div className="overflow-x-auto rounded-xl border border-border/70 bg-muted/20 p-3 shadow-sm sm:p-4">
@@ -476,7 +520,14 @@ export default function ProjectsPage() {
             {PROJECT_COLUMNS.filter((column) =>
               columns.visibleColumns.has(column.id),
             ).map((column) => (
-              <span key={column.id}>{column.label}</span>
+              <SortableHeader
+                key={column.id}
+                label={column.label}
+                column={column.id}
+                sortColumn={sortColumn}
+                sortDirection={sortDirection}
+                onSort={handleSort}
+              />
             ))}
           </div>
 

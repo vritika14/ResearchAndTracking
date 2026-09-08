@@ -58,6 +58,19 @@ vi.mock("@/api/hooks", () => ({
     error: queryState.tasksError,
     refetch: queryState.tasksRefetch,
   }),
+  useModules: () => ({
+    data: [],
+    isPending: false,
+    isError: false,
+    error: null,
+    refetch: vi.fn(),
+  }),
+  useMe: () => ({ data: { id: "user-1" }, isPending: false }),
+  useCreateProject: () => ({ mutateAsync: vi.fn(), isPending: false }),
+  useCreateTask: () => ({ mutateAsync: vi.fn(), isPending: false }),
+  useCreateConference: () => ({ mutateAsync: vi.fn(), isPending: false }),
+  useTrackEvent: () => vi.fn(),
+  useUserSearch: () => ({ data: [], isPending: false, isError: false }),
 }));
 
 vi.mock("@/components/dashboard/priority-tasks-table", () => ({
@@ -111,42 +124,54 @@ describe("DashboardPage", () => {
     expect(queryState.tasksRefetch).toHaveBeenCalledOnce();
   });
 
-  it("shows live pipeline and task-health insight charts", () => {
+  it("shows only the pipeline and conference tables by default, with insight cards hidden", () => {
     render(
       <MemoryRouter>
         <DashboardPage />
       </MemoryRouter>,
     );
 
-    expect(screen.getByRole("heading", { name: "Pipeline distribution" })).toBeInTheDocument();
+    expect(screen.getByTestId("dashboard-table-pipeline")).toBeInTheDocument();
+    expect(screen.getByTestId("dashboard-table-conferences")).toBeInTheDocument();
+    expect(screen.queryByTestId("dashboard-table-tasks")).not.toBeInTheDocument();
+    expect(screen.queryByRole("heading", { name: "Pipeline distribution" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("heading", { name: "Task health" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("heading", { name: "Priority workload" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("heading", { name: "Project progress" })).not.toBeInTheDocument();
+  });
+
+  it("adds a hidden-by-default insight card back via Customise dashboard", () => {
+    render(
+      <MemoryRouter>
+        <DashboardPage />
+      </MemoryRouter>,
+    );
+
+    fireEvent.click(screen.getByRole("button", { name: "Customise dashboard" }));
+    fireEvent.click(screen.getByRole("checkbox", { name: /Task health/ }));
+    fireEvent.click(screen.getByRole("button", { name: "Done" }));
+
     expect(screen.getByRole("heading", { name: "Task health" })).toBeInTheDocument();
-    expect(screen.getByRole("heading", { name: "Priority workload" })).toBeInTheDocument();
-    expect(screen.getByRole("heading", { name: "Project progress" })).toBeInTheDocument();
     expect(screen.getByRole("img", { name: /tasks completed/ })).toBeInTheDocument();
   });
 
-  it("customizes insights and tables and preserves the layout", () => {
+  it("customises widget visibility and preserves the layout across remounts", () => {
     const view = render(
       <MemoryRouter>
         <DashboardPage />
       </MemoryRouter>,
     );
 
-    fireEvent.click(screen.getByRole("button", { name: "Customize dashboard" }));
-    expect(screen.getByRole("heading", { name: "Insights" })).toBeInTheDocument();
-    expect(screen.getByRole("heading", { name: "Tables" })).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "Customise dashboard" }));
+    expect(screen.getByRole("heading", { name: "Dashboard widgets" })).toBeInTheDocument();
     fireEvent.click(screen.getByRole("checkbox", { name: /Task health/ }));
-    fireEvent.click(screen.getByRole("checkbox", { name: /Tasks to be done/ }));
-    fireEvent.click(
-      screen.getByRole("button", { name: "Move Pipeline project overview up" }),
-    );
+    fireEvent.click(screen.getByRole("checkbox", { name: /Upcoming conference submissions/ }));
     fireEvent.click(screen.getByRole("button", { name: "Done" }));
 
-    expect(screen.getByRole("heading", { name: "Task health" }).closest("div.hidden")).not.toBeNull();
-    expect(screen.queryByTestId("dashboard-table-tasks")).not.toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "Task health" })).toBeInTheDocument();
+    expect(screen.queryByTestId("dashboard-table-conferences")).not.toBeInTheDocument();
     expect(screen.getAllByTestId(/dashboard-table-/).map((table) => table.textContent)).toEqual([
       "Pipeline table",
-      "Conferences table",
     ]);
 
     view.unmount();
@@ -156,11 +181,10 @@ describe("DashboardPage", () => {
       </MemoryRouter>,
     );
 
-    expect(screen.getByRole("heading", { name: "Task health" }).closest("div.hidden")).not.toBeNull();
-    expect(screen.queryByTestId("dashboard-table-tasks")).not.toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "Task health" })).toBeInTheDocument();
+    expect(screen.queryByTestId("dashboard-table-conferences")).not.toBeInTheDocument();
     expect(screen.getAllByTestId(/dashboard-table-/).map((table) => table.textContent)).toEqual([
       "Pipeline table",
-      "Conferences table",
     ]);
   });
 
@@ -195,7 +219,7 @@ describe("DashboardPage", () => {
       </MemoryRouter>,
     );
 
-    fireEvent.click(screen.getByRole("button", { name: "Customize dashboard" }));
+    fireEvent.click(screen.getByRole("button", { name: "Customise dashboard" }));
     fireEvent.click(screen.getByRole("checkbox", { name: /Task health/ }));
 
     await waitFor(() => expect(updateDashboardLayout).toHaveBeenCalledTimes(1));

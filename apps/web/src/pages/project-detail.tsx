@@ -12,21 +12,27 @@ import {
   FolderKanban,
   GripVertical,
   Pencil,
+  Plus,
   Save,
   Trash2,
+  Unlink,
   Users,
   Workflow,
   X,
 } from "lucide-react";
 import {
   Link,
+  useLocation,
   useNavigate,
   useParams,
   useSearchParams,
 } from "react-router-dom";
 
+import { apiClient } from "@/api/client";
 import {
   useArchiveMyProject,
+  useCreateModule,
+  useCreateTask,
   useCurrentWorkspace,
   useMe,
   useMembers,
@@ -35,19 +41,25 @@ import {
   useNotes,
   useMyProjectPipelineStages,
   useTasks,
+  useTrackEvent,
+  useUpdateModule,
   useUpdateMyProject,
+  useUpdateNote,
+  useUpdateTask,
   type ApiModule,
   type ApiNote,
   type ApiProject,
   type ApiPipelineStage,
   type ApiTask,
 } from "@/api/hooks";
+import { ModuleDialog, type ModuleFormInput } from "@/components/modules/module-dialog";
 import { ProjectCollaborators } from "@/components/projects/project-collaborators";
 import { BackButton } from "@/components/shared/back-button";
 import { EmptyState } from "@/components/shared/empty-state";
 import { ErrorState } from "@/components/shared/error-state";
 import { LoadingState } from "@/components/shared/loading-state";
 import { StatusBadge } from "@/components/shared/status-badge";
+import { TaskDialog, type TaskFormInput } from "@/components/tasks/task-dialog";
 import { PageHeading } from "@/components/typography/heading";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -143,14 +155,28 @@ function FormField({
   );
 }
 
-function ProjectModulesDetails({ modules }: { modules: ApiModule[] }) {
+function ProjectModulesDetails({
+  modules,
+  onAddModule,
+  onUnlinkModule,
+}: {
+  modules: ApiModule[];
+  onAddModule: () => void;
+  onUnlinkModule: (module: ApiModule) => void;
+}) {
   return (
     <Card>
       <CardHeader className="flex-row items-center justify-between gap-3 space-y-0">
         <CardTitle>Modules ({modules.length})</CardTitle>
-        <Button asChild variant="ghost" size="sm">
-          <Link to="/modules">View all</Link>
-        </Button>
+        <div className="flex items-center gap-2">
+          <Button variant="outline" size="sm" onClick={onAddModule}>
+            <Plus />
+            Add module
+          </Button>
+          <Button asChild variant="ghost" size="sm">
+            <Link to="/modules">View all</Link>
+          </Button>
+        </div>
       </CardHeader>
       <CardContent>
         {modules.length === 0 ? (
@@ -160,25 +186,38 @@ function ProjectModulesDetails({ modules }: { modules: ApiModule[] }) {
         ) : (
           <div className="grid gap-2">
             {modules.map((module) => (
-              <Link
+              <div
                 key={module.id}
-                to={`/modules/${module.id}`}
-                className="rounded-md border border-border bg-card p-3 transition-colors hover:border-primary/40 hover:bg-muted/40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                className="flex items-start gap-1 rounded-md border border-border bg-card p-3 transition-colors hover:border-primary/40 hover:bg-muted/40"
               >
-                <div className="flex flex-wrap items-start justify-between gap-2">
-                  <div className="min-w-0">
-                    {module.displayId ? (
-                      <span className="block font-mono text-[10px] text-muted-foreground">
-                        {module.displayId}
+                <Link
+                  to={`/modules/${module.id}`}
+                  className="min-w-0 flex-1 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                >
+                  <div className="flex flex-wrap items-start justify-between gap-2">
+                    <div className="min-w-0">
+                      {module.displayId ? (
+                        <span className="block font-mono text-[10px] text-muted-foreground">
+                          {module.displayId}
+                        </span>
+                      ) : null}
+                      <span className="block text-sm font-semibold">
+                        {module.title}
                       </span>
-                    ) : null}
-                    <span className="block text-sm font-semibold">
-                      {module.title}
-                    </span>
+                    </div>
+                    <StatusBadge status={module.status ?? "—"} />
                   </div>
-                  <StatusBadge status={module.status ?? "—"} />
-                </div>
-              </Link>
+                </Link>
+                <button
+                  type="button"
+                  onClick={() => onUnlinkModule(module)}
+                  aria-label={`Unlink ${module.title} from this project`}
+                  title="Unlink"
+                  className="shrink-0 rounded-md p-1.5 text-muted-foreground transition-colors hover:bg-destructive/10 hover:text-destructive focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                >
+                  <Unlink className="h-3.5 w-3.5" />
+                </button>
+              </div>
             ))}
           </div>
         )}
@@ -187,14 +226,28 @@ function ProjectModulesDetails({ modules }: { modules: ApiModule[] }) {
   );
 }
 
-function ProjectTasksDetails({ tasks }: { tasks: ApiTask[] }) {
+function ProjectTasksDetails({
+  tasks,
+  onAddTask,
+  onUnlinkTask,
+}: {
+  tasks: ApiTask[];
+  onAddTask: () => void;
+  onUnlinkTask: (task: ApiTask) => void;
+}) {
   return (
     <Card>
       <CardHeader className="flex-row items-center justify-between gap-3 space-y-0">
         <CardTitle>Tasks ({tasks.length})</CardTitle>
-        <Button asChild variant="ghost" size="sm">
-          <Link to="/tasks">View all</Link>
-        </Button>
+        <div className="flex items-center gap-2">
+          <Button variant="outline" size="sm" onClick={onAddTask}>
+            <Plus />
+            Add task
+          </Button>
+          <Button asChild variant="ghost" size="sm">
+            <Link to="/tasks">View all</Link>
+          </Button>
+        </div>
       </CardHeader>
       <CardContent>
         {tasks.length === 0 ? (
@@ -204,31 +257,44 @@ function ProjectTasksDetails({ tasks }: { tasks: ApiTask[] }) {
         ) : (
           <div className="grid gap-2">
             {tasks.map((task) => (
-              <Link
+              <div
                 key={task.id}
-                to={`/tasks/${task.id}`}
-                className="rounded-md border border-border bg-card p-3 transition-colors hover:border-primary/40 hover:bg-muted/40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                className="flex items-start gap-1 rounded-md border border-border bg-card p-3 transition-colors hover:border-primary/40 hover:bg-muted/40"
               >
-                <div className="flex flex-wrap items-start justify-between gap-2">
-                  <div className="min-w-0">
-                    {task.displayId ? (
-                      <span className="block font-mono text-[10px] text-muted-foreground">
-                        {task.displayId}
+                <Link
+                  to={`/tasks/${task.id}`}
+                  className="min-w-0 flex-1 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                >
+                  <div className="flex flex-wrap items-start justify-between gap-2">
+                    <div className="min-w-0">
+                      {task.displayId ? (
+                        <span className="block font-mono text-[10px] text-muted-foreground">
+                          {task.displayId}
+                        </span>
+                      ) : null}
+                      <span className="block text-sm font-semibold">
+                        {task.title}
                       </span>
-                    ) : null}
-                    <span className="block text-sm font-semibold">
-                      {task.title}
-                    </span>
+                    </div>
+                    <div className="flex flex-wrap gap-1">
+                      <StatusBadge status={task.status ?? "—"} />
+                      <StatusBadge status={task.priority ?? "—"} />
+                    </div>
                   </div>
-                  <div className="flex flex-wrap gap-1">
-                    <StatusBadge status={task.status ?? "—"} />
-                    <StatusBadge status={task.priority ?? "—"} />
+                  <div className="mt-2 flex flex-wrap gap-x-4 gap-y-1 text-xs text-muted-foreground">
+                    <span>Due {formatDate(task.dueDate)}</span>
                   </div>
-                </div>
-                <div className="mt-2 flex flex-wrap gap-x-4 gap-y-1 text-xs text-muted-foreground">
-                  <span>Due {formatDate(task.dueDate)}</span>
-                </div>
-              </Link>
+                </Link>
+                <button
+                  type="button"
+                  onClick={() => onUnlinkTask(task)}
+                  aria-label={`Unlink ${task.title} from this project`}
+                  title="Unlink"
+                  className="shrink-0 rounded-md p-1.5 text-muted-foreground transition-colors hover:bg-destructive/10 hover:text-destructive focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                >
+                  <Unlink className="h-3.5 w-3.5" />
+                </button>
+              </div>
             ))}
           </div>
         )}
@@ -237,14 +303,30 @@ function ProjectTasksDetails({ tasks }: { tasks: ApiTask[] }) {
   );
 }
 
-function ProjectNotesDetails({ notes }: { notes: ApiNote[] }) {
+function ProjectNotesDetails({
+  notes,
+  projectId,
+  onUnlinkNote,
+}: {
+  notes: ApiNote[];
+  projectId: string;
+  onUnlinkNote: (note: ApiNote) => void;
+}) {
   return (
     <Card>
       <CardHeader className="flex-row items-center justify-between gap-3 space-y-0">
         <CardTitle>Notes ({notes.length})</CardTitle>
-        <Button asChild variant="ghost" size="sm">
-          <Link to="/daily-notes">View all</Link>
-        </Button>
+        <div className="flex items-center gap-2">
+          <Button asChild variant="outline" size="sm">
+            <Link to={`/daily-notes?projectId=${projectId}&new=true`}>
+              <Plus />
+              Add note
+            </Link>
+          </Button>
+          <Button asChild variant="ghost" size="sm">
+            <Link to="/daily-notes">View all</Link>
+          </Button>
+        </div>
       </CardHeader>
       <CardContent>
         {notes.length === 0 ? (
@@ -254,18 +336,31 @@ function ProjectNotesDetails({ notes }: { notes: ApiNote[] }) {
         ) : (
           <div className="grid gap-2">
             {notes.map((note) => (
-              <Link
+              <div
                 key={note.id}
-                to={`/daily-notes/${note.id}`}
-                className="rounded-md border border-border bg-card p-3 transition-colors hover:border-primary/40 hover:bg-muted/40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                className="flex items-start gap-1 rounded-md border border-border bg-card p-3 transition-colors hover:border-primary/40 hover:bg-muted/40"
               >
-                <span className="text-sm font-semibold">{note.title}</span>
-                {note.content ? (
-                  <p className="mt-1 line-clamp-2 text-xs text-muted-foreground">
-                    {note.content}
-                  </p>
-                ) : null}
-              </Link>
+                <Link
+                  to={`/daily-notes/${note.id}`}
+                  className="min-w-0 flex-1 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                >
+                  <span className="text-sm font-semibold">{note.title}</span>
+                  {note.content ? (
+                    <p className="mt-1 line-clamp-2 text-xs text-muted-foreground">
+                      {note.content}
+                    </p>
+                  ) : null}
+                </Link>
+                <button
+                  type="button"
+                  onClick={() => onUnlinkNote(note)}
+                  aria-label={`Unlink ${note.title} from this project`}
+                  title="Unlink"
+                  className="shrink-0 rounded-md p-1.5 text-muted-foreground transition-colors hover:bg-destructive/10 hover:text-destructive focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                >
+                  <Unlink className="h-3.5 w-3.5" />
+                </button>
+              </div>
             ))}
           </div>
         )}
@@ -480,6 +575,7 @@ function ProjectPipeline({
 export default function ProjectDetailPage() {
   const { projectId = "" } = useParams();
   const navigate = useNavigate();
+  const location = useLocation();
   const [searchParams] = useSearchParams();
   const workspace = useCurrentWorkspace();
   const tenantId = workspace.data?.id ?? "";
@@ -499,7 +595,15 @@ export default function ProjectDetailPage() {
   const me = useMe();
   const updateProject = useUpdateMyProject();
   const archiveProject = useArchiveMyProject();
+  const createTask = useCreateTask(tenantId);
+  const createModule = useCreateModule(tenantId);
+  const updateModule = useUpdateModule(tenantId);
+  const updateTask = useUpdateTask(tenantId);
+  const updateNote = useUpdateNote(tenantId);
+  const trackEvent = useTrackEvent(tenantId);
   const [isCollaboratorsVisible, setIsCollaboratorsVisible] = useState(false);
+  const [isAddTaskOpen, setIsAddTaskOpen] = useState(false);
+  const [isAddModuleOpen, setIsAddModuleOpen] = useState(false);
 
   const project = projectQuery.data;
   const sameTenant = Boolean(
@@ -546,7 +650,6 @@ export default function ProjectDetailPage() {
   }
 
   const projectPath = `/projects/${project.id}`;
-  const editOrigin = searchParams.get("from");
 
   function beginEditing() {
     setForm(editableValues(project!));
@@ -557,9 +660,11 @@ export default function ProjectDetailPage() {
     setForm(null);
     setIsEditing(false);
     if (searchParams.get("edit") === "true") {
-      navigate(editOrigin === "pipeline" ? "/pipeline" : projectPath, {
-        replace: true,
-      });
+      if (location.key === "default") {
+        navigate(projectPath, { replace: true });
+      } else {
+        navigate(-1);
+      }
     }
   }
 
@@ -608,12 +713,102 @@ export default function ProjectDetailPage() {
     });
   }
 
+  async function handleCreateTask(input: TaskFormInput) {
+    const task = await createTask.mutateAsync({
+      title: input.title,
+      description: input.description || undefined,
+      projectId: input.linkTarget === "project" ? input.projectId : undefined,
+      moduleId: input.linkTarget === "module" ? input.moduleId : undefined,
+      status: input.status,
+      priority: input.priority,
+      visibility: input.visibility,
+      workingWith: input.workingWith || undefined,
+      estimatedHours: input.estimatedHours || undefined,
+      dueDate: input.dueDate || undefined,
+    });
+
+    await Promise.all(
+      input.collaboratorUserIds.map((userId) =>
+        apiClient.POST("/api/v1/tenant/{tenantId}/tasks/{taskId}/members", {
+          params: { path: { tenantId, taskId: task.id } },
+          body: { userId },
+        }),
+      ),
+    );
+    trackEvent({ name: "task_created" });
+  }
+
+  async function handleCreateModule(input: ModuleFormInput) {
+    await createModule.mutateAsync({
+      title: input.title,
+      description: input.description || undefined,
+      projectId: input.projectId ?? undefined,
+      status: input.status,
+      pipelineStage: input.pipelineStage,
+      pipelineStages: input.pipelineStages,
+      tag: input.tag || undefined,
+      dueDate: input.dueDate || undefined,
+      assignedToUserId: input.assignedToUserId ?? undefined,
+    });
+    trackEvent({ name: "module_created" });
+  }
+
+  async function handleUnlinkModule(module: ApiModule) {
+    if (!window.confirm(`Unlink "${module.title}" from this project? It will become an independent module.`)) {
+      return;
+    }
+    await updateModule.mutateAsync({
+      moduleId: module.id,
+      input: { projectId: null },
+    });
+  }
+
+  async function handleUnlinkTask(task: ApiTask) {
+    if (!window.confirm(`Unlink "${task.title}" from this project? The task itself won't be deleted.`)) {
+      return;
+    }
+    await updateTask.mutateAsync({
+      taskId: task.id,
+      input: { projectId: null },
+    });
+  }
+
+  async function handleUnlinkNote(note: ApiNote) {
+    if (!window.confirm(`Unlink "${note.title}" from this project? The note itself won't be deleted.`)) {
+      return;
+    }
+    await updateNote.mutateAsync({
+      noteId: note.id,
+      input: { projectId: null },
+    });
+  }
+
   const myRole =
     project.userId === me.data?.id ? "Owner" : (project.role ?? "—");
 
   return (
     <div className="page-stack">
       <BackButton fallback="/projects" label="Back" />
+
+      <TaskDialog
+        open={isAddTaskOpen}
+        onOpenChange={setIsAddTaskOpen}
+        tenantId={tenantId}
+        projects={[project]}
+        modules={modules}
+        initialProjectId={project.id}
+        onSave={handleCreateTask}
+      />
+
+      <ModuleDialog
+        open={isAddModuleOpen}
+        onOpenChange={setIsAddModuleOpen}
+        tenantId={tenantId}
+        projects={[project]}
+        members={members}
+        initialProjectId={project.id}
+        onSave={handleCreateModule}
+      />
 
       <PageHeading
         tone="blue"
@@ -824,7 +1019,7 @@ export default function ProjectDetailPage() {
                 </FormField>
 
                 <FormField
-                  label="Total budget"
+                  label="Budget"
                   htmlFor="edit-project-budget-total"
                 >
                   <Input
@@ -932,9 +1127,21 @@ export default function ProjectDetailPage() {
             className="grid gap-6 lg:grid-cols-3"
             aria-label="Linked work"
           >
-            <ProjectModulesDetails modules={modules} />
-            <ProjectTasksDetails tasks={tasks} />
-            <ProjectNotesDetails notes={notes} />
+            <ProjectModulesDetails
+              modules={modules}
+              onAddModule={() => setIsAddModuleOpen(true)}
+              onUnlinkModule={(module) => void handleUnlinkModule(module)}
+            />
+            <ProjectTasksDetails
+              tasks={tasks}
+              onAddTask={() => setIsAddTaskOpen(true)}
+              onUnlinkTask={(task) => void handleUnlinkTask(task)}
+            />
+            <ProjectNotesDetails
+              notes={notes}
+              projectId={project.id}
+              onUnlinkNote={(note) => void handleUnlinkNote(note)}
+            />
           </section>
 
           <ProjectPipeline

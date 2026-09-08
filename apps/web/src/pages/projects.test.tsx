@@ -7,6 +7,7 @@ import ProjectsPage from "@/pages/projects";
 
 const fixtures = vi.hoisted(() => ({
   tenantId: "workspace-1",
+  projects: [] as Record<string, unknown>[],
   project: {
     id: "PRJ-101",
     displayId: "PRJ-101",
@@ -119,6 +120,7 @@ vi.mock("@/api/hooks", () => ({
     },
   }),
   useCurrentWorkspace: () => ({ data: { id: fixtures.tenantId }, isPending: false }),
+  useProjects: () => ({ data: { data: fixtures.projects, meta: { page: 1, pageSize: 20, totalItems: fixtures.projects.length, totalPages: 1 } }, isPending: false, isError: false }),
   useMembers: () => ({
     data: {
       data: [],
@@ -131,7 +133,6 @@ vi.mock("@/api/hooks", () => ({
     },
     isPending: false,
   }),
-  useProjects: () => ({ data: { data: [fixtures.project], meta: { page: 1, pageSize: 20, totalItems: 1, totalPages: 1 } }, isPending: false, isError: false }),
   useCreateProject: () => ({ mutateAsync: vi.fn(), isPending: false }),
   useArchiveProject: () => ({ mutateAsync: vi.fn(), isPending: false }),
   useTrackEvent: () => vi.fn(),
@@ -193,6 +194,7 @@ function renderPage() {
 describe("ProjectsPage", () => {
   beforeEach(() => {
     window.localStorage.clear();
+    fixtures.projects = [fixtures.project];
   });
 
   it("provides a direct edit action for each project row", () => {
@@ -278,5 +280,31 @@ describe("ProjectsPage", () => {
     });
     const projectRow = projectLink.closest('[role="button"]');
     expect(projectRow).toHaveTextContent("Data Collection");
+  });
+
+  it("sorts by column, toggling direction on repeated clicks", () => {
+    fixtures.projects = [
+      { ...fixtures.project, id: "PRJ-C", displayId: "PRJ-C", title: "Charlie project", dueDate: "2026-08-03" },
+      { ...fixtures.project, id: "PRJ-A", displayId: "PRJ-A", title: "Alpha project", dueDate: "2026-08-01" },
+      { ...fixtures.project, id: "PRJ-B", displayId: "PRJ-B", title: "Bravo project", dueDate: "2026-08-02" },
+    ];
+    renderPage();
+
+    const titleOrder = () =>
+      screen
+        .getAllByRole("link")
+        .map((el) => el.textContent)
+        .filter((text): text is string =>
+          ["Alpha project", "Bravo project", "Charlie project"].includes(text ?? ""),
+        );
+
+    // Default sort is by Due Date, ascending.
+    expect(titleOrder()).toEqual(["Alpha project", "Bravo project", "Charlie project"]);
+
+    fireEvent.click(screen.getByRole("button", { name: "Sort by Project" }));
+    expect(titleOrder()).toEqual(["Alpha project", "Bravo project", "Charlie project"]);
+
+    fireEvent.click(screen.getByRole("button", { name: "Sort by Project" }));
+    expect(titleOrder()).toEqual(["Charlie project", "Bravo project", "Alpha project"]);
   });
 });
