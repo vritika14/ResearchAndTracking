@@ -250,6 +250,8 @@ export interface InvitationPreview extends ApiInvitation {
 export const apiKeys = {
   me: ["api", "me"] as const,
   workspaces: ["api", "workspaces"] as const,
+  workspacesPage: (page = 1) =>
+    ["api", "workspaces", page] as const,
   currentWorkspace: ["api", "workspace", "current"] as const,
   members: (
     tenantId: string,
@@ -505,11 +507,17 @@ export function useCurrentWorkspace(enabled = true) {
   });
 }
 
-export function useWorkspaces() {
+export function useWorkspaces(page = 1) {
   return useQuery({
-    queryKey: apiKeys.workspaces,
+    queryKey: apiKeys.workspacesPage(page),
     queryFn: async () =>
-      responseData<Workspace[]>(await apiClient.GET("/api/v1/workspaces")),
+      responseData<PaginatedResponse<Workspace>>(
+        await apiClient.GET("/api/v1/workspaces", {
+          params: {
+            query: { page },
+          } as never,
+        }),
+      ),
   });
 }
 

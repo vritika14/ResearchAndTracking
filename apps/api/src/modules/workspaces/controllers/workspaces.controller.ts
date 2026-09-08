@@ -9,6 +9,7 @@ import {
   Put,
   Req,
   UseGuards,
+  Query,
 } from '@nestjs/common';
 import {
   ApiBearerAuth,
@@ -23,7 +24,8 @@ import { UsersService } from '../../users/users.service';
 import { CreateWorkspaceDto } from '../dto/create-workspace.dto';
 import { SwitchWorkspaceDto } from '../dto/switch-workspace.dto';
 import { WorkspacesService } from '../services/workspaces.service';
-
+import { ConfigService } from '@nestjs/config';
+import { PaginationQueryDto } from '../../../common/dto/pagination-query.dto';
 interface AuthenticatedRequest extends Request {
   user: AuthenticatedPrincipal;
 }
@@ -35,6 +37,7 @@ export class WorkspacesController {
   constructor(
     private readonly workspacesService: WorkspacesService,
     private readonly usersService: UsersService,
+    private readonly configService: ConfigService,
   ) {}
 
   @ApiOperation({
@@ -65,7 +68,10 @@ export class WorkspacesController {
   @ApiResponse({ status: 200 })
   @UseGuards(JwtAuthGuard)
   @Get()
-  async list(@Req() req: AuthenticatedRequest) {
+  async list(
+    @Req() req: AuthenticatedRequest,
+    @Query() query: PaginationQueryDto,
+  ) {
     const user = await this.usersService.findOrProvisionFromAccessToken(
       req.user.sub,
       req.user.accessToken,
@@ -75,7 +81,13 @@ export class WorkspacesController {
       throw new NotFoundException('User could not be found or provisioned');
     }
 
-    return this.workspacesService.listWorkspaces(user.id);
+    const pageSize = this.configService.get<number>('PAGE_SIZE', 20);
+
+    return this.workspacesService.listWorkspaces(
+      user.id,
+      query.page ?? 1,
+      pageSize,
+    );
   }
 
   @ApiOperation({ summary: "Get the authenticated user's current workspace" })
