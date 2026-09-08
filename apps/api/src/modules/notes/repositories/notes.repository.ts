@@ -1,6 +1,6 @@
 import { Injectable } from '@nestjs/common';
-import { notes } from '@research-tracker/migrations';
-import { and, eq, inArray } from 'drizzle-orm';
+import { notes, noteMembers } from '@research-tracker/migrations';
+import { and, desc, eq, exists, inArray, or, sql } from 'drizzle-orm';
 import { DrizzleService } from '../../../db/drizzle.service';
 
 @Injectable()
@@ -38,15 +38,58 @@ export class NotesRepository {
     return this.drizzle.db.select().from(notes).where(inArray(notes.id, ids));
   }
 
-  async findByTenant(tenantId: string, projectId?: string) {
-    const conditions = [eq(notes.tenantId, tenantId)];
+  async findVisibleByTenant(
+    tenantId: string,
+    callerUserId: string,
+    offset: number,
+    limit: number,
+    projectId?: string,
+  ) {
+    const visibilityCondition = or(
+      eq(notes.createdBy, callerUserId),
+      exists(
+        this.drizzle.db
+          .select({ id: noteMembers.id })
+          .from(noteMembers)
+          .where(
+            and(
+              eq(noteMembers.tenantId, tenantId),
+              eq(noteMembers.noteId, notes.id),
+              eq(noteMembers.userId, callerUserId),
+            ),
+          ),
+      ),
+    );
+
+    const conditions = [eq(notes.tenantId, tenantId), visibilityCondition];
+
     if (projectId) {
       conditions.push(eq(notes.projectId, projectId));
     }
-    return this.drizzle.db
-      .select()
-      .from(notes)
-      .where(and(...conditions));
+
+    const whereCondition = and(...conditions);
+
+    const [data, countResult] = await Promise.all([
+      this.drizzle.db
+        .select()
+        .from(notes)
+        .where(whereCondition)
+        .orderBy(desc(notes.updatedAt), desc(notes.id))
+        .limit(limit)
+        .offset(offset),
+
+      this.drizzle.db
+        .select({
+          count: sql<number>`count(*)::int`,
+        })
+        .from(notes)
+        .where(whereCondition),
+    ]);
+
+    return {
+      data,
+      totalItems: countResult[0]?.count ?? 0,
+    };
   }
 
   async create(values: {

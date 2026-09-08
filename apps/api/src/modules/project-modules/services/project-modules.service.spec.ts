@@ -13,7 +13,7 @@ describe('ProjectModulesService', () => {
     findByIdGlobal: jest.Mock;
     findByIds: jest.Mock;
     findByProjectIds: jest.Mock;
-    findActiveByTenant: jest.Mock;
+    findVisibleActiveByTenant: jest.Mock;
     create: jest.Mock;
     configurePipelineStages: jest.Mock;
     update: jest.Mock;
@@ -44,7 +44,7 @@ describe('ProjectModulesService', () => {
       findByIdGlobal: jest.fn(),
       findByIds: jest.fn(),
       findByProjectIds: jest.fn(),
-      findActiveByTenant: jest.fn(),
+      findVisibleActiveByTenant: jest.fn(),
       create: jest.fn(),
       configurePipelineStages: jest.fn(),
       update: jest.fn(),
@@ -300,25 +300,52 @@ describe('ProjectModulesService', () => {
   });
 
   describe('listActive', () => {
-    it('filters out modules the caller cannot see', async () => {
-      repository.findActiveByTenant.mockResolvedValue([
-        { id: 'module-1', projectId: null, tagId: null, statusId: null },
-        { id: 'module-2', projectId: 'project-1', tagId: null, statusId: null },
-        { id: 'module-3', projectId: 'project-2', tagId: null, statusId: null },
-      ]);
-      collaboratorsRepository.findByModuleIdsAndUser.mockResolvedValue(
-        new Set(['module-1']),
-      );
-      projectCollaboratorsRepository.findByProjectIdsAndUser.mockResolvedValue(
-        new Map([['project-1', { roleId: 'role-1' }]]),
+    it('returns a paginated list of visible active modules', async () => {
+      repository.findVisibleActiveByTenant.mockResolvedValue({
+        data: [
+          {
+            id: 'module-1',
+            projectId: null,
+            tagId: null,
+            statusId: null,
+          },
+          {
+            id: 'module-2',
+            projectId: 'project-1',
+            tagId: null,
+            statusId: null,
+          },
+        ],
+        totalItems: 45,
+      });
+
+      const result = await service.listActive(
+        'tenant-1',
+        'user-1',
+        2,
+        20,
+        'project-1',
       );
 
-      const result = await service.listActive('tenant-1', 'user-1');
+      expect(repository.findVisibleActiveByTenant).toHaveBeenCalledWith(
+        'tenant-1',
+        'user-1',
+        20,
+        20,
+        'project-1',
+      );
 
-      expect(result.map((module) => module.id)).toEqual([
+      expect(result.data.map((module) => module.id)).toEqual([
         'module-1',
         'module-2',
       ]);
+
+      expect(result.meta).toEqual({
+        page: 2,
+        pageSize: 20,
+        totalItems: 45,
+        totalPages: 3,
+      });
     });
   });
 

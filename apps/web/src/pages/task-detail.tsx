@@ -117,6 +117,7 @@ export default function TaskDetailPage() {
   const projectsQuery = useProjects(tenantId);
   const projects = projectsQuery.data?.data ?? [];
   const modulesQuery = useModules(tenantId);
+  const modules = modulesQuery.data?.data ?? [];
   const updateTask = useUpdateMyTask();
   const task = taskQuery.data;
   const trackEvent = useTrackEvent(task?.tenantId ?? "");
@@ -186,7 +187,7 @@ export default function TaskDetailPage() {
   }
 
   const linkedModule = task.moduleId
-    ? (modulesQuery.data ?? []).find((module) => module.id === task.moduleId)
+    ? (modules).find((module) => module.id === task.moduleId)
     : undefined;
 
   return (
@@ -231,7 +232,7 @@ export default function TaskDetailPage() {
                     className={form.linkTarget === option.value ? "rounded-full border border-primary bg-primary px-3 py-1 text-xs font-medium text-primary-foreground" : "rounded-full border px-3 py-1 text-xs font-medium text-muted-foreground"}>{option.label}</button>)}</div>
                 </FormField>
                 {form.linkTarget === "project" ? <FormField label="Project" htmlFor="edit-task-project"><Select value={form.projectId} onValueChange={(value) => setForm({ ...form, projectId: value })}><SelectTrigger id="edit-task-project"><SelectValue placeholder="Select a project" /></SelectTrigger><SelectContent>{projects.map((project) => <SelectItem key={project.id} value={project.id}>{project.title}</SelectItem>)}</SelectContent></Select></FormField> : null}
-                {form.linkTarget === "module" ? <FormField label="Module" htmlFor="edit-task-module"><Select value={form.moduleId} onValueChange={(value) => setForm({ ...form, moduleId: value })}><SelectTrigger id="edit-task-module"><SelectValue placeholder="Select a module" /></SelectTrigger><SelectContent>{(modulesQuery.data ?? []).map((module) => <SelectItem key={module.id} value={module.id}>{module.title}</SelectItem>)}</SelectContent></Select></FormField> : null}
+                {form.linkTarget === "module" ? <FormField label="Module" htmlFor="edit-task-module"><Select value={form.moduleId} onValueChange={(value) => setForm({ ...form, moduleId: value })}><SelectTrigger id="edit-task-module"><SelectValue placeholder="Select a module" /></SelectTrigger><SelectContent>{(modules).map((module) => <SelectItem key={module.id} value={module.id}>{module.title}</SelectItem>)}</SelectContent></Select></FormField> : null}
                 <FormField label="Status" htmlFor="edit-task-status"><Select value={form.status} onValueChange={(value) => setForm({ ...form, status: value })}><SelectTrigger id="edit-task-status"><SelectValue /></SelectTrigger><SelectContent>{TASK_STATUSES.map((value) => <SelectItem key={value} value={value}>{value}</SelectItem>)}</SelectContent></Select></FormField>
                 <FormField label="Priority" htmlFor="edit-task-priority"><Select value={form.priority} onValueChange={(value) => setForm({ ...form, priority: value })}><SelectTrigger id="edit-task-priority"><SelectValue /></SelectTrigger><SelectContent>{TASK_PRIORITIES.map((value) => <SelectItem key={value} value={value}>{value}</SelectItem>)}</SelectContent></Select></FormField>
                 <FormField label="Due date" htmlFor="edit-task-due"><DatePickerInput id="edit-task-due" label="Due date" value={form.dueDate} onChange={(value) => setForm({ ...form, dueDate: value })} /></FormField>

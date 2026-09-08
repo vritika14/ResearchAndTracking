@@ -27,6 +27,8 @@ import { UpdateModuleDto } from '../dto/update-module.dto';
 import { ProjectModulesService } from '../services/project-modules.service';
 import { TenantMemberGuard } from '../../memberships/policies/tenant-member.guard';
 import { ModuleAccessGuard } from '../policies/module-access.guard';
+import { ConfigService } from '@nestjs/config';
+import { PaginationQueryDto } from '../../../common/dto/pagination-query.dto';
 interface AuthenticatedRequest extends Request {
   user: AuthenticatedPrincipal;
 }
@@ -38,6 +40,7 @@ export class ProjectModulesController {
   constructor(
     private readonly modulesService: ProjectModulesService,
     private readonly usersService: UsersService,
+    private readonly configService: ConfigService,
   ) {}
 
   @ApiOperation({
@@ -50,10 +53,20 @@ export class ProjectModulesController {
   async list(
     @Param('tenantId') tenantId: string,
     @Req() req: AuthenticatedRequest,
+    @Query() query: PaginationQueryDto,
     @Query('projectId') projectId?: string,
   ) {
     const user = await this.usersService.findByExternalAuthId(req.user.sub);
-    return this.modulesService.listActive(tenantId, user.id, projectId);
+
+    const pageSize = this.configService.get<number>('PAGE_SIZE', 20);
+
+    return this.modulesService.listActive(
+      tenantId,
+      user.id,
+      query.page ?? 1,
+      pageSize,
+      projectId,
+    );
   }
 
   @ApiOperation({ summary: 'Get a single module' })

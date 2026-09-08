@@ -57,17 +57,32 @@ vi.mock("@/api/hooks", () => ({
     refetch: vi.fn(),
   }),
   useModules: () => ({
-    data: fixtures.modules,
+    data: {
+      data: fixtures.modules,
+      meta: {
+        page: 1,
+        pageSize: 20,
+        totalItems: fixtures.modules.length,
+        totalPages: 1,
+      },
+    },
     isPending: false,
     isError: false,
     error: null,
     refetch: vi.fn(),
   }),
   useTasks: () => ({
-    data: fixtures.tasks,
+    data: {
+      data: fixtures.tasks,
+      meta: {
+        page: 1,
+        pageSize: 20,
+        totalItems: fixtures.tasks.length,
+        totalPages: 1,
+      },
+    },
     isPending: false,
     isError: false,
-    error: null,
     refetch: vi.fn(),
   }),
   useConferences: () => ({

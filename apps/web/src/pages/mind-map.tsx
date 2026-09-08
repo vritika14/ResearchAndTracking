@@ -445,8 +445,11 @@ export default function MindMapPage() {
   const projectsQuery = useProjects(tenantId);
   const allProjects = projectsQuery.data?.data ?? [];
   const modulesQuery = useModules(tenantId);
+  const modules = modulesQuery.data?.data ?? [];
   const tasksQuery = useTasks(tenantId);
+  const tasks = tasksQuery.data?.data ?? [];
   const notesQuery = useNotes(tenantId);
+  const notes = notesQuery.data?.data ?? [];
   const [search, setSearch] = useState("");
   const [projectFilter, setProjectFilter] = useState("all");
   const [view, setView] = useState<MapView>("tree");
@@ -455,19 +458,19 @@ export default function MindMapPage() {
   const projects = useMemo(() => allProjects.filter((project) => {
     if (projectFilter !== "all" && project.id !== projectFilter) return false;
     if (!normalizedSearch || matchesSearch(project.title, normalizedSearch)) return true;
-    const moduleIds = new Set((modulesQuery.data ?? []).filter((module) => module.projectId === project.id).map((module) => module.id));
-    return (modulesQuery.data ?? []).some((module) => module.projectId === project.id && matchesSearch(module.title, normalizedSearch))
-      || (tasksQuery.data ?? []).some((task) => (task.projectId === project.id || (task.moduleId && moduleIds.has(task.moduleId))) && matchesSearch(task.title, normalizedSearch))
-      || (notesQuery.data ?? []).some((note) => (note.projectId === project.id || (note.moduleId && moduleIds.has(note.moduleId))) && matchesSearch(note.title, normalizedSearch));
-    }), [modulesQuery.data, normalizedSearch, notesQuery.data, projectFilter, allProjects, tasksQuery.data]);
+    const moduleIds = new Set((modules).filter((module) => module.projectId === project.id).map((module) => module.id));
+    return (modules).some((module) => module.projectId === project.id && matchesSearch(module.title, normalizedSearch))
+      || (tasks).some((task) => (task.projectId === project.id || (task.moduleId && moduleIds.has(task.moduleId))) && matchesSearch(task.title, normalizedSearch))
+      || (notes).some((note) => (note.projectId === project.id || (note.moduleId && moduleIds.has(note.moduleId))) && matchesSearch(note.title, normalizedSearch));
+    }), [modules, normalizedSearch, notes, projectFilter, allProjects, tasks]);
 
-  const independentModules = (modulesQuery.data ?? []).filter((module) => !module.projectId && (
+  const independentModules = (modules).filter((module) => !module.projectId && (
     matchesSearch(module.title, normalizedSearch)
-    || (tasksQuery.data ?? []).some((task) => task.moduleId === module.id && matchesSearch(task.title, normalizedSearch))
-    || (notesQuery.data ?? []).some((note) => note.moduleId === module.id && matchesSearch(note.title, normalizedSearch))
+    || (tasks).some((task) => task.moduleId === module.id && matchesSearch(task.title, normalizedSearch))
+    || (notes).some((note) => note.moduleId === module.id && matchesSearch(note.title, normalizedSearch))
   ));
-  const unassignedTasks = (tasksQuery.data ?? []).filter((task) => !task.projectId && !task.moduleId && matchesSearch(task.title, normalizedSearch));
-  const unassignedNotes = (notesQuery.data ?? []).filter((note) => !note.projectId && !note.moduleId && matchesSearch(note.title, normalizedSearch));
+  const unassignedTasks = (tasks).filter((task) => !task.projectId && !task.moduleId && matchesSearch(task.title, normalizedSearch));
+  const unassignedNotes = (notes).filter((note) => !note.projectId && !note.moduleId && matchesSearch(note.title, normalizedSearch));
   const showStandalone = projectFilter === "all";
 
   if (workspace.isPending || projectsQuery.isPending || modulesQuery.isPending || tasksQuery.isPending || notesQuery.isPending) {
@@ -526,9 +529,9 @@ export default function MindMapPage() {
         <BubbleRelationshipMap
           workspaceName={workspace.data?.name ?? "Workspace"}
           projects={allProjects}
-          modules={modulesQuery.data ?? []}
-          tasks={tasksQuery.data ?? []}
-          notes={notesQuery.data ?? []}
+          modules={modules}
+          tasks={tasks}
+          notes={notes}
           projectFilter={projectFilter}
           search={normalizedSearch}
         />
@@ -539,10 +542,10 @@ export default function MindMapPage() {
         </div>
 
         <div className="ml-5 space-y-4 border-l-2 border-border pl-5 sm:ml-8 sm:pl-8">
-          {projects.map((project) => <ProjectTree key={project.id} project={project} modules={modulesQuery.data ?? []} tasks={tasksQuery.data ?? []} notes={notesQuery.data ?? []} search={normalizedSearch} />)}
+          {projects.map((project) => <ProjectTree key={project.id} project={project} modules={modules} tasks={tasks} notes={notes} search={normalizedSearch} />)}
 
           {showStandalone && independentModules.map((module) => (
-            <ModuleBranch key={module.id} module={module} tasks={(tasksQuery.data ?? []).filter((task) => task.moduleId === module.id && (matchesSearch(module.title, normalizedSearch) || matchesSearch(task.title, normalizedSearch)))} notes={(notesQuery.data ?? []).filter((note) => note.moduleId === module.id && (matchesSearch(module.title, normalizedSearch) || matchesSearch(note.title, normalizedSearch)))} defaultExpanded />
+            <ModuleBranch key={module.id} module={module} tasks={(tasks).filter((task) => task.moduleId === module.id && (matchesSearch(module.title, normalizedSearch) || matchesSearch(task.title, normalizedSearch)))} notes={(notes).filter((note) => note.moduleId === module.id && (matchesSearch(module.title, normalizedSearch) || matchesSearch(note.title, normalizedSearch)))} defaultExpanded />
           ))}
 
           {showStandalone && (unassignedTasks.length > 0 || unassignedNotes.length > 0) ? (

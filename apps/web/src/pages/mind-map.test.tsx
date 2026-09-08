@@ -14,9 +14,48 @@ const fixtures = vi.hoisted(() => ({
 vi.mock("@/api/hooks", () => ({
   useCurrentWorkspace: () => ({ data: { id: "workspace-1", name: "Research lab" }, isPending: false }),
   useProjects: () => ({ data: { data: fixtures.projects, meta: { page: 1, pageSize: 20, totalItems: fixtures.projects.length, totalPages: 1 } }, isPending: false, isError: false, refetch: vi.fn() }),
-  useModules: () => ({ data: fixtures.modules, isPending: false, isError: false, refetch: vi.fn() }),
-  useTasks: () => ({ data: fixtures.tasks, isPending: false, isError: false, refetch: vi.fn() }),
-  useNotes: () => ({ data: fixtures.notes, isPending: false, isError: false, refetch: vi.fn() }),
+  useModules: () => ({
+    data: {
+      data: fixtures.modules,
+      meta: {
+        page: 1,
+        pageSize: 20,
+        totalItems: fixtures.modules.length,
+        totalPages: 1,
+      },
+    },
+    isPending: false,
+    isError: false,
+    refetch: vi.fn(),
+  }),
+  useTasks: () => ({
+    data: {
+      data: fixtures.tasks,
+      meta: {
+        page: 1,
+        pageSize: 20,
+        totalItems: fixtures.tasks.length,
+        totalPages: 1,
+      },
+    },
+    isPending: false,
+    isError: false,
+    refetch: vi.fn(),
+  }),
+  useNotes: () => ({
+    data: {
+      data: fixtures.notes,
+      meta: {
+        page: 1,
+        pageSize: 20,
+        totalItems: fixtures.notes.length,
+        totalPages: 1,
+      },
+    },
+    isPending: false,
+    isError: false,
+    refetch: vi.fn(),
+  }),
 }));
 
 describe("MindMapPage", () => {

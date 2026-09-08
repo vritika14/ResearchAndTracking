@@ -78,7 +78,17 @@ vi.mock("@/api/hooks", async () => {
     useTrackEvent: () => vi.fn(),
     useMembers: () => ({ data: fixtures.members, isPending: false }),
     useProjects: () => ({ data: { data: fixtures.projects, meta: { page: 1, pageSize: 20, totalItems: fixtures.projects.length, totalPages: 1 } }, isPending: false, isError: false }),
-    useModules: () => ({ data: fixtures.modules }),
+    useModules: () => ({
+      data: {
+        data: fixtures.modules,
+        meta: {
+          page: 1,
+          pageSize: 20,
+          totalItems: fixtures.modules.length,
+          totalPages: 1,
+        },
+      },
+    }),
     useUserSearch: (query: string) => ({
       data: query.trim()
         ? fixtures.allUsers.filter((user) =>
@@ -87,13 +97,28 @@ vi.mock("@/api/hooks", async () => {
         : [],
       isPending: false,
     }),
-    useTasks: () => ({
-      data: useSyncExternalStore(store.subscribe, store.getTasks),
-      isPending: false,
-      isError: false,
-      error: undefined,
-      refetch: vi.fn(),
-    }),
+    useTasks: () => {
+      const tasks = useSyncExternalStore(
+        store.subscribe,
+        store.getTasks,
+      );
+    
+      return {
+        data: {
+          data: tasks,
+          meta: {
+            page: 1,
+            pageSize: 20,
+            totalItems: tasks.length,
+            totalPages: 1,
+          },
+        },
+        isPending: false,
+        isError: false,
+        error: undefined,
+        refetch: vi.fn(),
+      };
+    },
     useCreateTask: () => ({
       mutateAsync: vi.fn(async (input: Record<string, unknown>) => {
         const tasks = store.getTasks();

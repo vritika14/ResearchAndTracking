@@ -8,7 +8,10 @@ import { ModuleCollaboratorsRepository } from '../../module-collaborators/reposi
 import { ProjectCollaboratorsRepository } from '../../project-collaborators/repositories/project-collaborators.repository';
 import { TenantSequencesRepository } from '../../tenant-sequences/repositories/tenant-sequences.repository';
 import { ProjectModulesRepository } from '../repositories/project-modules.repository';
-
+import {
+  buildPaginationMeta,
+  paginationOffset,
+} from '../../../common/pagination';
 const ARCHIVE_RETENTION_DAYS = 14;
 
 @Injectable()
@@ -51,34 +54,33 @@ export class ProjectModulesService {
     return Boolean(moduleMembership);
   }
 
-  async listActive(tenantId: string, callerUserId: string, projectId?: string) {
-    const rows = await this.repository.findActiveByTenant(tenantId, projectId);
+  async listActive(
+    tenantId: string,
+    callerUserId: string,
+    page: number,
+    pageSize: number,
+    projectId?: string,
+  ) {
+    const offset = paginationOffset(page, pageSize);
 
-    const projectScopedIds = rows
-      .filter((r) => r.projectId !== null)
-      .map((r) => r.projectId!);
-    const standaloneIds = rows
-      .filter((r) => r.projectId === null)
-      .map((r) => r.id);
-
-    const [projectMemberships, standaloneMemberships] = await Promise.all([
-      this.projectCollaboratorsRepository.findByProjectIdsAndUser(
-        projectScopedIds,
+    const { data, totalItems } =
+      await this.repository.findVisibleActiveByTenant(
+        tenantId,
         callerUserId,
-      ),
-      this.collaboratorsRepository.findByModuleIdsAndUser(
-        standaloneIds,
-        callerUserId,
-      ),
-    ]);
+        offset,
+        pageSize,
+        projectId,
+      );
 
-    const visibleRows = rows.filter((row) =>
-      row.projectId
-        ? projectMemberships.has(row.projectId)
-        : standaloneMemberships.has(row.id),
+    const modulesWithDisplayValues = await this.withDisplayValues(
+      data,
+      callerUserId,
     );
 
-    return this.withDisplayValues(visibleRows, callerUserId);
+    return {
+      data: modulesWithDisplayValues,
+      meta: buildPaginationMeta(page, pageSize, totalItems),
+    };
   }
 
   async findOne(tenantId: string, moduleId: string, callerUserId: string) {

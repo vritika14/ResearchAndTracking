@@ -9,21 +9,27 @@ import { ProjectModulesRepository } from '../../project-modules/repositories/pro
 
 describe('NotesService', () => {
   let service: NotesService;
+
   let repository: {
     findById: jest.Mock;
     findByIdGlobal: jest.Mock;
     findByCreator: jest.Mock;
     findByIds: jest.Mock;
-    findByTenant: jest.Mock;
+    findVisibleByTenant: jest.Mock;
     create: jest.Mock;
     update: jest.Mock;
     delete: jest.Mock;
   };
-  let sequences: { nextDisplayId: jest.Mock };
+
+  let sequences: {
+    nextDisplayId: jest.Mock;
+  };
+
   let enumRepository: {
     findByCategoryAndValue: jest.Mock;
     findValuesByIds: jest.Mock;
   };
+
   let noteMembers: {
     create: jest.Mock;
     deleteAllForNote: jest.Mock;
@@ -31,7 +37,10 @@ describe('NotesService', () => {
     findByNoteIdsAndUser: jest.Mock;
     findNoteIdsByUser: jest.Mock;
   };
-  let modulesRepository: { findById: jest.Mock };
+
+  let modulesRepository: {
+    findById: jest.Mock;
+  };
 
   beforeEach(() => {
     repository = {
@@ -39,24 +48,28 @@ describe('NotesService', () => {
       findByIdGlobal: jest.fn(),
       findByCreator: jest.fn(),
       findByIds: jest.fn(),
-      findByTenant: jest.fn(),
+      findVisibleByTenant: jest.fn(),
       create: jest.fn(),
       update: jest.fn(),
       delete: jest.fn(),
     };
+
     sequences = {
       nextDisplayId: jest.fn().mockResolvedValue('NTE-0001'),
     };
+
     enumRepository = {
       findByCategoryAndValue: jest
         .fn()
         .mockResolvedValue({ id: 'visibility-private-id' }),
+
       findValuesByIds: jest
         .fn()
         .mockImplementation((ids: string[]) =>
           Promise.resolve(new Map(ids.map((id) => [id, id]))),
         ),
     };
+
     noteMembers = {
       create: jest.fn(),
       deleteAllForNote: jest.fn(),
@@ -64,7 +77,10 @@ describe('NotesService', () => {
       findByNoteIdsAndUser: jest.fn().mockResolvedValue(new Set()),
       findNoteIdsByUser: jest.fn().mockResolvedValue([]),
     };
-    modulesRepository = { findById: jest.fn() };
+
+    modulesRepository = {
+      findById: jest.fn(),
+    };
 
     service = new NotesService(
       repository as unknown as NotesRepository,
@@ -97,6 +113,7 @@ describe('NotesService', () => {
         displayId: 'NTE-0001',
         visibilityId: 'visibility-private-id',
       });
+
       expect(result).toEqual({
         id: 'note-1',
         visibility: 'visibility-private-id',
@@ -108,7 +125,11 @@ describe('NotesService', () => {
         id: 'module-1',
         projectId: null,
       });
-      repository.create.mockResolvedValue({ id: 'note-1', visibilityId: null });
+
+      repository.create.mockResolvedValue({
+        id: 'note-1',
+        visibilityId: null,
+      });
 
       await service.create('tenant-1', 'user-1', {
         title: 'Meeting Notes',
@@ -117,7 +138,10 @@ describe('NotesService', () => {
       });
 
       expect(repository.create).toHaveBeenCalledWith(
-        expect.objectContaining({ projectId: undefined, moduleId: 'module-1' }),
+        expect.objectContaining({
+          projectId: undefined,
+          moduleId: 'module-1',
+        }),
       );
     });
   });
@@ -125,6 +149,7 @@ describe('NotesService', () => {
   describe('findOne', () => {
     it('throws NotFoundException when the note does not exist', async () => {
       repository.findById.mockResolvedValue(undefined);
+
       await expect(
         service.findOne('tenant-1', 'note-1', 'user-1'),
       ).rejects.toThrow(NotFoundException);
@@ -135,6 +160,7 @@ describe('NotesService', () => {
         id: 'note-1',
         createdBy: 'owner-1',
       });
+
       await expect(
         service.findOne('tenant-1', 'note-1', 'outsider-1'),
       ).rejects.toThrow(NotFoundException);
@@ -146,8 +172,14 @@ describe('NotesService', () => {
         createdBy: 'user-1',
         visibilityId: null,
       });
+
       const result = await service.findOne('tenant-1', 'note-1', 'user-1');
-      expect(result).toEqual(expect.objectContaining({ id: 'note-1' }));
+
+      expect(result).toEqual(
+        expect.objectContaining({
+          id: 'note-1',
+        }),
+      );
     });
 
     it('returns the note when the caller is a note member', async () => {
@@ -156,20 +188,39 @@ describe('NotesService', () => {
         createdBy: 'owner-1',
         visibilityId: null,
       });
-      noteMembers.findByNoteAndUser.mockResolvedValue({ id: 'member-row' });
+
+      noteMembers.findByNoteAndUser.mockResolvedValue({
+        id: 'member-row',
+      });
+
       const result = await service.findOne('tenant-1', 'note-1', 'member-1');
-      expect(result).toEqual(expect.objectContaining({ id: 'note-1' }));
+
+      expect(result).toEqual(
+        expect.objectContaining({
+          id: 'note-1',
+        }),
+      );
     });
   });
 
   describe('listForCaller', () => {
     it('returns every note the caller created or was added to, across tenants', async () => {
       repository.findByCreator.mockResolvedValue([
-        { id: 'note-1', createdBy: 'user-1', visibilityId: null },
+        {
+          id: 'note-1',
+          createdBy: 'user-1',
+          visibilityId: null,
+        },
       ]);
+
       noteMembers.findNoteIdsByUser.mockResolvedValue(['note-1', 'note-2']);
+
       repository.findByIds.mockResolvedValue([
-        { id: 'note-2', createdBy: 'owner-2', visibilityId: null },
+        {
+          id: 'note-2',
+          createdBy: 'owner-2',
+          visibilityId: null,
+        },
       ]);
 
       const result = await service.listForCaller('user-1');
@@ -187,7 +238,10 @@ describe('NotesService', () => {
         createdBy: 'owner-1',
         visibilityId: null,
       });
-      noteMembers.findByNoteAndUser.mockResolvedValue({ id: 'member-row' });
+
+      noteMembers.findByNoteAndUser.mockResolvedValue({
+        id: 'member-row',
+      });
 
       const result = await service.findOneForCaller('note-1', 'member-1');
 
@@ -196,11 +250,17 @@ describe('NotesService', () => {
         'note-1',
         'member-1',
       );
-      expect(result).toEqual(expect.objectContaining({ id: 'note-1' }));
+
+      expect(result).toEqual(
+        expect.objectContaining({
+          id: 'note-1',
+        }),
+      );
     });
 
     it('throws NotFoundException when the note does not exist in any tenant', async () => {
       repository.findByIdGlobal.mockResolvedValue(undefined);
+
       await expect(
         service.findOneForCaller('note-1', 'user-1'),
       ).rejects.toThrow(NotFoundException);
@@ -212,6 +272,7 @@ describe('NotesService', () => {
         tenantId: 'tenant-1',
         createdBy: 'owner-1',
       });
+
       await expect(
         service.findOneForCaller('note-1', 'outsider-1'),
       ).rejects.toThrow(NotFoundException);
@@ -219,23 +280,60 @@ describe('NotesService', () => {
   });
 
   describe('list', () => {
-    it('filters out notes the caller cannot see', async () => {
-      repository.findByTenant.mockResolvedValue([
-        { id: 'note-1', createdBy: 'user-1', visibilityId: null },
-        { id: 'note-2', createdBy: 'owner-2', visibilityId: null },
-      ]);
+    it('returns a paginated list of visible notes', async () => {
+      repository.findVisibleByTenant.mockResolvedValue({
+        data: [
+          {
+            id: 'note-1',
+            createdBy: 'user-1',
+            visibilityId: null,
+          },
+          {
+            id: 'note-2',
+            createdBy: 'owner-2',
+            visibilityId: null,
+          },
+        ],
+        totalItems: 45,
+      });
 
-      const result = await service.list('tenant-1', 'user-1');
+      const result = await service.list(
+        'tenant-1',
+        'user-1',
+        2,
+        20,
+        'project-1',
+      );
 
-      expect(result.map((note) => note.id)).toEqual(['note-1']);
+      expect(repository.findVisibleByTenant).toHaveBeenCalledWith(
+        'tenant-1',
+        'user-1',
+        20,
+        20,
+        'project-1',
+      );
+
+      expect(noteMembers.findByNoteIdsAndUser).not.toHaveBeenCalled();
+
+      expect(result.data.map((note) => note.id)).toEqual(['note-1', 'note-2']);
+
+      expect(result.meta).toEqual({
+        page: 2,
+        pageSize: 20,
+        totalItems: 45,
+        totalPages: 3,
+      });
     });
   });
 
   describe('update', () => {
     it('throws NotFoundException if the note does not exist', async () => {
       repository.findById.mockResolvedValue(undefined);
+
       await expect(
-        service.update('tenant-1', 'note-1', 'user-1', { title: 'Updated' }),
+        service.update('tenant-1', 'note-1', 'user-1', {
+          title: 'Updated',
+        }),
       ).rejects.toThrow(NotFoundException);
     });
 
@@ -244,6 +342,7 @@ describe('NotesService', () => {
         id: 'note-1',
         createdBy: 'owner-1',
       });
+
       await expect(
         service.update('tenant-1', 'note-1', 'outsider-1', {
           title: 'Updated',
@@ -255,6 +354,7 @@ describe('NotesService', () => {
   describe('delete', () => {
     it('throws NotFoundException if the note does not exist', async () => {
       repository.findById.mockResolvedValue(undefined);
+
       await expect(
         service.delete('tenant-1', 'note-1', 'user-1'),
       ).rejects.toThrow(NotFoundException);
@@ -265,9 +365,11 @@ describe('NotesService', () => {
         id: 'note-1',
         createdBy: 'owner-1',
       });
+
       await expect(
         service.delete('tenant-1', 'note-1', 'outsider-1'),
       ).rejects.toThrow(ForbiddenException);
+
       expect(repository.delete).not.toHaveBeenCalled();
     });
 
@@ -276,15 +378,25 @@ describe('NotesService', () => {
         id: 'note-1',
         createdBy: 'user-1',
       });
-      repository.delete.mockResolvedValue({ id: 'note-1', visibilityId: null });
+
+      repository.delete.mockResolvedValue({
+        id: 'note-1',
+        visibilityId: null,
+      });
+
       const result = await service.delete('tenant-1', 'note-1', 'user-1');
-      expect(result).toEqual({ id: 'note-1', visibility: null });
+
+      expect(result).toEqual({
+        id: 'note-1',
+        visibility: null,
+      });
     });
   });
 
   describe('deleteForCaller', () => {
     it('throws NotFoundException when the note does not exist in any tenant', async () => {
       repository.findByIdGlobal.mockResolvedValue(undefined);
+
       await expect(service.deleteForCaller('note-1', 'user-1')).rejects.toThrow(
         NotFoundException,
       );
@@ -296,11 +408,16 @@ describe('NotesService', () => {
         tenantId: 'tenant-2',
         createdBy: 'user-1',
       });
+
       repository.findById.mockResolvedValue({
         id: 'note-1',
         createdBy: 'user-1',
       });
-      repository.delete.mockResolvedValue({ id: 'note-1', visibilityId: null });
+
+      repository.delete.mockResolvedValue({
+        id: 'note-1',
+        visibilityId: null,
+      });
 
       await service.deleteForCaller('note-1', 'user-1');
 

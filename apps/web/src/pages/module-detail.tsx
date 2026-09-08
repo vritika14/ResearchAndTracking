@@ -148,7 +148,9 @@ export default function ModuleDetailPage() {
   // MyModulesController on the backend).
   const moduleQuery = useMyModule(moduleId);
   const tasksQuery = useTasks(tenantId);
+  const tasks = tasksQuery.data?.data ?? [];
   const notesQuery = useNotes(tenantId);
+  const notes = notesQuery.data?.data ?? [];
   const membersQuery = useMembers(tenantId);
   const updateModule = useUpdateMyModule();
   const tagValuesQuery = useEnumValues("module_type");
@@ -224,8 +226,10 @@ export default function ModuleDetailPage() {
   const assignee = module.assignedToUserId
     ? (membersQuery.data ?? []).find((member) => member.userId === module.assignedToUserId)
     : undefined;
-  const moduleTasks = (tasksQuery.data ?? []).filter((task) => task.moduleId === module.id);
-  const moduleNotes = (notesQuery.data ?? []).filter((note) => note.moduleId === module.id);
+    const moduleTasks = tasks.filter(
+      (task) => task.moduleId === module.id,
+    );
+  const moduleNotes = (notes).filter((note) => note.moduleId === module.id);
 
   return (
     <div className="page-stack">

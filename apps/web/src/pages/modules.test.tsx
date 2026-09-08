@@ -80,13 +80,31 @@ vi.mock("@/api/hooks", async () => {
     useMe: store.useMe,
     useMembers: () => ({ data: fixtures.members, isPending: false }),
     useProjects: () => ({ data: { data: fixtures.projects, meta: { page: 1, pageSize: 20, totalItems: fixtures.projects.length, totalPages: 1 } }, isPending: false, isError: false }),
-    useModules: () => ({
-      data: useStore(store.subscribe, store.getModules),
-      isPending: false,
-      isError: false,
-      error: undefined,
-      refetch: vi.fn(),
-    }),
+    useModules: () => {
+      const moduleRows = useStore(
+        store.subscribe,
+        store.getModules,
+      );
+    
+      return {
+        data: {
+          data: moduleRows,
+          meta: {
+            page: 1,
+            pageSize: 20,
+            totalItems: moduleRows.length,
+            totalPages: Math.max(
+              1,
+              Math.ceil(moduleRows.length / 20),
+            ),
+          },
+        },
+        isPending: false,
+        isError: false,
+        error: undefined,
+        refetch: vi.fn(),
+      };
+    },
     useEnumValues: (category: string) => ({
       data: category === "module_pipeline_stage"
         ? fixtures.stageValues

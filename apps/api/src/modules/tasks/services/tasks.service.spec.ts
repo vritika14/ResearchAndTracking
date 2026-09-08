@@ -12,7 +12,7 @@ describe('TasksService', () => {
   let repository: {
     findById: jest.Mock;
     findByIdGlobal: jest.Mock;
-    findByTenant: jest.Mock;
+    findVisibleByTenant: jest.Mock;
     findByCreator: jest.Mock;
     findByIds: jest.Mock;
     create: jest.Mock;
@@ -37,7 +37,7 @@ describe('TasksService', () => {
     repository = {
       findById: jest.fn(),
       findByIdGlobal: jest.fn(),
-      findByTenant: jest.fn(),
+      findVisibleByTenant: jest.fn(),
       findByCreator: jest.fn(),
       findByIds: jest.fn(),
       create: jest.fn(),
@@ -212,27 +212,71 @@ describe('TasksService', () => {
   });
 
   describe('list', () => {
-    it('filters out tasks the caller cannot see', async () => {
-      repository.findByTenant.mockResolvedValue([
-        {
-          id: 'task-1',
-          createdBy: 'user-1',
-          statusId: null,
-          priorityId: null,
-          visibilityId: null,
-        },
-        {
-          id: 'task-2',
-          createdBy: 'owner-2',
-          statusId: null,
-          priorityId: null,
-          visibilityId: null,
-        },
-      ]);
-      taskMembers.findByTaskIdsAndUser.mockResolvedValue(new Set());
+    it('returns a paginated page of visible tasks', async () => {
+      repository.findVisibleByTenant.mockResolvedValue({
+        data: [
+          {
+            id: 'task-21',
+            createdBy: 'user-1',
+            statusId: null,
+            priorityId: null,
+            visibilityId: null,
+          },
+        ],
+        totalItems: 41,
+      });
 
-      const result = await service.list('tenant-1', 'user-1');
-      expect(result.map((task) => task.id)).toEqual(['task-1']);
+      const result = await service.list(
+        'tenant-1',
+        'user-1',
+        2,
+        20,
+        'project-1',
+      );
+
+      expect(repository.findVisibleByTenant).toHaveBeenCalledWith(
+        'tenant-1',
+        'user-1',
+        20,
+        20,
+        'project-1',
+      );
+
+      expect(result.data.map((task) => task.id)).toEqual(['task-21']);
+
+      expect(result.meta).toEqual({
+        page: 2,
+        pageSize: 20,
+        totalItems: 41,
+        totalPages: 3,
+      });
+    });
+
+    it('returns pagination metadata when no visible tasks exist', async () => {
+      repository.findVisibleByTenant.mockResolvedValue({
+        data: [],
+        totalItems: 0,
+      });
+
+      const result = await service.list('tenant-1', 'user-1', 1, 20);
+
+      expect(repository.findVisibleByTenant).toHaveBeenCalledWith(
+        'tenant-1',
+        'user-1',
+        0,
+        20,
+        undefined,
+      );
+
+      expect(result).toEqual({
+        data: [],
+        meta: {
+          page: 1,
+          pageSize: 20,
+          totalItems: 0,
+          totalPages: 1,
+        },
+      });
     });
   });
 

@@ -9,6 +9,10 @@ import { ProjectModulesRepository } from '../../project-modules/repositories/pro
 import { TaskMembersRepository } from '../../task-members/repositories/task-members.repository';
 import { TenantSequencesRepository } from '../../tenant-sequences/repositories/tenant-sequences.repository';
 import { TasksRepository } from '../repositories/tasks.repository';
+import {
+  buildPaginationMeta,
+  paginationOffset,
+} from '../../../common/pagination';
 
 @Injectable()
 export class TasksService {
@@ -64,22 +68,30 @@ export class TasksService {
     return Boolean(membership);
   }
 
-  async list(tenantId: string, callerUserId: string, projectId?: string) {
-    const rows = await this.repository.findByTenant(tenantId, projectId);
+  async list(
+    tenantId: string,
+    callerUserId: string,
+    page: number,
+    pageSize: number,
+    projectId?: string,
+  ) {
+    const offset = paginationOffset(page, pageSize);
 
-    const nonCreatorTaskIds = rows
-      .filter((row) => row.createdBy !== callerUserId)
-      .map((row) => row.id);
-    const memberTaskIds = await this.taskMembers.findByTaskIdsAndUser(
-      nonCreatorTaskIds,
-      callerUserId,
-    );
+    const { data: rows, totalItems } =
+      await this.repository.findVisibleByTenant(
+        tenantId,
+        callerUserId,
+        offset,
+        pageSize,
+        projectId,
+      );
 
-    const visibleRows = rows.filter(
-      (row) => row.createdBy === callerUserId || memberTaskIds.has(row.id),
-    );
+    const shaped = await this.withDisplayValues(rows);
 
-    return this.withDisplayValues(visibleRows);
+    return {
+      data: shaped,
+      meta: buildPaginationMeta(page, pageSize, totalItems),
+    };
   }
 
   async findOne(tenantId: string, taskId: string, callerUserId: string) {

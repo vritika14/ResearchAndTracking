@@ -2,6 +2,7 @@
 import { NotesController } from './notes.controller';
 import { NotesService } from '../services/notes.service';
 import { UsersService } from '../../users/users.service';
+import { ConfigService } from '@nestjs/config';
 
 describe('NotesController', () => {
   let controller: NotesController;
@@ -13,6 +14,9 @@ describe('NotesController', () => {
     delete: jest.Mock;
   };
   let usersService: { findByExternalAuthId: jest.Mock };
+  let configService: {
+    get: jest.Mock;
+  };
 
   beforeEach(() => {
     notesService = {
@@ -24,9 +28,14 @@ describe('NotesController', () => {
     };
     usersService = { findByExternalAuthId: jest.fn() };
 
+    configService = {
+      get: jest.fn().mockReturnValue(20),
+    };
+
     controller = new NotesController(
       notesService as unknown as NotesService,
       usersService as unknown as UsersService,
+      configService as unknown as ConfigService,
     );
   });
 
@@ -35,19 +44,45 @@ describe('NotesController', () => {
   } as any;
 
   describe('list', () => {
-    it('resolves the caller and delegates to the service with tenantId', async () => {
-      usersService.findByExternalAuthId.mockResolvedValue({ id: 'user-1' });
-      const notes = [{ id: 'n1' }];
-      notesService.list.mockResolvedValue(notes);
+    it('resolves the caller and delegates with pagination parameters', async () => {
+      usersService.findByExternalAuthId.mockResolvedValue({
+        id: 'user-1',
+      });
 
-      const result = await controller.list('tenant-1', req, 'project-1');
+      const response = {
+        data: [{ id: 'n1' }],
+        meta: {
+          page: 2,
+          pageSize: 20,
+          totalItems: 21,
+          totalPages: 2,
+        },
+      };
+
+      notesService.list.mockResolvedValue(response);
+
+      const result = await controller.list(
+        'tenant-1',
+        req,
+        { page: 2 },
+        'project-1',
+      );
+
+      expect(usersService.findByExternalAuthId).toHaveBeenCalledWith(
+        'cognito-sub-1',
+      );
+
+      expect(configService.get).toHaveBeenCalledWith('PAGE_SIZE', 20);
 
       expect(notesService.list).toHaveBeenCalledWith(
         'tenant-1',
         'user-1',
+        2,
+        20,
         'project-1',
       );
-      expect(result).toBe(notes);
+
+      expect(result).toBe(response);
     });
   });
 

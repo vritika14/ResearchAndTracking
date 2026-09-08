@@ -489,8 +489,11 @@ export default function ProjectDetailPage() {
   // backend).
   const projectQuery = useMyProject(projectId);
   const modulesQuery = useModules(tenantId, projectId);
+  const modules = modulesQuery.data?.data ?? [];
   const tasksQuery = useTasks(tenantId, projectId);
+  const tasks = tasksQuery.data?.data ?? [];
   const notesQuery = useNotes(tenantId, projectId);
+  const notes = notesQuery.data?.data ?? [];
   const membersQuery = useMembers(tenantId);
   const me = useMe();
   const updateProject = useUpdateMyProject();
@@ -928,9 +931,9 @@ export default function ProjectDetailPage() {
             className="grid gap-6 lg:grid-cols-3"
             aria-label="Linked work"
           >
-            <ProjectModulesDetails modules={modulesQuery.data ?? []} />
-            <ProjectTasksDetails tasks={tasksQuery.data ?? []} />
-            <ProjectNotesDetails notes={notesQuery.data ?? []} />
+            <ProjectModulesDetails modules={modules} />
+            <ProjectTasksDetails tasks={tasks} />
+            <ProjectNotesDetails notes={notes} />
           </section>
 
           <ProjectPipeline

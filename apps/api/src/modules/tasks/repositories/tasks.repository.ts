@@ -1,6 +1,6 @@
 import { Injectable } from '@nestjs/common';
-import { tasks } from '@research-tracker/migrations';
-import { and, eq, inArray } from 'drizzle-orm';
+import { taskMembers, tasks } from '@research-tracker/migrations';
+import { and, desc, eq, exists, inArray, or, sql } from 'drizzle-orm';
 import { DrizzleService } from '../../../db/drizzle.service';
 
 @Injectable()
@@ -38,15 +38,56 @@ export class TasksRepository {
     return this.drizzle.db.select().from(tasks).where(inArray(tasks.id, ids));
   }
 
-  async findByTenant(tenantId: string, projectId?: string) {
-    const conditions = [eq(tasks.tenantId, tenantId)];
+  async findVisibleByTenant(
+    tenantId: string,
+    callerUserId: string,
+    offset: number,
+    limit: number,
+    projectId?: string,
+  ) {
+    const accessCondition = or(
+      eq(tasks.createdBy, callerUserId),
+      exists(
+        this.drizzle.db
+          .select({ id: taskMembers.id })
+          .from(taskMembers)
+          .where(
+            and(
+              eq(taskMembers.tenantId, tenantId),
+              eq(taskMembers.taskId, tasks.id),
+              eq(taskMembers.userId, callerUserId),
+            ),
+          ),
+      ),
+    );
+
+    const conditions = [eq(tasks.tenantId, tenantId), accessCondition];
+
     if (projectId) {
       conditions.push(eq(tasks.projectId, projectId));
     }
-    return this.drizzle.db
-      .select()
-      .from(tasks)
-      .where(and(...conditions));
+
+    const whereCondition = and(...conditions);
+
+    const [data, countResult] = await Promise.all([
+      this.drizzle.db
+        .select()
+        .from(tasks)
+        .where(whereCondition)
+        .orderBy(desc(tasks.createdAt), desc(tasks.id))
+        .limit(limit)
+        .offset(offset),
+
+      this.drizzle.db
+        .select({ count: sql<number>`count(*)::int` })
+        .from(tasks)
+        .where(whereCondition),
+    ]);
+
+    return {
+      data,
+      totalItems: countResult[0]?.count ?? 0,
+    };
   }
 
   async create(values: {
