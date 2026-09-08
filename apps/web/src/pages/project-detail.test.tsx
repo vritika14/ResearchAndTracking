@@ -84,9 +84,39 @@ vi.mock("@/api/hooks", () => ({
     isPending: false,
   }),
   useArchiveMyProject: () => ({ mutateAsync: vi.fn(), isPending: false }),
-  useModules: () => ({ data: [] }),
-  useTasks: () => ({ data: [] }),
-  useNotes: () => ({ data: [] }),
+  useModules: () => ({
+    data: {
+      data: [],
+      meta: {
+        page: 1,
+        pageSize: 20,
+        totalItems: 0,
+        totalPages: 1,
+      },
+    },
+  }),
+  useTasks: () => ({
+    data: {
+      data: [],
+      meta: {
+        page: 1,
+        pageSize: 20,
+        totalItems: 0,
+        totalPages: 1,
+      },
+    },
+  }),
+  useNotes: () => ({
+    data: {
+      data: [],
+      meta: {
+        page: 1,
+        pageSize: 20,
+        totalItems: 0,
+        totalPages: 1,
+      },
+    },
+  }),
   useMyProjectPipelineStages: () => ({
     data: fixtures.pipelineStages,
     isPending: false,

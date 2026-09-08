@@ -75,6 +75,7 @@ export default function ModulesPage() {
   const tenantId = workspace.data?.id ?? "";
 
   const modulesQuery = useModules(tenantId);
+  const modules = modulesQuery.data?.data ?? [];
   const projectsQuery = useProjects(tenantId);
   const projects = projectsQuery.data?.data ?? [];
   const [isNewModuleOpen, setIsNewModuleOpen] = useState(false);
@@ -117,7 +118,7 @@ export default function ModulesPage() {
 
   const visibleModules = useMemo(() => {
     const query = search.trim().toLowerCase();
-    return (modulesQuery.data ?? []).filter((module) => {
+    return (modules).filter((module) => {
       if (status !== "All" && module.status !== status) return false;
       const linkedProject = projectName(module.projectId);
       return (
@@ -127,7 +128,7 @@ export default function ModulesPage() {
         linkedProject.toLowerCase().includes(query)
       );
     });
-  }, [modulesQuery.data, search, status, projectName]);
+  }, [modules, search, status, projectName]);
 
   const hasActiveFilters = search !== "" || status !== "All";
 

@@ -135,15 +135,43 @@ vi.mock("@/api/hooks", async () => {
         refetch: vi.fn(),
       };
     },
-    useTasks: () => ({ data: [] }),
-    useMembers: () => ({ data: [] }),
-    useModules: () => ({
-      data: useSyncExternalStore(modules.subscribe, modules.get),
-      isPending: false,
-      isError: false,
-      error: undefined,
-      refetch: vi.fn(),
+    useTasks: () => ({
+      data: {
+        data: [],
+        meta: {
+          page: 1,
+          pageSize: 20,
+          totalItems: 0,
+          totalPages: 1,
+        },
+      },
     }),
+    useMembers: () => ({ data: [] }),
+    useModules: () => {
+      const moduleRows = useSyncExternalStore(
+        modules.subscribe,
+        modules.get,
+      );
+    
+      return {
+        data: {
+          data: moduleRows,
+          meta: {
+            page: 1,
+            pageSize: 20,
+            totalItems: moduleRows.length,
+            totalPages: Math.max(
+              1,
+              Math.ceil(moduleRows.length / 20),
+            ),
+          },
+        },
+        isPending: false,
+        isError: false,
+        error: undefined,
+        refetch: vi.fn(),
+      };
+    },
     usePipelineStages: () => ({
       data: useSyncExternalStore(stages.subscribe, stages.get),
       isPending: false,

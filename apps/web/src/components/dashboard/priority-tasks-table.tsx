@@ -54,9 +54,11 @@ export function PriorityTasksTable() {
   const workspace = useCurrentWorkspace();
   const tenantId = workspace.data?.id ?? "";
   const tasksQuery = useTasks(tenantId);
+  const tasks = tasksQuery.data?.data ?? [];
   const projectsQuery = useProjects(tenantId);
   const projects = projectsQuery.data?.data ?? [];
   const modulesQuery = useModules(tenantId);
+  const modules = modulesQuery.data?.data ?? [];
 
   const [search, setSearch] = useState("");
   const [priority, setPriority] = useState<PriorityFilter>("All");
@@ -72,14 +74,14 @@ export function PriorityTasksTable() {
   }, [projects]);
   const moduleById = useMemo(() => {
     const map = new Map<string, string>();
-    for (const module of modulesQuery.data ?? []) map.set(module.id, module.title);
+    for (const module of modules) map.set(module.id, module.title);
     return map;
-  }, [modulesQuery.data]);
+  }, [modules]);
 
   const today = new Date().toISOString().slice(0, 10);
 
   const rows = useMemo(() => {
-    return (tasksQuery.data ?? [])
+    return tasks
       .filter((task) => task.status !== "Complete")
       .map((task) => ({
         id: task.id,
@@ -99,7 +101,7 @@ export function PriorityTasksTable() {
         if (priorityDiff !== 0) return priorityDiff;
         return a.due.localeCompare(b.due);
       });
-  }, [tasksQuery.data, projectById, moduleById, today]);
+  }, [tasks, projectById, moduleById, today]);
 
   const filtered = useMemo(() => {
     const query = search.trim().toLowerCase();

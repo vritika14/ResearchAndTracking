@@ -1,4 +1,3 @@
-// apps/api/src/modules/notes/controllers/notes.controller.ts
 import {
   Body,
   Controller,
@@ -26,7 +25,8 @@ import { CreateNoteDto } from '../dto/create-note.dto';
 import { UpdateNoteDto } from '../dto/update-note.dto';
 import { NotesService } from '../services/notes.service';
 import { TenantMemberGuard } from '../../memberships/policies/tenant-member.guard';
-
+import { ConfigService } from '@nestjs/config';
+import { PaginationQueryDto } from '../../../common/dto/pagination-query.dto';
 interface AuthenticatedRequest extends Request {
   user: AuthenticatedPrincipal;
 }
@@ -38,6 +38,7 @@ export class NotesController {
   constructor(
     private readonly notesService: NotesService,
     private readonly usersService: UsersService,
+    private readonly configService: ConfigService,
   ) {}
 
   @ApiOperation({
@@ -49,10 +50,20 @@ export class NotesController {
   async list(
     @Param('tenantId') tenantId: string,
     @Req() req: AuthenticatedRequest,
+    @Query() query: PaginationQueryDto,
     @Query('projectId') projectId?: string,
   ) {
     const user = await this.usersService.findByExternalAuthId(req.user.sub);
-    return this.notesService.list(tenantId, user.id, projectId);
+
+    const pageSize = this.configService.get<number>('PAGE_SIZE', 20);
+
+    return this.notesService.list(
+      tenantId,
+      user.id,
+      query.page ?? 1,
+      pageSize,
+      projectId,
+    );
   }
 
   @ApiOperation({ summary: 'Get a single note' })

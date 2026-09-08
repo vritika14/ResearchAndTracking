@@ -124,9 +124,39 @@ vi.mock("@/api/hooks", () => ({
   useCreateProject: () => ({ mutateAsync: vi.fn(), isPending: false }),
   useArchiveProject: () => ({ mutateAsync: vi.fn(), isPending: false }),
   useTrackEvent: () => vi.fn(),
-  useModules: () => ({ data: [fixtures.module] }),
-  useTasks: () => ({ data: [fixtures.task] }),
-  useNotes: () => ({ data: [fixtures.note] }),
+  useModules: () => ({
+    data: {
+      data: [fixtures.module],
+      meta: {
+        page: 1,
+        pageSize: 20,
+        totalItems: 1,
+        totalPages: 1,
+      },
+    },
+  }),
+  useTasks: () => ({
+    data: {
+      data: [fixtures.task],
+      meta: {
+        page: 1,
+        pageSize: 20,
+        totalItems: 1,
+        totalPages: 1,
+      },
+    },
+  }),
+  useNotes: () => ({
+    data: {
+      data: [fixtures.note],
+      meta: {
+        page: 1,
+        pageSize: 20,
+        totalItems: 1,
+        totalPages: 1,
+      },
+    },
+  }),
   usePipelineStages: () => ({ data: fixtures.pipelineStages }),
 }));
 

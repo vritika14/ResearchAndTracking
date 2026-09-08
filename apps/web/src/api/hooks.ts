@@ -268,8 +268,19 @@ export const apiKeys = {
     ] as const,
   projectInvitations: (tenantId: string, projectId: string) =>
     ["api", "tenant", tenantId, "projects", projectId, "invitations"] as const,
-  modules: (tenantId: string, projectId?: string) =>
-    ["api", "tenant", tenantId, "modules", projectId ?? "all"] as const,
+  modules: (
+    tenantId: string,
+    projectId?: string,
+    page = 1,
+  ) =>
+    [
+      "api",
+      "tenant",
+      tenantId,
+      "modules",
+      projectId ?? "all",
+      page,
+    ] as const,
   module: (tenantId: string, moduleId: string) =>
     ["api", "tenant", tenantId, "modules", "detail", moduleId] as const,
   moduleCollaborators: (tenantId: string, moduleId: string) =>
@@ -277,14 +288,36 @@ export const apiKeys = {
   moduleInvitations: (tenantId: string, moduleId: string) =>
     ["api", "tenant", tenantId, "modules", moduleId, "invitations"] as const,
   invitation: (token: string) => ["api", "invitations", token] as const,
-  tasks: (tenantId: string, projectId?: string) =>
-    ["api", "tenant", tenantId, "tasks", projectId ?? "all"] as const,
+  tasks: (
+    tenantId: string,
+    projectId?: string,
+    page = 1,
+  ) =>
+    [
+      "api",
+      "tenant",
+      tenantId,
+      "tasks",
+      projectId ?? "all",
+      page,
+    ] as const,
   task: (tenantId: string, taskId: string) =>
     ["api", "tenant", tenantId, "tasks", "detail", taskId] as const,
   taskMembers: (tenantId: string, taskId: string) =>
     ["api", "tenant", tenantId, "tasks", taskId, "members"] as const,
-  notes: (tenantId: string, projectId?: string) =>
-    ["api", "tenant", tenantId, "notes", projectId ?? "all"] as const,
+  notes: (
+    tenantId: string,
+    projectId?: string,
+    page = 1,
+  ) =>
+    [
+      "api",
+      "tenant",
+      tenantId,
+      "notes",
+      projectId ?? "all",
+      page,
+    ] as const,
   note: (tenantId: string, noteId: string) =>
     ["api", "tenant", tenantId, "notes", "detail", noteId] as const,
   noteMembers: (tenantId: string, noteId: string) =>
@@ -846,19 +879,26 @@ export type UpdateModuleInput = Partial<CreateModuleInput>;
 export function useModules(
   tenantId: string,
   projectId?: string,
+  page = 1,
   enabled = true,
 ) {
   return useQuery({
-    queryKey: apiKeys.modules(tenantId, projectId),
+    queryKey: apiKeys.modules(tenantId, projectId, page),
     enabled: Boolean(tenantId) && enabled,
     queryFn: async () =>
-      responseData<ApiModule[]>(
+      responseData<PaginatedResponse<ApiModule>>(
         await apiClient.GET("/api/v1/tenant/{tenantId}/modules", {
           params: {
             path: { tenantId },
-            // The generated type marks this required despite the controller's
-            // @ApiQuery({ required: false }) — it's genuinely optional at runtime.
-            query: (projectId ? { projectId } : {}) as { projectId: string },
+            // The generated type marks projectId as required even though
+            // it is optional at runtime.
+            query: {
+              ...(projectId ? { projectId } : {}),
+              page,
+            } as {
+              projectId: string;
+              page: number;
+            },
           },
         }),
       ),
@@ -1122,18 +1162,27 @@ export interface CreateTaskInput {
 }
 export type UpdateTaskInput = Partial<CreateTaskInput>;
 
-export function useTasks(tenantId: string, projectId?: string, enabled = true) {
+export function useTasks(
+  tenantId: string,
+  projectId?: string,
+  page = 1,
+  enabled = true,
+) {
   return useQuery({
-    queryKey: apiKeys.tasks(tenantId, projectId),
+    queryKey: apiKeys.tasks(tenantId, projectId, page),
     enabled: Boolean(tenantId) && enabled,
     queryFn: async () =>
-      responseData<ApiTask[]>(
+      responseData<PaginatedResponse<ApiTask>>(
         await apiClient.GET("/api/v1/tenant/{tenantId}/tasks", {
           params: {
             path: { tenantId },
-            // The generated type marks this required despite the controller's
-            // @ApiQuery({ required: false }) — it's genuinely optional at runtime.
-            query: (projectId ? { projectId } : {}) as { projectId: string },
+            query: {
+              ...(projectId ? { projectId } : {}),
+              page,
+            } as {
+              projectId: string;
+              page: number;
+            },
           },
         }),
       ),
@@ -1355,18 +1404,29 @@ export interface CreateNoteInput {
 }
 export type UpdateNoteInput = Partial<CreateNoteInput>;
 
-export function useNotes(tenantId: string, projectId?: string, enabled = true) {
+export function useNotes(
+  tenantId: string,
+  projectId?: string,
+  page = 1,
+  enabled = true,
+) {
   return useQuery({
-    queryKey: apiKeys.notes(tenantId, projectId),
+    queryKey: apiKeys.notes(tenantId, projectId, page),
     enabled: Boolean(tenantId) && enabled,
     queryFn: async () =>
-      responseData<ApiNote[]>(
+      responseData<PaginatedResponse<ApiNote>>(
         await apiClient.GET("/api/v1/tenant/{tenantId}/notes", {
           params: {
             path: { tenantId },
-            // The generated type marks this required despite the controller's
-            // @ApiQuery({ required: false }) — it's genuinely optional at runtime.
-            query: (projectId ? { projectId } : {}) as { projectId: string },
+            // The generated type marks projectId as required even though
+            // it is optional at runtime.
+            query: {
+              ...(projectId ? { projectId } : {}),
+              page,
+            } as {
+              projectId: string;
+              page: number;
+            },
           },
         }),
       ),

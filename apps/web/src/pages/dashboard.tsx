@@ -178,6 +178,7 @@ export default function DashboardPage() {
   const projectsQuery = useProjects(tenantId);
   const projects = projectsQuery.data?.data ?? [];
   const tasksQuery = useTasks(tenantId);
+  const tasks = tasksQuery.data?.data ?? [];
   const stagesQuery = usePipelineStages(tenantId);
   const [isCustomizeOpen, setIsCustomizeOpen] = useState(false);
   const [layout, setLayout] = useState(loadDashboardLayout);
@@ -191,13 +192,15 @@ export default function DashboardPage() {
         activeProjects: projects.filter((project) => project.status === "Active")
           .length,
         totalProjects: projects.length,
-        openTasks: (tasksQuery.data ?? []).filter((task) => task.status !== "Complete").length,
-        totalTasks: (tasksQuery.data ?? []).length,
+        openTasks: tasks.filter(
+          (task) => task.status !== "Complete",
+        ).length,
+        totalTasks: tasks.length,
         reviewStage: projects.filter(
           (project) => project.pipelineStage === REVIEW_STAGE,
         ).length,
       }),
-    [projects, tasksQuery.data],
+    [projects, tasks],
   );
   const visibleWidgets = new Set(
     layout.order.filter((id) => !layout.hidden.includes(id)),
@@ -384,7 +387,7 @@ export default function DashboardPage() {
       </div>
       <DashboardInsights
         projects={projects}
-        tasks={tasksQuery.data ?? []}
+        tasks={tasks}
         stages={stagesQuery.data ?? []}
         order={insightOrder}
         visible={visibleInsights}

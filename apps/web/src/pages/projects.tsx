@@ -204,8 +204,11 @@ export default function ProjectsPage() {
 
   const projectsQuery = useProjects(tenantId);
   const modulesQuery = useModules(tenantId);
+  const modules = modulesQuery.data?.data ?? [];
   const tasksQuery = useTasks(tenantId);
+  const tasks = tasksQuery.data?.data ?? [];
   const notesQuery = useNotes(tenantId);
+  const notes = notesQuery.data?.data ?? [];
   const pipelineStagesQuery = usePipelineStages(tenantId);
   const me = useMe();
   const stageOrder = useMemo(() => {
@@ -244,7 +247,7 @@ export default function ProjectsPage() {
 
   const taskCountByProject = useMemo(() => {
     const counts = new Map<string, { completed: number; total: number }>();
-    for (const task of tasksQuery.data ?? []) {
+    for (const task of tasks) {
       if (!task.projectId) continue;
       const entry = counts.get(task.projectId) ?? { completed: 0, total: 0 };
       entry.total += 1;
@@ -252,25 +255,25 @@ export default function ProjectsPage() {
       counts.set(task.projectId, entry);
     }
     return counts;
-  }, [tasksQuery.data]);
+  }, [tasks]);
 
   const noteCountByProject = useMemo(() => {
     const counts = new Map<string, number>();
-    for (const note of notesQuery.data ?? []) {
+    for (const note of notes) {
       if (!note.projectId) continue;
       counts.set(note.projectId, (counts.get(note.projectId) ?? 0) + 1);
     }
     return counts;
-  }, [notesQuery.data]);
+  }, [notes]);
 
   const moduleCountByProject = useMemo(() => {
     const counts = new Map<string, number>();
-    for (const module of modulesQuery.data ?? []) {
+    for (const module of modules) {
       if (!module.projectId) continue;
       counts.set(module.projectId, (counts.get(module.projectId) ?? 0) + 1);
     }
     return counts;
-  }, [modulesQuery.data]);
+  }, [modules]);
 
   const visibleProjects = useMemo(() => {
     const rows = projectsQuery.data?.data ?? [];

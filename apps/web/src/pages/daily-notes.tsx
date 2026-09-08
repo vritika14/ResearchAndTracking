@@ -108,6 +108,7 @@ export default function DailyNotesPage() {
   const projectsQuery = useProjects(tenantId);
   const projects = projectsQuery.data?.data ?? [];
   const modulesQuery = useModules(tenantId);
+  const modules = modulesQuery.data?.data ?? [];
 
   const createNote = useCreateNote(tenantId);
   const updateNote = useUpdateNote(tenantId);
@@ -124,7 +125,7 @@ export default function DailyNotesPage() {
   const [selectedMembers, setSelectedMembers] = useState<ApiUserSearchResult[]>([]);
   const userSearchQuery = useUserSearch(memberSearch, memberPickerOpen);
 
-  const notes = notesQuery.data ?? [];
+  const notes = notesQuery.data?.data ?? [];
 
   useEffect(() => {
     if (!selectedId && notes.length > 0) {
@@ -147,9 +148,9 @@ export default function DailyNotesPage() {
 
   const moduleById = useMemo(() => {
     const map = new Map<string, string>();
-    for (const module of modulesQuery.data ?? []) map.set(module.id, module.title);
+    for (const module of modules) map.set(module.id, module.title);
     return map;
-  }, [modulesQuery.data]);
+  }, [modules]);
 
   function linkTargetLabel(note: ApiNote) {
     if (note.moduleId) return moduleById.get(note.moduleId) ?? "Unknown module";
@@ -498,7 +499,7 @@ export default function DailyNotesPage() {
                       <SelectValue placeholder="Select a module" />
                     </SelectTrigger>
                     <SelectContent>
-                      {(modulesQuery.data ?? []).map((module) => (
+                      {(modules).map((module) => (
                         <SelectItem key={module.id} value={module.id}>
                           {module.title}
                         </SelectItem>

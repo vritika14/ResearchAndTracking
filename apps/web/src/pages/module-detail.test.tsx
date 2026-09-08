@@ -65,8 +65,28 @@ vi.mock("@/api/hooks", () => ({
     mutateAsync: fixtures.updateModule,
     isPending: false,
   }),
-  useTasks: () => ({ data: [] }),
-  useNotes: () => ({ data: [] }),
+  useTasks: () => ({
+    data: {
+      data: [],
+      meta: {
+        page: 1,
+        pageSize: 20,
+        totalItems: 0,
+        totalPages: 1,
+      },
+    },
+  }),
+  useNotes: () => ({
+    data: {
+      data: [],
+      meta: {
+        page: 1,
+        pageSize: 20,
+        totalItems: 0,
+        totalPages: 1,
+      },
+    },
+  }),
   useMembers: () => ({ data: [], isPending: false }),
   useEnumValues: () => ({ data: [] }),
   useProject: () => ({ data: undefined, isError: false }),

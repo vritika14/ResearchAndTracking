@@ -1,6 +1,7 @@
 import { ProjectModulesController } from './project-modules.controller';
 import { ProjectModulesService } from '../services/project-modules.service';
 import { UsersService } from '../../users/users.service';
+import { ConfigService } from '@nestjs/config';
 
 describe('ProjectModulesController', () => {
   let controller: ProjectModulesController;
@@ -12,6 +13,9 @@ describe('ProjectModulesController', () => {
     archive: jest.Mock;
   };
   let usersService: { findByExternalAuthId: jest.Mock };
+  let configService: {
+    get: jest.Mock;
+  };
 
   beforeEach(() => {
     modulesService = {
@@ -24,28 +28,55 @@ describe('ProjectModulesController', () => {
     usersService = {
       findByExternalAuthId: jest.fn().mockResolvedValue({ id: 'user-1' }),
     };
+    configService = {
+      get: jest.fn().mockReturnValue(20),
+    };
 
     controller = new ProjectModulesController(
       modulesService as unknown as ProjectModulesService,
       usersService as unknown as UsersService,
+      configService as unknown as ConfigService,
     );
   });
 
   const req = { user: { sub: 'cognito-sub-1', accessToken: 'token-1' } } as any;
 
   describe('list', () => {
-    it('resolves the caller and delegates to the service', async () => {
-      const modules = [{ id: 'm1' }];
-      modulesService.listActive.mockResolvedValue(modules);
+    it('resolves the caller and delegates with pagination parameters', async () => {
+      const response = {
+        data: [{ id: 'm1' }],
+        meta: {
+          page: 2,
+          pageSize: 20,
+          totalItems: 21,
+          totalPages: 2,
+        },
+      };
 
-      const result = await controller.list('tenant-1', req, 'project-1');
+      modulesService.listActive.mockResolvedValue(response);
+
+      const result = await controller.list(
+        'tenant-1',
+        req,
+        { page: 2 },
+        'project-1',
+      );
+
+      expect(usersService.findByExternalAuthId).toHaveBeenCalledWith(
+        'cognito-sub-1',
+      );
+
+      expect(configService.get).toHaveBeenCalledWith('PAGE_SIZE', 20);
 
       expect(modulesService.listActive).toHaveBeenCalledWith(
         'tenant-1',
         'user-1',
+        2,
+        20,
         'project-1',
       );
-      expect(result).toBe(modules);
+
+      expect(result).toBe(response);
     });
   });
 
