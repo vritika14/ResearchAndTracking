@@ -107,6 +107,7 @@ export default function ModulesPage() {
   const tenantId = workspace.data?.id ?? "";
 
   const modulesQuery = useModules(tenantId);
+  const modules = modulesQuery.data?.data ?? [];
   const projectsQuery = useProjects(tenantId);
   const projects = projectsQuery.data?.data ?? [];
   const [isNewModuleOpen, setIsNewModuleOpen] = useState(false);
@@ -114,9 +115,10 @@ export default function ModulesPage() {
   const [actionError, setActionError] = useState<string | null>(null);
   const workspaceMembers = useMembers(
     tenantId,
+    1,
     isNewModuleOpen || sharingModule !== null,
   );
-
+  const members = workspaceMembers.data?.data ?? [];
   const createModule = useCreateModule(tenantId);
   const archiveModule = useArchiveModule(tenantId);
   const trackEvent = useTrackEvent(tenantId);
@@ -140,9 +142,9 @@ export default function ModulesPage() {
 
   const memberById = useMemo(() => {
     const map = new Map<string, string>();
-    for (const member of workspaceMembers.data ?? []) map.set(member.userId, member.displayName);
+    for (const member of members) map.set(member.userId, member.displayName);
     return map;
-  }, [workspaceMembers.data]);
+  }, [members]);
 
   const projectName = useCallback((projectId: string | null) => {
     if (!projectId) return "Independent module";
@@ -185,6 +187,7 @@ export default function ModulesPage() {
   const visibleModules = useMemo(() => {
     const query = search.trim().toLowerCase();
     const filtered = (modulesQuery.data ?? []).filter((module) => {
+    return (modules).filter((module) => {
       if (status !== "All" && module.status !== status) return false;
       const linkedProject = projectName(module.projectId);
       return (
@@ -199,6 +202,7 @@ export default function ModulesPage() {
     );
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [modulesQuery.data, search, status, projectName, assigneeName, sortColumn, sortDirection]);
+  }, [modules, search, status, projectName]);
 
   const hasActiveFilters = search !== "" || status !== "All";
 
@@ -259,7 +263,7 @@ export default function ModulesPage() {
         onOpenChange={setIsNewModuleOpen}
         tenantId={tenantId}
         projects={projects}
-        members={workspaceMembers.data ?? []}
+        members={members}
         onSave={handleCreateModule}
       />
       <Dialog
@@ -281,7 +285,7 @@ export default function ModulesPage() {
                 tenantId={tenantId}
                 moduleId={sharingModule.id}
                 moduleTitle={sharingModule.title}
-                members={workspaceMembers.data ?? []}
+                members={members}
               />
             ) : (
               <p className="text-sm text-muted-foreground">

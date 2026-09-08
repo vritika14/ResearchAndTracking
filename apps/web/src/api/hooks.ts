@@ -255,9 +255,20 @@ export interface InvitationPreview extends ApiInvitation {
 export const apiKeys = {
   me: ["api", "me"] as const,
   workspaces: ["api", "workspaces"] as const,
+  workspacesPage: (page = 1) =>
+    ["api", "workspaces", page] as const,
   currentWorkspace: ["api", "workspace", "current"] as const,
-  members: (tenantId: string) =>
-    ["api", "tenant", tenantId, "members"] as const,
+  members: (
+    tenantId: string,
+    page = 1,
+  ) =>
+    [
+      "api",
+      "tenant",
+      tenantId,
+      "members",
+      page,
+    ] as const,
   projects: (tenantId: string) =>
     ["api", "tenant", tenantId, "projects"] as const,
   project: (tenantId: string, projectId: string) =>
@@ -273,8 +284,19 @@ export const apiKeys = {
     ] as const,
   projectInvitations: (tenantId: string, projectId: string) =>
     ["api", "tenant", tenantId, "projects", projectId, "invitations"] as const,
-  modules: (tenantId: string, projectId?: string) =>
-    ["api", "tenant", tenantId, "modules", projectId ?? "all"] as const,
+  modules: (
+    tenantId: string,
+    projectId?: string,
+    page = 1,
+  ) =>
+    [
+      "api",
+      "tenant",
+      tenantId,
+      "modules",
+      projectId ?? "all",
+      page,
+    ] as const,
   module: (tenantId: string, moduleId: string) =>
     ["api", "tenant", tenantId, "modules", "detail", moduleId] as const,
   moduleCollaborators: (tenantId: string, moduleId: string) =>
@@ -282,20 +304,51 @@ export const apiKeys = {
   moduleInvitations: (tenantId: string, moduleId: string) =>
     ["api", "tenant", tenantId, "modules", moduleId, "invitations"] as const,
   invitation: (token: string) => ["api", "invitations", token] as const,
-  tasks: (tenantId: string, projectId?: string) =>
-    ["api", "tenant", tenantId, "tasks", projectId ?? "all"] as const,
+  tasks: (
+    tenantId: string,
+    projectId?: string,
+    page = 1,
+  ) =>
+    [
+      "api",
+      "tenant",
+      tenantId,
+      "tasks",
+      projectId ?? "all",
+      page,
+    ] as const,
   task: (tenantId: string, taskId: string) =>
     ["api", "tenant", tenantId, "tasks", "detail", taskId] as const,
   taskMembers: (tenantId: string, taskId: string) =>
     ["api", "tenant", tenantId, "tasks", taskId, "members"] as const,
-  notes: (tenantId: string, projectId?: string) =>
-    ["api", "tenant", tenantId, "notes", projectId ?? "all"] as const,
+  notes: (
+    tenantId: string,
+    projectId?: string,
+    page = 1,
+  ) =>
+    [
+      "api",
+      "tenant",
+      tenantId,
+      "notes",
+      projectId ?? "all",
+      page,
+    ] as const,
   note: (tenantId: string, noteId: string) =>
     ["api", "tenant", tenantId, "notes", "detail", noteId] as const,
   noteMembers: (tenantId: string, noteId: string) =>
     ["api", "tenant", tenantId, "notes", noteId, "members"] as const,
-  conferences: (tenantId: string) =>
-    ["api", "tenant", tenantId, "conferences"] as const,
+  conferences: (
+    tenantId: string,
+    page = 1,
+  ) =>
+    [
+      "api",
+      "tenant",
+      tenantId,
+      "conferences",
+      page,
+    ] as const,
   conference: (tenantId: string, conferenceId: string) =>
     ["api", "tenant", tenantId, "conferences", conferenceId] as const,
   accountPreferences: ["api", "me", "preferences"] as const,
@@ -459,11 +512,17 @@ export function useCurrentWorkspace(enabled = true) {
   });
 }
 
-export function useWorkspaces() {
+export function useWorkspaces(page = 1) {
   return useQuery({
-    queryKey: apiKeys.workspaces,
+    queryKey: apiKeys.workspacesPage(page),
     queryFn: async () =>
-      responseData<Workspace[]>(await apiClient.GET("/api/v1/workspaces")),
+      responseData<PaginatedResponse<Workspace>>(
+        await apiClient.GET("/api/v1/workspaces", {
+          params: {
+            query: { page },
+          } as never,
+        }),
+      ),
   });
 }
 
@@ -550,19 +609,30 @@ export function useDeleteWorkspace() {
   });
 }
 
-export function useMembers(tenantId: string, enabled = true) {
+export function useMembers(
+  tenantId: string,
+  page = 1,
+  enabled = true,
+) {
   return useQuery({
-    queryKey: apiKeys.members(tenantId),
+    queryKey: apiKeys.members(tenantId, page),
     enabled: Boolean(tenantId) && enabled,
     queryFn: async () => {
-      const result = await apiClient.GET("/api/v1/tenant/{tenantId}/members", {
-        params: { path: { tenantId } },
-      });
+      const result = await apiClient.GET(
+        "/api/v1/tenant/{tenantId}/members",
+        {
+          params: {
+            path: { tenantId },
+            query: { page },
+          } as never,
+        },
+      );
+
       // The generated MembershipResponseDto mis-describes `joinedAt` as `{}`
-      // (the backend DTO lacks an explicit Swagger type hint on that Date
-      // field) — joinedAt isn't used anywhere in the UI, so trust our own
-      // shape here rather than the lossy generated one.
-      return responseData<Membership[]>(result as never);
+      // because the backend DTO lacks an explicit Swagger type hint.
+      return responseData<PaginatedResponse<Membership>>(
+        result as never,
+      );
     },
   });
 }
@@ -694,7 +764,18 @@ export function useArchiveProject(tenantId: string) {
   });
 }
 
-const myProjectsKey = ["api", "me", "projects"] as const;
+const myProjectsKey = [
+  "api",
+  "me",
+  "projects",
+] as const;
+
+const myProjectsPageKey = (page = 1) =>
+  [
+    ...myProjectsKey,
+    page,
+  ] as const;
+
 const myProjectKey = (projectId: string) =>
   ["api", "me", "projects", projectId] as const;
 
@@ -717,12 +798,21 @@ function invalidateResourceEverywhere(queryClient: QueryClient, resource: string
  * regardless of which workspace it lives in — see MyProjectsController on
  * the backend.
  */
-export function useMyProjects(enabled = true) {
+export function useMyProjects(
+  page = 1,
+  enabled = true,
+) {
   return useQuery({
-    queryKey: myProjectsKey,
+    queryKey: myProjectsPageKey(page),
     enabled,
     queryFn: async () =>
-      responseData<ApiProject[]>(await apiClient.GET("/api/v1/me/projects")),
+      responseData<PaginatedResponse<ApiProject>>(
+        await apiClient.GET("/api/v1/me/projects", {
+          params: {
+            query: { page },
+          } as never,
+        }),
+      ),
   });
 }
 
@@ -874,19 +964,26 @@ export type UpdateModuleInput = Omit<Partial<CreateModuleInput>, "projectId"> & 
 export function useModules(
   tenantId: string,
   projectId?: string,
+  page = 1,
   enabled = true,
 ) {
   return useQuery({
-    queryKey: apiKeys.modules(tenantId, projectId),
+    queryKey: apiKeys.modules(tenantId, projectId, page),
     enabled: Boolean(tenantId) && enabled,
     queryFn: async () =>
-      responseData<ApiModule[]>(
+      responseData<PaginatedResponse<ApiModule>>(
         await apiClient.GET("/api/v1/tenant/{tenantId}/modules", {
           params: {
             path: { tenantId },
-            // The generated type marks this required despite the controller's
-            // @ApiQuery({ required: false }) — it's genuinely optional at runtime.
-            query: (projectId ? { projectId } : {}) as { projectId: string },
+            // The generated type marks projectId as required even though
+            // it is optional at runtime.
+            query: {
+              ...(projectId ? { projectId } : {}),
+              page,
+            } as {
+              projectId: string;
+              page: number;
+            },
           },
         }),
       ),
@@ -1165,18 +1262,27 @@ export type UpdateTaskInput = Omit<Partial<CreateTaskInput>, "projectId" | "modu
   moduleId?: string | null;
 };
 
-export function useTasks(tenantId: string, projectId?: string, enabled = true) {
+export function useTasks(
+  tenantId: string,
+  projectId?: string,
+  page = 1,
+  enabled = true,
+) {
   return useQuery({
-    queryKey: apiKeys.tasks(tenantId, projectId),
+    queryKey: apiKeys.tasks(tenantId, projectId, page),
     enabled: Boolean(tenantId) && enabled,
     queryFn: async () =>
-      responseData<ApiTask[]>(
+      responseData<PaginatedResponse<ApiTask>>(
         await apiClient.GET("/api/v1/tenant/{tenantId}/tasks", {
           params: {
             path: { tenantId },
-            // The generated type marks this required despite the controller's
-            // @ApiQuery({ required: false }) — it's genuinely optional at runtime.
-            query: (projectId ? { projectId } : {}) as { projectId: string },
+            query: {
+              ...(projectId ? { projectId } : {}),
+              page,
+            } as {
+              projectId: string;
+              page: number;
+            },
           },
         }),
       ),
@@ -1412,18 +1518,29 @@ export type UpdateNoteInput = Omit<Partial<CreateNoteInput>, "projectId" | "modu
   moduleId?: string | null;
 };
 
-export function useNotes(tenantId: string, projectId?: string, enabled = true) {
+export function useNotes(
+  tenantId: string,
+  projectId?: string,
+  page = 1,
+  enabled = true,
+) {
   return useQuery({
-    queryKey: apiKeys.notes(tenantId, projectId),
+    queryKey: apiKeys.notes(tenantId, projectId, page),
     enabled: Boolean(tenantId) && enabled,
     queryFn: async () =>
-      responseData<ApiNote[]>(
+      responseData<PaginatedResponse<ApiNote>>(
         await apiClient.GET("/api/v1/tenant/{tenantId}/notes", {
           params: {
             path: { tenantId },
-            // The generated type marks this required despite the controller's
-            // @ApiQuery({ required: false }) — it's genuinely optional at runtime.
-            query: (projectId ? { projectId } : {}) as { projectId: string },
+            // The generated type marks projectId as required even though
+            // it is optional at runtime.
+            query: {
+              ...(projectId ? { projectId } : {}),
+              page,
+            } as {
+              projectId: string;
+              page: number;
+            },
           },
         }),
       ),
@@ -1637,13 +1754,19 @@ export function useDeleteMyNote() {
 // Conferences
 // ---------------------------------------------------------------------------
 
-export function useConferences(tenantId: string, enabled = true) {
+export function useConferences(
+  tenantId: string,
+  page = 1,
+  enabled = true,
+) {
   return useQuery({
-    queryKey: apiKeys.conferences(tenantId),
+    queryKey: apiKeys.conferences(tenantId, page),
     enabled: Boolean(tenantId) && enabled,
     queryFn: () =>
-      authenticatedJson<ApiConference[]>(
-        `/api/v1/tenant/${encodeURIComponent(tenantId)}/conferences`,
+      authenticatedJson<PaginatedResponse<ApiConference>>(
+        `/api/v1/tenant/${encodeURIComponent(
+          tenantId,
+        )}/conferences?page=${page}`,
       ),
   });
 }

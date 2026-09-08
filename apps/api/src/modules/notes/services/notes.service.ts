@@ -9,6 +9,10 @@ import { NoteMembersRepository } from '../../note-members/repositories/note-memb
 import { ProjectModulesRepository } from '../../project-modules/repositories/project-modules.repository';
 import { TenantSequencesRepository } from '../../tenant-sequences/repositories/tenant-sequences.repository';
 import { NotesRepository } from '../repositories/notes.repository';
+import {
+  buildPaginationMeta,
+  paginationOffset,
+} from '../../../common/pagination';
 
 @Injectable()
 export class NotesService {
@@ -64,22 +68,29 @@ export class NotesService {
     return Boolean(membership);
   }
 
-  async list(tenantId: string, callerUserId: string, projectId?: string) {
-    const rows = await this.repository.findByTenant(tenantId, projectId);
+  async list(
+    tenantId: string,
+    callerUserId: string,
+    page: number,
+    pageSize: number,
+    projectId?: string,
+  ) {
+    const offset = paginationOffset(page, pageSize);
 
-    const nonCreatorNoteIds = rows
-      .filter((row) => row.createdBy !== callerUserId)
-      .map((row) => row.id);
-    const memberNoteIds = await this.noteMembers.findByNoteIdsAndUser(
-      nonCreatorNoteIds,
+    const { data, totalItems } = await this.repository.findVisibleByTenant(
+      tenantId,
       callerUserId,
+      offset,
+      pageSize,
+      projectId,
     );
 
-    const visibleRows = rows.filter(
-      (row) => row.createdBy === callerUserId || memberNoteIds.has(row.id),
-    );
+    const notesWithDisplayValues = await this.withDisplayValues(data);
 
-    return this.withDisplayValues(visibleRows);
+    return {
+      data: notesWithDisplayValues,
+      meta: buildPaginationMeta(page, pageSize, totalItems),
+    };
   }
 
   async findOne(tenantId: string, noteId: string, callerUserId: string) {

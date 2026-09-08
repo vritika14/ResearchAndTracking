@@ -2,9 +2,11 @@
 import { TasksController } from './tasks.controller';
 import { TasksService } from '../services/tasks.service';
 import { UsersService } from '../../users/users.service';
+import { ConfigService } from '@nestjs/config';
 
 describe('TasksController', () => {
   let controller: TasksController;
+
   let tasksService: {
     list: jest.Mock;
     findOne: jest.Mock;
@@ -12,7 +14,14 @@ describe('TasksController', () => {
     update: jest.Mock;
     delete: jest.Mock;
   };
-  let usersService: { findByExternalAuthId: jest.Mock };
+
+  let usersService: {
+    findByExternalAuthId: jest.Mock;
+  };
+
+  let configService: {
+    get: jest.Mock;
+  };
 
   beforeEach(() => {
     tasksService = {
@@ -23,10 +32,14 @@ describe('TasksController', () => {
       delete: jest.fn(),
     };
     usersService = { findByExternalAuthId: jest.fn() };
+    configService = {
+      get: jest.fn().mockReturnValue(50),
+    };
 
     controller = new TasksController(
       tasksService as unknown as TasksService,
       usersService as unknown as UsersService,
+      configService as unknown as ConfigService,
     );
   });
 
@@ -35,19 +48,67 @@ describe('TasksController', () => {
   } as any;
 
   describe('list', () => {
-    it('resolves the caller and delegates to the service with tenantId and projectId', async () => {
-      usersService.findByExternalAuthId.mockResolvedValue({ id: 'user-1' });
-      const tasks = [{ id: 't1' }];
+    it('passes the page and configured page size to the service', async () => {
+      usersService.findByExternalAuthId.mockResolvedValue({
+        id: 'user-1',
+      });
+
+      const tasks = {
+        data: [{ id: 't1' }],
+        meta: {
+          page: 2,
+          pageSize: 50,
+          totalItems: 51,
+          totalPages: 2,
+        },
+      };
+
       tasksService.list.mockResolvedValue(tasks);
 
-      const result = await controller.list('tenant-1', req, 'project-1');
+      const result = await controller.list(
+        'tenant-1',
+        req,
+        { page: 2 },
+        'project-1',
+      );
+
+      expect(configService.get).toHaveBeenCalledWith('PAGE_SIZE', 20);
 
       expect(tasksService.list).toHaveBeenCalledWith(
         'tenant-1',
         'user-1',
+        2,
+        50,
         'project-1',
       );
+
       expect(result).toBe(tasks);
+    });
+
+    it('defaults to page one when page is not supplied', async () => {
+      usersService.findByExternalAuthId.mockResolvedValue({
+        id: 'user-1',
+      });
+
+      tasksService.list.mockResolvedValue({
+        data: [],
+        meta: {
+          page: 1,
+          pageSize: 50,
+          totalItems: 0,
+          totalPages: 1,
+        },
+      });
+
+      await controller.list('tenant-1', req, {}, undefined);
+
+      expect(tasksService.list).toHaveBeenCalledWith(
+        'tenant-1',
+        'user-1',
+        1,
+        50,
+        undefined,
+      );
     });
   });
 

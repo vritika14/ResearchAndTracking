@@ -73,15 +73,23 @@ vi.mock("@/api/hooks", () => ({
     isPending: false,
   }),
   useMembers: () => ({
-    data: [
-      {
-        id: "membership-owner",
-        userId: "user-owner",
-        displayName: "Avi Researcher",
-        email: "owner@example.com",
-        role: "owner",
+    data: {
+      data: [
+        {
+          id: "membership-owner",
+          userId: "user-owner",
+          displayName: "Avi Researcher",
+          email: "owner@example.com",
+          role: "owner",
+        },
+      ],
+      meta: {
+        page: 1,
+        pageSize: 20,
+        totalItems: 1,
+        totalPages: 1,
       },
-    ],
+    },
     isPending: false,
   }),
   useMyProject: () => ({
@@ -107,6 +115,39 @@ vi.mock("@/api/hooks", () => ({
   useModules: () => ({ data: fixtures.modules }),
   useTasks: () => ({ data: fixtures.tasks }),
   useNotes: () => ({ data: fixtures.notes }),
+  useModules: () => ({
+    data: {
+      data: [],
+      meta: {
+        page: 1,
+        pageSize: 20,
+        totalItems: 0,
+        totalPages: 1,
+      },
+    },
+  }),
+  useTasks: () => ({
+    data: {
+      data: [],
+      meta: {
+        page: 1,
+        pageSize: 20,
+        totalItems: 0,
+        totalPages: 1,
+      },
+    },
+  }),
+  useNotes: () => ({
+    data: {
+      data: [],
+      meta: {
+        page: 1,
+        pageSize: 20,
+        totalItems: 0,
+        totalPages: 1,
+      },
+    },
+  }),
   useMyProjectPipelineStages: () => ({
     data: fixtures.pipelineStages,
     isPending: false,

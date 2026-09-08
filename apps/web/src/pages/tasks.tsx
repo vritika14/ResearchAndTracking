@@ -122,9 +122,11 @@ export default function TasksPage() {
   const tenantId = workspace.data?.id ?? "";
 
   const tasksQuery = useTasks(tenantId);
+  const tasks = tasksQuery.data?.data ?? [];
   const projectsQuery = useProjects(tenantId);
   const projects = projectsQuery.data?.data ?? [];
   const modulesQuery = useModules(tenantId);
+  const modules = modulesQuery.data?.data ?? [];
 
   const [isNewTaskOpen, setIsNewTaskOpen] = useState(false);
 
@@ -152,9 +154,9 @@ export default function TasksPage() {
 
   const moduleById = useMemo(() => {
     const map = new Map<string, string>();
-    for (const module of modulesQuery.data ?? []) map.set(module.id, module.title);
+    for (const module of modules) map.set(module.id, module.title);
     return map;
-  }, [modulesQuery.data]);
+  }, [modules]);
 
   function linkTargetLabel(task: ApiTask) {
     if (task.moduleId) return moduleById.get(task.moduleId) ?? "Unknown module";
@@ -194,7 +196,7 @@ export default function TasksPage() {
 
   const visibleTasks = useMemo(() => {
     const query = search.trim().toLowerCase();
-    const filtered = (tasksQuery.data ?? []).filter((task) => {
+    const filtered = tasks.filter((task) => {
       if (status !== "All" && task.status !== status) return false;
       if (priority !== "All" && task.priority !== priority) return false;
       if (
@@ -213,7 +215,7 @@ export default function TasksPage() {
       (a, b) => compareTasks(a, b, sortColumn) * (sortDirection === "asc" ? 1 : -1),
     );
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [tasksQuery.data, search, status, priority, sortColumn, sortDirection, projectById, moduleById]);
+  }, [tasks, search, status, priority, sortColumn, sortDirection, projectById, moduleById]);
 
   const hasActiveFilters = search !== "" || status !== "All" || priority !== "All";
 
@@ -284,7 +286,7 @@ export default function TasksPage() {
         onOpenChange={setIsNewTaskOpen}
         tenantId={tenantId}
         projects={projects}
-        modules={modulesQuery.data ?? []}
+        modules={modules}
         onSave={handleCreateTask}
       />
 

@@ -79,9 +79,30 @@ vi.mock("@/api/hooks", async () => {
   return {
     useCurrentWorkspace: () => ({ data: { id: fixtures.tenantId }, isPending: false }),
     useTrackEvent: () => vi.fn(),
-    useMembers: () => ({ data: fixtures.members, isPending: false }),
+    useMembers: () => ({
+      data: {
+        data: fixtures.members,
+        meta: {
+          page: 1,
+          pageSize: 20,
+          totalItems: fixtures.members.length,
+          totalPages: 1,
+        },
+      },
+      isPending: false,
+    }),
     useProjects: () => ({ data: { data: fixtures.projects, meta: { page: 1, pageSize: 20, totalItems: fixtures.projects.length, totalPages: 1 } }, isPending: false, isError: false }),
-    useModules: () => ({ data: [] }),
+    useModules: () => ({
+      data: {
+        data: [],
+        meta: {
+          page: 1,
+          pageSize: 20,
+          totalItems: 0,
+          totalPages: 1,
+        },
+      },
+    }),
     useUserSearch: (query: string) => ({
       data: query.trim()
         ? fixtures.allUsers.filter((user) =>
@@ -90,13 +111,28 @@ vi.mock("@/api/hooks", async () => {
         : [],
       isPending: false,
     }),
-    useNotes: () => ({
-      data: useSyncExternalStore(store.subscribe, store.getNotes),
-      isPending: false,
-      isError: false,
-      error: undefined,
-      refetch: vi.fn(),
-    }),
+    useNotes: () => {
+      const notes = useSyncExternalStore(
+        store.subscribe,
+        store.getNotes,
+      );
+    
+      return {
+        data: {
+          data: notes,
+          meta: {
+            page: 1,
+            pageSize: 20,
+            totalItems: notes.length,
+            totalPages: Math.max(1, Math.ceil(notes.length / 20)),
+          },
+        },
+        isPending: false,
+        isError: false,
+        error: undefined,
+        refetch: vi.fn(),
+      };
+    },
     useCreateNote: () => ({
       mutateAsync: vi.fn(async (input: Record<string, unknown>) => {
         const notes = store.getNotes();

@@ -78,15 +78,44 @@ vi.mock("@/api/hooks", async () => {
     useCurrentWorkspace: () => ({ data: { id: fixtures.tenantId }, isPending: false }),
     useTrackEvent: () => vi.fn(),
     useMe: store.useMe,
-    useMembers: () => ({ data: fixtures.members, isPending: false }),
-    useProjects: () => ({ data: { data: fixtures.projects, meta: { page: 1, pageSize: 20, totalItems: fixtures.projects.length, totalPages: 1 } }, isPending: false, isError: false }),
-    useModules: () => ({
-      data: useStore(store.subscribe, store.getModules),
+    useMembers: () => ({
+      data: {
+        data: fixtures.members,
+        meta: {
+          page: 1,
+          pageSize: 20,
+          totalItems: fixtures.members.length,
+          totalPages: 1,
+        },
+      },
       isPending: false,
-      isError: false,
-      error: undefined,
-      refetch: vi.fn(),
     }),
+    useProjects: () => ({ data: { data: fixtures.projects, meta: { page: 1, pageSize: 20, totalItems: fixtures.projects.length, totalPages: 1 } }, isPending: false, isError: false }),
+    useModules: () => {
+      const moduleRows = useStore(
+        store.subscribe,
+        store.getModules,
+      );
+    
+      return {
+        data: {
+          data: moduleRows,
+          meta: {
+            page: 1,
+            pageSize: 20,
+            totalItems: moduleRows.length,
+            totalPages: Math.max(
+              1,
+              Math.ceil(moduleRows.length / 20),
+            ),
+          },
+        },
+        isPending: false,
+        isError: false,
+        error: undefined,
+        refetch: vi.fn(),
+      };
+    },
     useEnumValues: (category: string) => ({
       data: category === "module_pipeline_stage"
         ? fixtures.stageValues

@@ -26,6 +26,7 @@ export function UserMenu({ compact = false }: UserMenuProps) {
   const me = useMe(auth.isAuthenticated);
   const workspace = useCurrentWorkspace();
   const workspaces = useWorkspaces();
+  const workspaceOptions = workspaces.data?.data ?? [];
   const switchWorkspace = useSwitchWorkspace();
   const signOut = useSignOut();
   const appearance = useAppearanceTheme();
@@ -71,7 +72,7 @@ export function UserMenu({ compact = false }: UserMenuProps) {
         <DropdownMenuLabel className="text-foreground">{displayName}</DropdownMenuLabel>
         <DropdownMenuSeparator />
         <DropdownMenuLabel>Workspaces</DropdownMenuLabel>
-        {workspaces.data?.map((option) => {
+        {workspaceOptions.map((option) => {
           const isCurrent = option.id === workspace.data?.id;
           return (
             <DropdownMenuItem

@@ -10,6 +10,10 @@ import {
 } from '@research-tracker/migrations';
 import { DrizzleService } from '../../../db/drizzle.service';
 import { WorkspacesRepository } from '../repositories/workspaces.repository';
+import {
+  buildPaginationMeta,
+  paginationOffset,
+} from '../../../common/pagination';
 
 function slugify(name: string) {
   return name
@@ -67,8 +71,19 @@ export class WorkspacesService {
     return { ...tenant, membershipRole: 'owner' as const };
   }
 
-  async listWorkspaces(userId: string) {
-    return this.repository.findAllByMemberUserId(userId);
+  async listWorkspaces(userId: string, page: number, pageSize: number) {
+    const offset = paginationOffset(page, pageSize);
+
+    const { data, totalItems } = await this.repository.findPageByMemberUserId(
+      userId,
+      offset,
+      pageSize,
+    );
+
+    return {
+      data,
+      meta: buildPaginationMeta(page, pageSize, totalItems),
+    };
   }
 
   async getCurrentWorkspace(userId: string) {

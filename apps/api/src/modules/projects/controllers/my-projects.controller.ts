@@ -8,6 +8,7 @@ import {
   Patch,
   Req,
   UseGuards,
+  Query,
 } from '@nestjs/common';
 import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
 import { Request } from 'express';
@@ -16,6 +17,8 @@ import { JwtAuthGuard } from '../../auth/jwt-auth.guard';
 import { UsersService } from '../../users/users.service';
 import { UpdateProjectDto } from '../dto/update-project.dto';
 import { ProjectsService } from '../services/projects.service';
+import { ConfigService } from '@nestjs/config';
+import { PaginationQueryDto } from '../../../common/dto/pagination-query.dto';
 
 interface AuthenticatedRequest extends Request {
   user: AuthenticatedPrincipal;
@@ -36,6 +39,7 @@ export class MyProjectsController {
   constructor(
     private readonly projectsService: ProjectsService,
     private readonly usersService: UsersService,
+    private readonly configService: ConfigService,
   ) {}
 
   @ApiOperation({
@@ -43,9 +47,19 @@ export class MyProjectsController {
   })
   @UseGuards(JwtAuthGuard)
   @Get()
-  async list(@Req() req: AuthenticatedRequest) {
+  async list(
+    @Req() req: AuthenticatedRequest,
+    @Query() query: PaginationQueryDto,
+  ) {
     const user = await this.usersService.findByExternalAuthId(req.user.sub);
-    return this.projectsService.listForCaller(user.id);
+
+    const pageSize = this.configService.get<number>('PAGE_SIZE', 20);
+
+    return this.projectsService.listForCaller(
+      user.id,
+      query.page ?? 1,
+      pageSize,
+    );
   }
 
   @ApiOperation({ summary: 'Get a single project the caller can access' })

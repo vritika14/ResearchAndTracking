@@ -122,12 +122,55 @@ vi.mock("@/api/hooks", () => ({
   useCurrentWorkspace: () => ({ data: { id: fixtures.tenantId }, isPending: false }),
   useMembers: () => ({ data: [], isPending: false }),
   useProjects: () => ({ data: { data: fixtures.projects, meta: { page: 1, pageSize: 20, totalItems: fixtures.projects.length, totalPages: 1 } }, isPending: false, isError: false }),
+  useMembers: () => ({
+    data: {
+      data: [],
+      meta: {
+        page: 1,
+        pageSize: 20,
+        totalItems: 0,
+        totalPages: 1,
+      },
+    },
+    isPending: false,
+  }),
+  useProjects: () => ({ data: { data: [fixtures.project], meta: { page: 1, pageSize: 20, totalItems: 1, totalPages: 1 } }, isPending: false, isError: false }),
   useCreateProject: () => ({ mutateAsync: vi.fn(), isPending: false }),
   useArchiveProject: () => ({ mutateAsync: vi.fn(), isPending: false }),
   useTrackEvent: () => vi.fn(),
-  useModules: () => ({ data: [fixtures.module] }),
-  useTasks: () => ({ data: [fixtures.task] }),
-  useNotes: () => ({ data: [fixtures.note] }),
+  useModules: () => ({
+    data: {
+      data: [fixtures.module],
+      meta: {
+        page: 1,
+        pageSize: 20,
+        totalItems: 1,
+        totalPages: 1,
+      },
+    },
+  }),
+  useTasks: () => ({
+    data: {
+      data: [fixtures.task],
+      meta: {
+        page: 1,
+        pageSize: 20,
+        totalItems: 1,
+        totalPages: 1,
+      },
+    },
+  }),
+  useNotes: () => ({
+    data: {
+      data: [fixtures.note],
+      meta: {
+        page: 1,
+        pageSize: 20,
+        totalItems: 1,
+        totalPages: 1,
+      },
+    },
+  }),
   usePipelineStages: () => ({ data: fixtures.pipelineStages }),
 }));
 

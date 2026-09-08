@@ -585,9 +585,13 @@ export default function ProjectDetailPage() {
   // backend).
   const projectQuery = useMyProject(projectId);
   const modulesQuery = useModules(tenantId, projectId);
+  const modules = modulesQuery.data?.data ?? [];
   const tasksQuery = useTasks(tenantId, projectId);
+  const tasks = tasksQuery.data?.data ?? [];
   const notesQuery = useNotes(tenantId, projectId);
+  const notes = notesQuery.data?.data ?? [];
   const membersQuery = useMembers(tenantId);
+  const members = membersQuery.data?.data ?? [];
   const me = useMe();
   const updateProject = useUpdateMyProject();
   const archiveProject = useArchiveMyProject();
@@ -1104,7 +1108,7 @@ export default function ProjectDetailPage() {
                       tenantId={tenantId}
                       projectId={project.id}
                       ownerUserId={project.userId}
-                      members={membersQuery.data ?? []}
+                      members={members}
                       entityTitle={project.title}
                       canManage={me.data?.id === project.userId}
                     />
@@ -1138,6 +1142,9 @@ export default function ProjectDetailPage() {
               projectId={project.id}
               onUnlinkNote={(note) => void handleUnlinkNote(note)}
             />
+            <ProjectModulesDetails modules={modules} />
+            <ProjectTasksDetails tasks={tasks} />
+            <ProjectNotesDetails notes={notes} />
           </section>
 
           <ProjectPipeline

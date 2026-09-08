@@ -44,7 +44,15 @@ vi.mock("@/api/hooks", () => ({
     refetch: queryState.projectsRefetch,
   }),
   useTasks: () => ({
-    data: [],
+    data: {
+      data: [],
+      meta: {
+        page: 1,
+        pageSize: 20,
+        totalItems: 0,
+        totalPages: 1,
+      },
+    },
     isPending: queryState.tasksPending,
     isError: queryState.tasksError !== null,
     error: queryState.tasksError,

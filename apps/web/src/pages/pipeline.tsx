@@ -280,8 +280,11 @@ export default function PipelinePage() {
   const projectsQuery = useProjects(tenantId);
   const projects = projectsQuery.data?.data ?? [];
   const modulesQuery = useModules(tenantId);
+  const modules = modulesQuery.data?.data ?? [];
   const tasksQuery = useTasks(tenantId);
+  const tasks = tasksQuery.data?.data ?? [];
   const membersQuery = useMembers(tenantId);
+  const members = membersQuery.data?.data ?? [];
   const me = useMe();
   const preferences = usePreferences();
 
@@ -408,7 +411,7 @@ export default function PipelinePage() {
 
   const taskCountByProject = useMemo(() => {
     const counts = new Map<string, { completed: number; total: number }>();
-    for (const task of tasksQuery.data ?? []) {
+    for (const task of tasks) {
       if (!task.projectId) continue;
       const entry = counts.get(task.projectId) ?? { completed: 0, total: 0 };
       entry.total += 1;
@@ -416,11 +419,11 @@ export default function PipelinePage() {
       counts.set(task.projectId, entry);
     }
     return counts;
-  }, [tasksQuery.data]);
+  }, [tasks]);
 
   const taskCountByModule = useMemo(() => {
     const counts = new Map<string, { completed: number; total: number }>();
-    for (const task of tasksQuery.data ?? []) {
+    for (const task of tasks) {
       if (!task.moduleId) continue;
       const entry = counts.get(task.moduleId) ?? { completed: 0, total: 0 };
       entry.total += 1;
@@ -428,15 +431,15 @@ export default function PipelinePage() {
       counts.set(task.moduleId, entry);
     }
     return counts;
-  }, [tasksQuery.data]);
+  }, [tasks]);
 
   const memberNameById = useMemo(() => {
     const map = new Map<string, string>();
-    for (const member of membersQuery.data ?? []) {
+    for (const member of members) {
       if (member.displayName) map.set(member.userId, member.displayName);
     }
     return map;
-  }, [membersQuery.data]);
+  }, [members]);
 
   const roleOptions = useMemo(() => {
     const roles = new Set<string>();
@@ -449,7 +452,7 @@ export default function PipelinePage() {
 
   const assigneeOptions = useMemo(() => {
     const ids = new Set<string>();
-    for (const module of modulesQuery.data ?? []) {
+    for (const module of modules) {
       if (module.assignedToUserId) ids.add(module.assignedToUserId);
     }
     const labeled = Array.from(ids).map((id) => ({
@@ -458,7 +461,7 @@ export default function PipelinePage() {
     }));
     labeled.sort((a, b) => a.label.localeCompare(b.label));
     return [{ id: "All", label: "All assignees" }, { id: "Unassigned", label: "Unassigned" }, ...labeled];
-  }, [modulesQuery.data, memberNameById, me.data?.id]);
+  }, [modules, memberNameById, me.data?.id]);
 
   const moduleProjectFilterOptions = useMemo(() => {
     const projectsForMap = projects.map((project) => ({
@@ -497,7 +500,7 @@ export default function PipelinePage() {
 
   const moduleRows: PipelineRow[] = useMemo(
     () =>
-      (modulesQuery.data ?? []).map((module) => {
+      (modules).map((module) => {
         const counts = taskCountByModule.get(module.id) ?? { completed: 0, total: 0 };
         const assigneeLabel = module.assignedToUserId
           ? module.assignedToUserId === me.data?.id
@@ -519,7 +522,7 @@ export default function PipelinePage() {
           stageIndex: module.pipelineStage ? stageIndexByValue.get(module.pipelineStage) : undefined,
         };
       }),
-    [modulesQuery.data, taskCountByModule, stageIndexByValue, memberNameById, me.data?.id],
+    [modules, taskCountByModule, stageIndexByValue, memberNameById, me.data?.id],
   );
 
   const entityRows = entityType === "Project" ? projectRows : moduleRows;
@@ -527,8 +530,8 @@ export default function PipelinePage() {
     () =>
       entityType === "Project"
         ? projects.map((project) => ({ id: project.id, label: project.title }))
-        : (modulesQuery.data ?? []).map((module) => ({ id: module.id, label: module.title })),
-    [entityType, projects, modulesQuery.data],
+        : (modules).map((module) => ({ id: module.id, label: module.title })),
+    [entityType, projects, modules],
   );
 
   const unassignedCount = entityRows.filter((row) => row.stageIndex === undefined).length;

@@ -73,8 +73,11 @@ export default function CalendarPage() {
   const projectsQuery = useProjects(tenantId);
   const projects = projectsQuery.data?.data ?? [];
   const modulesQuery = useModules(tenantId);
+  const modules = modulesQuery.data?.data ?? [];
   const tasksQuery = useTasks(tenantId);
+  const tasks = tasksQuery.data?.data ?? [];
   const conferencesQuery = useConferences(tenantId);
+  const conferences = conferencesQuery.data?.data ?? [];
   const [visibleMonth, setVisibleMonth] = useState(
     () => new Date(new Date().getFullYear(), new Date().getMonth(), 1),
   );
@@ -101,7 +104,7 @@ export default function CalendarPage() {
       }
     }
     if (activeFilter === null || activeFilter === "module") {
-      for (const module of modulesQuery.data ?? []) {
+      for (const module of modules) {
         if (!module.dueDate) continue;
         rows.push({
           id: module.id,
@@ -114,7 +117,7 @@ export default function CalendarPage() {
       }
     }
     if (activeFilter === null || activeFilter === "task") {
-      for (const task of tasksQuery.data ?? []) {
+      for (const task of tasks) {
         if (!task.dueDate) continue;
         rows.push({
           id: task.id,
@@ -127,7 +130,7 @@ export default function CalendarPage() {
       }
     }
     if (activeFilter === null || activeFilter === "conference") {
-      for (const conference of conferencesQuery.data ?? []) {
+      for (const conference of conferences) {
         rows.push({
           id: `${conference.id}-submission`,
           kind: "conference",
@@ -153,7 +156,7 @@ export default function CalendarPage() {
       }
     }
     return rows.sort((a, b) => a.title.localeCompare(b.title));
-  }, [activeFilter, conferencesQuery.data, modulesQuery.data, projectById, projects, tasksQuery.data]);
+  }, [activeFilter, conferences, modules, projectById, projects, tasks]);
 
   const eventsByDate = useMemo(() => {
     const grouped = new Map<string, CalendarEvent[]>();

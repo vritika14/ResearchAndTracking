@@ -63,6 +63,30 @@ vi.mock("@/api/hooks", async () => {
       isError: false,
       error: null,
     }),
+    useConferences: () => {
+      const conferences = useSyncExternalStore(
+        store.subscribe,
+        store.get,
+      );
+    
+      return {
+        data: {
+          data: conferences,
+          meta: {
+            page: 1,
+            pageSize: 20,
+            totalItems: conferences.length,
+            totalPages: Math.max(
+              1,
+              Math.ceil(conferences.length / 20),
+            ),
+          },
+        },
+        isPending: false,
+        isError: false,
+        error: null,
+      };
+    },
     useCreateConference: () => ({
       mutateAsync: vi.fn(async (input: Record<string, unknown>) => {
         const row: ConferenceFixture = {

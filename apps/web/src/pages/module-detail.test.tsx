@@ -98,6 +98,40 @@ vi.mock("@/api/hooks", () => ({
   useTasks: () => ({ data: fixtures.tasks }),
   useNotes: () => ({ data: fixtures.notes }),
   useMembers: () => ({ data: [], isPending: false }),
+  useTasks: () => ({
+    data: {
+      data: [],
+      meta: {
+        page: 1,
+        pageSize: 20,
+        totalItems: 0,
+        totalPages: 1,
+      },
+    },
+  }),
+  useNotes: () => ({
+    data: {
+      data: [],
+      meta: {
+        page: 1,
+        pageSize: 20,
+        totalItems: 0,
+        totalPages: 1,
+      },
+    },
+  }),
+  useMembers: () => ({
+    data: {
+      data: [],
+      meta: {
+        page: 1,
+        pageSize: 20,
+        totalItems: 0,
+        totalPages: 1,
+      },
+    },
+    isPending: false,
+  }),
   useEnumValues: () => ({ data: [] }),
   useProject: () => ({ data: undefined, isError: false }),
   useProjects: () => ({

@@ -51,6 +51,7 @@ export function PipelineOverviewTable() {
   const projectsQuery = useProjects(tenantId);
   const projects = projectsQuery.data?.data ?? [];
   const tasksQuery = useTasks(tenantId);
+  const tasks = tasksQuery.data?.data ?? [];
   const pipelineStagesQuery = usePipelineStages(tenantId);
 
   const [search, setSearch] = useState("");
@@ -76,7 +77,7 @@ export function PipelineOverviewTable() {
 
   const taskCountByProject = useMemo(() => {
     const counts = new Map<string, { completed: number; total: number }>();
-    for (const task of tasksQuery.data ?? []) {
+    for (const task of tasks) {
       if (!task.projectId) continue;
       const entry = counts.get(task.projectId) ?? { completed: 0, total: 0 };
       entry.total += 1;
@@ -84,7 +85,7 @@ export function PipelineOverviewTable() {
       counts.set(task.projectId, entry);
     }
     return counts;
-  }, [tasksQuery.data]);
+  }, [tasks]);
 
   const projectRows = useMemo(
     () =>

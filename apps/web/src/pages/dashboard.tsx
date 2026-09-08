@@ -234,6 +234,7 @@ export default function DashboardPage() {
   const projects = projectsQuery.data?.data ?? [];
   const tasksQuery = useTasks(tenantId);
   const modulesQuery = useModules(tenantId);
+  const tasks = tasksQuery.data?.data ?? [];
   const stagesQuery = usePipelineStages(tenantId);
   const me = useMe();
   const createProject = useCreateProject(tenantId);
@@ -270,8 +271,10 @@ export default function DashboardPage() {
         activeProjects: projects.filter((project) => project.status === "Active")
           .length,
         totalProjects: projects.length,
-        openTasks: (tasksQuery.data ?? []).filter((task) => task.status !== "Complete").length,
-        totalTasks: (tasksQuery.data ?? []).length,
+        openTasks: tasks.filter(
+          (task) => task.status !== "Complete",
+        ).length,
+        totalTasks: tasks.length,
         reviewStage: projects.filter(
           (project) => project.pipelineStage === REVIEW_STAGE,
         ).length,
@@ -281,6 +284,7 @@ export default function DashboardPage() {
         totalModules: (modulesQuery.data ?? []).length,
       }),
     [projects, tasksQuery.data, modulesQuery.data],
+    [projects, tasks],
   );
   const visibleWidgets = new Set(
     layout.order.filter((id) => !layout.hidden.includes(id)),
@@ -499,6 +503,10 @@ export default function DashboardPage() {
         projects={ownedProjects}
         modules={ownedModules}
         onSave={handleCreateConference}
+        tasks={tasks}
+        stages={stagesQuery.data ?? []}
+        order={insightOrder}
+        visible={visibleInsights}
       />
 
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">

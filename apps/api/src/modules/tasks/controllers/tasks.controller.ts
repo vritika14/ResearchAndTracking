@@ -26,6 +26,8 @@ import { CreateTaskDto } from '../dto/create-task.dto';
 import { UpdateTaskDto } from '../dto/update-task.dto';
 import { TasksService } from '../services/tasks.service';
 import { TenantMemberGuard } from '../../memberships/policies/tenant-member.guard';
+import { ConfigService } from '@nestjs/config';
+import { PaginationQueryDto } from '../../../common/dto/pagination-query.dto';
 interface AuthenticatedRequest extends Request {
   user: AuthenticatedPrincipal;
 }
@@ -37,6 +39,7 @@ export class TasksController {
   constructor(
     private readonly tasksService: TasksService,
     private readonly usersService: UsersService,
+    private readonly configService: ConfigService,
   ) {}
 
   @ApiOperation({
@@ -45,13 +48,23 @@ export class TasksController {
   @ApiQuery({ name: 'projectId', required: false, type: String })
   @UseGuards(JwtAuthGuard, TenantMemberGuard)
   @Get()
+  @Get()
   async list(
     @Param('tenantId') tenantId: string,
     @Req() req: AuthenticatedRequest,
+    @Query() query: PaginationQueryDto,
     @Query('projectId') projectId?: string,
   ) {
     const user = await this.usersService.findByExternalAuthId(req.user.sub);
-    return this.tasksService.list(tenantId, user.id, projectId);
+    const pageSize = this.configService.get<number>('PAGE_SIZE', 20);
+
+    return this.tasksService.list(
+      tenantId,
+      user.id,
+      query.page ?? 1,
+      pageSize,
+      projectId,
+    );
   }
 
   @ApiOperation({ summary: 'Get a single task' })

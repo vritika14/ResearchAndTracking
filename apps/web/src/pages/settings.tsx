@@ -70,6 +70,7 @@ export default function SettingsPage() {
   const me = useMe();
   const workspace = useCurrentWorkspace();
   const workspaces = useWorkspaces();
+  const workspaceOptions = workspaces.data?.data ?? [];
   const switchWorkspace = useSwitchWorkspace();
   const createWorkspaceMutation = useCreateWorkspace();
   const deleteWorkspaceMutation = useDeleteWorkspace();
@@ -530,8 +531,8 @@ export default function SettingsPage() {
               </div>
               {workspaces.data ? (
                 <Badge variant="outline" className="w-fit px-3 py-1">
-                  {workspaces.data.length}{" "}
-                  {workspaces.data.length === 1 ? "workspace" : "workspaces"}
+                  {workspaceOptions.length}{" "}
+                  {workspaceOptions.length === 1 ? "workspace" : "workspaces"}
                 </Badge>
               ) : null}
             </div>
@@ -548,7 +549,7 @@ export default function SettingsPage() {
             ) : (
               <>
                 <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
-                  {workspaces.data.map((option) => {
+                  {workspaceOptions.map((option) => {
                     const isCurrent = option.id === workspace.data?.id;
                     const isSwitching =
                       switchWorkspace.isPending && switchWorkspace.variables === option.id;
