@@ -86,7 +86,15 @@ vi.mock("@/api/hooks", () => ({
     refetch: vi.fn(),
   }),
   useConferences: () => ({
-    data: fixtures.conferences,
+    data: {
+      data: fixtures.conferences,
+      meta: {
+        page: 1,
+        pageSize: 20,
+        totalItems: fixtures.conferences.length,
+        totalPages: 1,
+      },
+    },
     isPending: false,
     isError: false,
     error: null,

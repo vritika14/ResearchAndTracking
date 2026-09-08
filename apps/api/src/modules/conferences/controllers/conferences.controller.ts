@@ -8,6 +8,7 @@ import {
   Post,
   Req,
   UseGuards,
+  Query,
 } from '@nestjs/common';
 import {
   ApiBearerAuth,
@@ -23,6 +24,8 @@ import { UsersService } from '../../users/users.service';
 import { CreateConferenceDto } from '../dto/create-conference.dto';
 import { UpdateConferenceDto } from '../dto/update-conference.dto';
 import { ConferencesService } from '../services/conferences.service';
+import { ConfigService } from '@nestjs/config';
+import { PaginationQueryDto } from '../../../common/dto/pagination-query.dto';
 
 interface AuthenticatedRequest extends Request {
   user: AuthenticatedPrincipal;
@@ -35,6 +38,7 @@ export class ConferencesController {
   constructor(
     private readonly conferencesService: ConferencesService,
     private readonly usersService: UsersService,
+    private readonly configService: ConfigService,
   ) {}
 
   @ApiOperation({
@@ -49,10 +53,18 @@ export class ConferencesController {
   async list(
     @Param('tenantId') tenantId: string,
     @Req() req: AuthenticatedRequest,
+    @Query() query: PaginationQueryDto,
   ) {
     const user = await this.usersService.findByExternalAuthId(req.user.sub);
 
-    return this.conferencesService.list(tenantId, user.id);
+    const pageSize = this.configService.get<number>('PAGE_SIZE', 20);
+
+    return this.conferencesService.list(
+      tenantId,
+      user.id,
+      query.page ?? 1,
+      pageSize,
+    );
   }
 
   @ApiOperation({

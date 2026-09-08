@@ -87,6 +87,7 @@ export function ConferenceSubmissionsTable({
   const workspace = useCurrentWorkspace();
   const tenantId = workspace.data?.id ?? "";
   const conferencesQuery = useConferences(tenantId);
+  const conferences = conferencesQuery.data?.data ?? [];
   const projectsQuery = useProjects(tenantId);
   const projects = projectsQuery.data?.data ?? [];
   const meQuery = useMe();
@@ -117,7 +118,7 @@ export function ConferenceSubmissionsTable({
 
   const filtered = useMemo(() => {
     const query = search.trim().toLowerCase();
-    return [...(conferencesQuery.data ?? [])]
+    return [...(conferences)]
       .filter((row) => {
         if (!showPast && row.daysRemaining < 0) return false;
         if (type !== "All" && row.submissionType !== type) return false;
@@ -127,7 +128,7 @@ export function ConferenceSubmissionsTable({
           row.projects.some((project) => project.title.toLowerCase().includes(query));
       })
       .sort((a, b) => a.submissionDue.localeCompare(b.submissionDue));
-  }, [conferencesQuery.data, deadline, search, showPast, type]);
+  }, [conferences, deadline, search, showPast, type]);
 
   const hasActiveFilters = search !== "" || type !== "All" || deadline !== "All";
 

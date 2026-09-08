@@ -7,6 +7,10 @@ import {
 import { CreateConferenceDto } from '../dto/create-conference.dto';
 import { UpdateConferenceDto } from '../dto/update-conference.dto';
 import { ConferencesRepository } from '../repositories/conferences.repository';
+import {
+  buildPaginationMeta,
+  paginationOffset,
+} from '../../../common/pagination';
 
 @Injectable()
 export class ConferencesService {
@@ -15,24 +19,39 @@ export class ConferencesService {
   /**
    * Lists conferences visible through projects the caller can access.
    */
-  async list(tenantId: string, callerUserId: string) {
-    const conferences = await this.repository.findVisibleByUser(
+  async list(
+    tenantId: string,
+    callerUserId: string,
+    page: number,
+    pageSize: number,
+  ) {
+    const offset = paginationOffset(page, pageSize);
+
+    const { data, totalItems } = await this.repository.findVisiblePageByUser(
       tenantId,
       callerUserId,
+      offset,
+      pageSize,
     );
 
-    const conferenceIds = conferences.map((c) => c.id);
+    const conferenceIds = data.map((conference) => conference.id);
+
     const projectsByConference =
       await this.repository.findLinkedProjectsForConferences(
         tenantId,
         conferenceIds,
       );
 
-    return conferences.map((conference) => ({
+    const conferencesWithProjects = data.map((conference) => ({
       ...conference,
       daysRemaining: calculateDaysRemaining(conference.submissionDue),
       projects: projectsByConference.get(conference.id) ?? [],
     }));
+
+    return {
+      data: conferencesWithProjects,
+      meta: buildPaginationMeta(page, pageSize, totalItems),
+    };
   }
 
   /**

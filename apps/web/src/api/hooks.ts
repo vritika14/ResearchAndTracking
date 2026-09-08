@@ -322,8 +322,17 @@ export const apiKeys = {
     ["api", "tenant", tenantId, "notes", "detail", noteId] as const,
   noteMembers: (tenantId: string, noteId: string) =>
     ["api", "tenant", tenantId, "notes", noteId, "members"] as const,
-  conferences: (tenantId: string) =>
-    ["api", "tenant", tenantId, "conferences"] as const,
+  conferences: (
+    tenantId: string,
+    page = 1,
+  ) =>
+    [
+      "api",
+      "tenant",
+      tenantId,
+      "conferences",
+      page,
+    ] as const,
   conference: (tenantId: string, conferenceId: string) =>
     ["api", "tenant", tenantId, "conferences", conferenceId] as const,
   accountPreferences: ["api", "me", "preferences"] as const,
@@ -1636,13 +1645,19 @@ export function useDeleteMyNote() {
 // Conferences
 // ---------------------------------------------------------------------------
 
-export function useConferences(tenantId: string, enabled = true) {
+export function useConferences(
+  tenantId: string,
+  page = 1,
+  enabled = true,
+) {
   return useQuery({
-    queryKey: apiKeys.conferences(tenantId),
+    queryKey: apiKeys.conferences(tenantId, page),
     enabled: Boolean(tenantId) && enabled,
     queryFn: () =>
-      authenticatedJson<ApiConference[]>(
-        `/api/v1/tenant/${encodeURIComponent(tenantId)}/conferences`,
+      authenticatedJson<PaginatedResponse<ApiConference>>(
+        `/api/v1/tenant/${encodeURIComponent(
+          tenantId,
+        )}/conferences?page=${page}`,
       ),
   });
 }

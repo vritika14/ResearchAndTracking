@@ -6,7 +6,7 @@ import {
   projectCollaborators,
   projects,
 } from '@research-tracker/migrations';
-import { and, eq, inArray } from 'drizzle-orm';
+import { and, asc, eq, inArray, sql } from 'drizzle-orm';
 import { DrizzleService } from '../../../db/drizzle.service';
 
 interface CreateConferenceValues {
@@ -42,30 +42,68 @@ export class ConferencesRepository {
    * one project linked to the conference. Project owners are also stored in
    * project_collaborators, so this covers owners and collaborators.
    */
-  async findVisibleByUser(tenantId: string, userId: string) {
-    const rows = await this.drizzle.db
-      .selectDistinct({
-        conference: conferences,
-      })
-      .from(conferences)
-      .innerJoin(
-        conferenceProjects,
-        and(
-          eq(conferenceProjects.conferenceId, conferences.id),
-          eq(conferenceProjects.tenantId, tenantId),
-        ),
-      )
-      .innerJoin(
-        projectCollaborators,
-        and(
-          eq(projectCollaborators.projectId, conferenceProjects.projectId),
-          eq(projectCollaborators.tenantId, tenantId),
-          eq(projectCollaborators.userId, userId),
-        ),
-      )
-      .where(eq(conferences.tenantId, tenantId));
 
-    return rows.map((row) => row.conference);
+  async findVisiblePageByUser(
+    tenantId: string,
+    userId: string,
+    offset: number,
+    limit: number,
+  ) {
+    const [rows, countResult] = await Promise.all([
+      this.drizzle.db
+        .selectDistinct({
+          conference: conferences,
+        })
+        .from(conferences)
+        .innerJoin(
+          conferenceProjects,
+          and(
+            eq(conferenceProjects.conferenceId, conferences.id),
+            eq(conferenceProjects.tenantId, tenantId),
+          ),
+        )
+        .innerJoin(
+          projectCollaborators,
+          and(
+            eq(projectCollaborators.projectId, conferenceProjects.projectId),
+            eq(projectCollaborators.tenantId, tenantId),
+            eq(projectCollaborators.userId, userId),
+          ),
+        )
+        .where(eq(conferences.tenantId, tenantId))
+        .orderBy(asc(conferences.submissionDue), asc(conferences.id))
+        .limit(limit)
+        .offset(offset),
+
+      this.drizzle.db
+        .select({
+          count: sql<number>`
+            count(distinct ${conferences.id})::int
+          `,
+        })
+        .from(conferences)
+        .innerJoin(
+          conferenceProjects,
+          and(
+            eq(conferenceProjects.conferenceId, conferences.id),
+            eq(conferenceProjects.tenantId, tenantId),
+          ),
+        )
+        .innerJoin(
+          projectCollaborators,
+          and(
+            eq(projectCollaborators.projectId, conferenceProjects.projectId),
+            eq(projectCollaborators.tenantId, tenantId),
+            eq(projectCollaborators.userId, userId),
+          ),
+        )
+        .where(eq(conferences.tenantId, tenantId)),
+    ]);
+
+    return {
+      data: rows.map((row) => row.conference),
+      totalItems: countResult[0]?.count ?? 0,
+    };
   }
 
   /**
