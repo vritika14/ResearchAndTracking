@@ -10,11 +10,11 @@ describe('ProjectsService', () => {
   let repository: {
     findById: jest.Mock;
     findByIdGlobal: jest.Mock;
-    findByIds: jest.Mock;
     findActiveByTenant: jest.Mock;
     create: jest.Mock;
     update: jest.Mock;
     archive: jest.Mock;
+    findAccessiblePageByUser: jest.Mock;
   };
   let enumRepository: {
     findByCategoryAndValue: jest.Mock;
@@ -25,7 +25,6 @@ describe('ProjectsService', () => {
   let collaboratorsRepository: {
     findByProjectAndUser: jest.Mock;
     findByProjectIdsAndUser: jest.Mock;
-    findProjectIdsByUser: jest.Mock;
   };
   let sequences: { nextDisplayId: jest.Mock };
 
@@ -33,11 +32,11 @@ describe('ProjectsService', () => {
     repository = {
       findById: jest.fn(),
       findByIdGlobal: jest.fn(),
-      findByIds: jest.fn(),
       findActiveByTenant: jest.fn(),
       create: jest.fn(),
       update: jest.fn(),
       archive: jest.fn(),
+      findAccessiblePageByUser: jest.fn(),
     };
     enumRepository = {
       findByCategoryAndValue: jest.fn(),
@@ -52,7 +51,6 @@ describe('ProjectsService', () => {
     collaboratorsRepository = {
       findByProjectAndUser: jest.fn().mockResolvedValue(undefined),
       findByProjectIdsAndUser: jest.fn().mockResolvedValue(new Map()),
-      findProjectIdsByUser: jest.fn().mockResolvedValue([]),
     };
     sequences = {
       nextDisplayId: jest.fn().mockResolvedValue('PRJ-0001'),
@@ -123,66 +121,52 @@ describe('ProjectsService', () => {
   });
 
   describe('listForCaller', () => {
-    it('returns every project the caller owns or collaborates on, across tenants', async () => {
-      collaboratorsRepository.findProjectIdsByUser.mockResolvedValue([
+    it('returns a paginated list of accessible projects across tenants', async () => {
+      repository.findAccessiblePageByUser.mockResolvedValue({
+        data: [
+          {
+            id: 'project-1',
+            tenantId: 'tenant-1',
+            title: 'Owned here',
+            userId: 'user-1',
+            statusId: null,
+            pipelineStageId: null,
+            importanceId: null,
+            archivedAt: null,
+          },
+          {
+            id: 'project-2',
+            tenantId: 'tenant-2',
+            title: 'Collaborating elsewhere',
+            userId: 'owner-2',
+            statusId: null,
+            pipelineStageId: null,
+            importanceId: null,
+            archivedAt: null,
+          },
+        ],
+        totalItems: 45,
+      });
+
+      const result = await service.listForCaller('user-1', 2, 20);
+
+      expect(repository.findAccessiblePageByUser).toHaveBeenCalledWith(
+        'user-1',
+        20,
+        20,
+      );
+
+      expect(result.data.map((project) => project.id)).toEqual([
         'project-1',
         'project-2',
       ]);
-      repository.findByIds.mockResolvedValue([
-        {
-          id: 'project-1',
-          tenantId: 'tenant-1',
-          title: 'Owned here',
-          userId: 'user-1',
-          statusId: null,
-          pipelineStageId: null,
-          importanceId: null,
-          archivedAt: null,
-        },
-        {
-          id: 'project-2',
-          tenantId: 'tenant-2',
-          title: 'Collaborating elsewhere',
-          userId: 'owner-2',
-          statusId: null,
-          pipelineStageId: null,
-          importanceId: null,
-          archivedAt: null,
-        },
-      ]);
 
-      const result = await service.listForCaller('user-1');
-
-      expect(repository.findByIds).toHaveBeenCalledWith([
-        'project-1',
-        'project-2',
-      ]);
-      expect(result.map((project) => project.id)).toEqual([
-        'project-1',
-        'project-2',
-      ]);
-    });
-
-    it('excludes archived projects', async () => {
-      collaboratorsRepository.findProjectIdsByUser.mockResolvedValue([
-        'project-1',
-      ]);
-      repository.findByIds.mockResolvedValue([
-        {
-          id: 'project-1',
-          tenantId: 'tenant-1',
-          title: 'Archived',
-          userId: 'user-1',
-          statusId: null,
-          pipelineStageId: null,
-          importanceId: null,
-          archivedAt: new Date(),
-        },
-      ]);
-
-      const result = await service.listForCaller('user-1');
-
-      expect(result).toEqual([]);
+      expect(result.meta).toEqual({
+        page: 2,
+        pageSize: 20,
+        totalItems: 45,
+        totalPages: 3,
+      });
     });
   });
 

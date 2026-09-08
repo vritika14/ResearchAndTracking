@@ -1,6 +1,7 @@
 import { MyModulesController } from './my-modules.controller';
 import { ProjectModulesService } from '../services/project-modules.service';
 import { UsersService } from '../../users/users.service';
+import { ConfigService } from '@nestjs/config';
 
 describe('MyModulesController', () => {
   let controller: MyModulesController;
@@ -12,6 +13,9 @@ describe('MyModulesController', () => {
     listPipelineStagesForCaller: jest.Mock;
   };
   let usersService: { findByExternalAuthId: jest.Mock };
+  let configService: {
+    get: jest.Mock;
+  };
 
   beforeEach(() => {
     modulesService = {
@@ -24,9 +28,13 @@ describe('MyModulesController', () => {
     usersService = {
       findByExternalAuthId: jest.fn().mockResolvedValue({ id: 'user-1' }),
     };
+    configService = {
+      get: jest.fn().mockReturnValue(20),
+    };
     controller = new MyModulesController(
       modulesService as unknown as ProjectModulesService,
       usersService as unknown as UsersService,
+      configService as unknown as ConfigService,
     );
   });
 
@@ -34,14 +42,30 @@ describe('MyModulesController', () => {
     return { user: { sub: 'cognito-sub-1' } } as never;
   }
 
-  it('list() resolves the caller and delegates to listForCaller', async () => {
-    modulesService.listForCaller.mockResolvedValue([{ id: 'module-1' }]);
-    const result = await controller.list(req());
+  it('list() delegates with the caller and pagination parameters', async () => {
+    const response = {
+      data: [{ id: 'module-1' }],
+      meta: {
+        page: 2,
+        pageSize: 20,
+        totalItems: 21,
+        totalPages: 2,
+      },
+    };
+
+    modulesService.listForCaller.mockResolvedValue(response);
+
+    const result = await controller.list(req(), { page: 2 });
+
     expect(usersService.findByExternalAuthId).toHaveBeenCalledWith(
       'cognito-sub-1',
     );
-    expect(modulesService.listForCaller).toHaveBeenCalledWith('user-1');
-    expect(result).toEqual([{ id: 'module-1' }]);
+
+    expect(configService.get).toHaveBeenCalledWith('PAGE_SIZE', 20);
+
+    expect(modulesService.listForCaller).toHaveBeenCalledWith('user-1', 2, 20);
+
+    expect(result).toBe(response);
   });
 
   it('findOne() delegates to findOneForCaller with the module id and caller id', async () => {

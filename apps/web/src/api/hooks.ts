@@ -759,7 +759,18 @@ export function useArchiveProject(tenantId: string) {
   });
 }
 
-const myProjectsKey = ["api", "me", "projects"] as const;
+const myProjectsKey = [
+  "api",
+  "me",
+  "projects",
+] as const;
+
+const myProjectsPageKey = (page = 1) =>
+  [
+    ...myProjectsKey,
+    page,
+  ] as const;
+
 const myProjectKey = (projectId: string) =>
   ["api", "me", "projects", projectId] as const;
 
@@ -768,12 +779,21 @@ const myProjectKey = (projectId: string) =>
  * regardless of which workspace it lives in — see MyProjectsController on
  * the backend.
  */
-export function useMyProjects(enabled = true) {
+export function useMyProjects(
+  page = 1,
+  enabled = true,
+) {
   return useQuery({
-    queryKey: myProjectsKey,
+    queryKey: myProjectsPageKey(page),
     enabled,
     queryFn: async () =>
-      responseData<ApiProject[]>(await apiClient.GET("/api/v1/me/projects")),
+      responseData<PaginatedResponse<ApiProject>>(
+        await apiClient.GET("/api/v1/me/projects", {
+          params: {
+            query: { page },
+          } as never,
+        }),
+      ),
   });
 }
 
