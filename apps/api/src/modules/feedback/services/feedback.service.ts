@@ -2,13 +2,34 @@ import { Injectable, NotFoundException } from '@nestjs/common';
 import { CreateFeedbackDto } from '../dto/create-feedback.dto';
 import { UpdateFeedbackDto } from '../dto/update-feedback.dto';
 import { FeedbackRepository } from '../repositories/feedback.repository';
+import {
+  buildPaginationMeta,
+  paginationOffset,
+} from '../../../common/pagination';
 
 @Injectable()
 export class FeedbackService {
   constructor(private readonly repository: FeedbackRepository) {}
 
-  async list(tenantId: string, callerUserId: string) {
-    return this.repository.findByUser(tenantId, callerUserId);
+  async list(
+    tenantId: string,
+    callerUserId: string,
+    page: number,
+    pageSize: number,
+  ) {
+    const offset = paginationOffset(page, pageSize);
+
+    const { data, totalItems } = await this.repository.findPageByUser(
+      tenantId,
+      callerUserId,
+      offset,
+      pageSize,
+    );
+
+    return {
+      data,
+      meta: buildPaginationMeta(page, pageSize, totalItems),
+    };
   }
 
   async findOne(tenantId: string, feedbackId: string, callerUserId: string) {
