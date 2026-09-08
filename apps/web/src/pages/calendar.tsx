@@ -77,6 +77,7 @@ export default function CalendarPage() {
   const tasksQuery = useTasks(tenantId);
   const tasks = tasksQuery.data?.data ?? [];
   const conferencesQuery = useConferences(tenantId);
+  const conferences = conferencesQuery.data?.data ?? [];
   const [visibleMonth, setVisibleMonth] = useState(
     () => new Date(new Date().getFullYear(), new Date().getMonth(), 1),
   );
@@ -129,7 +130,7 @@ export default function CalendarPage() {
       }
     }
     if (activeFilter === null || activeFilter === "conference") {
-      for (const conference of conferencesQuery.data ?? []) {
+      for (const conference of conferences) {
         rows.push({
           id: `${conference.id}-submission`,
           kind: "conference",
@@ -155,7 +156,7 @@ export default function CalendarPage() {
       }
     }
     return rows.sort((a, b) => a.title.localeCompare(b.title));
-  }, [activeFilter, conferencesQuery.data, modules, projectById, projects, tasks]);
+  }, [activeFilter, conferences, modules, projectById, projects, tasks]);
 
   const eventsByDate = useMemo(() => {
     const grouped = new Map<string, CalendarEvent[]>();
