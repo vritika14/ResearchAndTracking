@@ -274,6 +274,77 @@ describe("ModulesPage", () => {
     expect(screen.getByRole("combobox", { name: "Collaborator email" })).toBeInTheDocument();
   });
 
+  it("sorts by column, toggling direction on repeated clicks", () => {
+    store.setModules([
+      {
+        id: "module-1",
+        displayId: "MOD-001",
+        tenantId: fixtures.tenantId,
+        projectId: null,
+        title: "Charlie module",
+        description: "",
+        tag: null,
+        status: "Active",
+        pipelineStage: null,
+        dueDate: null,
+        assignedToUserId: null,
+        archivedAt: null,
+        createdAt: "2026-01-01T00:00:00.000Z",
+        updatedAt: "2026-01-01T00:00:00.000Z",
+      },
+      {
+        id: "module-2",
+        displayId: "MOD-002",
+        tenantId: fixtures.tenantId,
+        projectId: null,
+        title: "Alpha module",
+        description: "",
+        tag: null,
+        status: "Active",
+        pipelineStage: null,
+        dueDate: null,
+        assignedToUserId: null,
+        archivedAt: null,
+        createdAt: "2026-01-01T00:00:00.000Z",
+        updatedAt: "2026-01-01T00:00:00.000Z",
+      },
+      {
+        id: "module-3",
+        displayId: "MOD-003",
+        tenantId: fixtures.tenantId,
+        projectId: null,
+        title: "Bravo module",
+        description: "",
+        tag: null,
+        status: "Active",
+        pipelineStage: null,
+        dueDate: null,
+        assignedToUserId: null,
+        archivedAt: null,
+        createdAt: "2026-01-01T00:00:00.000Z",
+        updatedAt: "2026-01-01T00:00:00.000Z",
+      },
+    ]);
+    render(
+      <MemoryRouter>
+        <ModulesPage />
+      </MemoryRouter>,
+    );
+
+    const titleOrder = () =>
+      screen
+        .getAllByRole("link")
+        .map((el) => el.textContent)
+        .filter((text): text is string =>
+          ["Alpha module", "Bravo module", "Charlie module"].includes(text ?? ""),
+        );
+
+    expect(titleOrder()).toEqual(["Alpha module", "Bravo module", "Charlie module"]);
+
+    fireEvent.click(screen.getByRole("button", { name: "Sort by Module" }));
+    expect(titleOrder()).toEqual(["Charlie module", "Bravo module", "Alpha module"]);
+  });
+
   it("directs module sharing to the post-creation invitation flow", () => {
     render(
       <MemoryRouter>

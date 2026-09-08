@@ -1,5 +1,5 @@
 import { useCallback, useMemo, useState } from "react";
-import { Archive, Boxes, Pencil, UserPlus } from "lucide-react";
+import { Archive, ArrowDown, ArrowUp, ArrowUpDown, Boxes, Pencil, UserPlus } from "lucide-react";
 import { Link } from "react-router-dom";
 
 import {
@@ -36,6 +36,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { useColumnVisibility } from "@/hooks/use-column-visibility";
+import { cn } from "@/lib/utils";
 
 const STATUS_FILTERS = ["All", "Active", "Review", "Stalled", "Complete"] as const;
 const MODULE_COLUMNS = [
@@ -49,6 +50,10 @@ const MODULE_COLUMNS = [
 ] as const;
 
 type StatusFilter = (typeof STATUS_FILTERS)[number];
+type SortColumn = (typeof MODULE_COLUMNS)[number]["id"];
+type SortDirection = "asc" | "desc";
+
+const MODULE_STATUS_ORDER: Record<string, number> = { Active: 0, Review: 1, Stalled: 2, Complete: 3 };
 
 function statusPillClass(status: string | null) {
   switch (status) {
@@ -68,6 +73,33 @@ function formatDate(iso: string | null) {
   if (!iso) return "—";
   const [year, month, day] = iso.split("-");
   return `${day}/${month}/${year}`;
+}
+
+interface SortableHeaderProps {
+  label: string;
+  column: SortColumn;
+  sortColumn: SortColumn;
+  sortDirection: SortDirection;
+  onSort: (column: SortColumn) => void;
+}
+
+function SortableHeader({ label, column, sortColumn, sortDirection, onSort }: SortableHeaderProps) {
+  const active = column === sortColumn;
+  const Icon = active ? (sortDirection === "asc" ? ArrowUp : ArrowDown) : ArrowUpDown;
+  return (
+    <button
+      type="button"
+      onClick={() => onSort(column)}
+      aria-label={`Sort by ${label}`}
+      className={cn(
+        "flex items-center gap-1 text-left transition-colors",
+        active ? "text-foreground" : "hover:text-foreground",
+      )}
+    >
+      {label}
+      <Icon className={cn("h-3 w-3", active ? "text-primary" : "opacity-30")} />
+    </button>
+  );
 }
 
 export default function ModulesPage() {
@@ -91,6 +123,8 @@ export default function ModulesPage() {
 
   const [search, setSearch] = useState("");
   const [status, setStatus] = useState<StatusFilter>("All");
+  const [sortColumn, setSortColumn] = useState<SortColumn>("module");
+  const [sortDirection, setSortDirection] = useState<SortDirection>("asc");
   const columns = useColumnVisibility(MODULE_COLUMNS.map((column) => column.id), "modules");
   const gridTemplate = MODULE_COLUMNS.filter((column) =>
     columns.visibleColumns.has(column.id),
@@ -115,9 +149,42 @@ export default function ModulesPage() {
     return projectById.get(projectId) ?? "Unknown project";
   }, [projectById]);
 
+  const assigneeName = useCallback((userId: string | null) => {
+    if (!userId) return "Unassigned";
+    return memberById.get(userId) ?? "Unknown member";
+  }, [memberById]);
+
+  function handleSort(column: SortColumn) {
+    if (column === sortColumn) {
+      setSortDirection((prev) => (prev === "asc" ? "desc" : "asc"));
+    } else {
+      setSortColumn(column);
+      setSortDirection("asc");
+    }
+  }
+
+  function compareModules(a: ApiModule, b: ApiModule, column: SortColumn) {
+    switch (column) {
+      case "module":
+        return a.title.localeCompare(b.title);
+      case "project":
+        return projectName(a.projectId).localeCompare(projectName(b.projectId));
+      case "status":
+        return (MODULE_STATUS_ORDER[a.status ?? ""] ?? 99) - (MODULE_STATUS_ORDER[b.status ?? ""] ?? 99);
+      case "stage":
+        return (a.pipelineStage ?? "").localeCompare(b.pipelineStage ?? "");
+      case "type":
+        return (a.tag ?? "").localeCompare(b.tag ?? "");
+      case "due":
+        return (a.dueDate ?? "").localeCompare(b.dueDate ?? "");
+      case "assignee":
+        return assigneeName(a.assignedToUserId).localeCompare(assigneeName(b.assignedToUserId));
+    }
+  }
+
   const visibleModules = useMemo(() => {
     const query = search.trim().toLowerCase();
-    return (modulesQuery.data ?? []).filter((module) => {
+    const filtered = (modulesQuery.data ?? []).filter((module) => {
       if (status !== "All" && module.status !== status) return false;
       const linkedProject = projectName(module.projectId);
       return (
@@ -127,7 +194,11 @@ export default function ModulesPage() {
         linkedProject.toLowerCase().includes(query)
       );
     });
-  }, [modulesQuery.data, search, status, projectName]);
+    return [...filtered].sort(
+      (a, b) => compareModules(a, b, sortColumn) * (sortDirection === "asc" ? 1 : -1),
+    );
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [modulesQuery.data, search, status, projectName, assigneeName, sortColumn, sortDirection]);
 
   const hasActiveFilters = search !== "" || status !== "All";
 
@@ -179,7 +250,7 @@ export default function ModulesPage() {
         icon={Boxes}
         eyebrow="Workflows"
         title="Modules"
-        description="Organize project-related or independent areas of work by status, type and assignee."
+        description="Organise project-related or independent areas of work by status, type and assignee."
         actions={<Button onClick={() => setIsNewModuleOpen(true)}>New Module</Button>}
       />
 
@@ -273,7 +344,14 @@ export default function ModulesPage() {
             {MODULE_COLUMNS.filter((column) =>
               columns.visibleColumns.has(column.id),
             ).map((column) => (
-              <span key={column.id}>{column.label}</span>
+              <SortableHeader
+                key={column.id}
+                label={column.label}
+                column={column.id}
+                sortColumn={sortColumn}
+                sortDirection={sortDirection}
+                onSort={handleSort}
+              />
             ))}
           </div>
 

@@ -6,7 +6,7 @@ import {
   projectCollaborators,
   projects,
 } from '@research-tracker/migrations';
-import { and, eq, inArray } from 'drizzle-orm';
+import { and, eq, inArray, isNotNull, or } from 'drizzle-orm';
 import { DrizzleService } from '../../../db/drizzle.service';
 
 interface CreateConferenceValues {
@@ -38,9 +38,11 @@ export class ConferencesRepository {
   /**
    * Lists conferences visible to the caller.
    *
-   * A conference is visible when the caller is a collaborator on at least
-   * one project linked to the conference. Project owners are also stored in
-   * project_collaborators, so this covers owners and collaborators.
+   * A conference is visible when the caller owns it directly, or is a
+   * collaborator on at least one project linked to the conference (project
+   * owners are also stored in project_collaborators, so this covers project
+   * owners and collaborators too). Conferences with no linked projects are
+   * only visible to their direct owner.
    */
   async findVisibleByUser(tenantId: string, userId: string) {
     const rows = await this.drizzle.db
@@ -48,14 +50,14 @@ export class ConferencesRepository {
         conference: conferences,
       })
       .from(conferences)
-      .innerJoin(
+      .leftJoin(
         conferenceProjects,
         and(
           eq(conferenceProjects.conferenceId, conferences.id),
           eq(conferenceProjects.tenantId, tenantId),
         ),
       )
-      .innerJoin(
+      .leftJoin(
         projectCollaborators,
         and(
           eq(projectCollaborators.projectId, conferenceProjects.projectId),
@@ -63,14 +65,22 @@ export class ConferencesRepository {
           eq(projectCollaborators.userId, userId),
         ),
       )
-      .where(eq(conferences.tenantId, tenantId));
+      .where(
+        and(
+          eq(conferences.tenantId, tenantId),
+          or(
+            eq(conferences.ownerUserId, userId),
+            isNotNull(projectCollaborators.userId),
+          ),
+        ),
+      );
 
     return rows.map((row) => row.conference);
   }
 
   /**
-   * Finds one conference only when the caller has access through one of its
-   * linked projects.
+   * Finds one conference only when the caller owns it directly, or has
+   * access through one of its linked projects.
    */
   async findVisibleById(
     tenantId: string,
@@ -82,14 +92,14 @@ export class ConferencesRepository {
         conference: conferences,
       })
       .from(conferences)
-      .innerJoin(
+      .leftJoin(
         conferenceProjects,
         and(
           eq(conferenceProjects.conferenceId, conferences.id),
           eq(conferenceProjects.tenantId, tenantId),
         ),
       )
-      .innerJoin(
+      .leftJoin(
         projectCollaborators,
         and(
           eq(projectCollaborators.projectId, conferenceProjects.projectId),
@@ -101,6 +111,10 @@ export class ConferencesRepository {
         and(
           eq(conferences.tenantId, tenantId),
           eq(conferences.id, conferenceId),
+          or(
+            eq(conferences.ownerUserId, userId),
+            isNotNull(projectCollaborators.userId),
+          ),
         ),
       );
 
@@ -239,13 +253,15 @@ export class ConferencesRepository {
       return undefined;
     }
 
-    await this.drizzle.db.insert(conferenceProjects).values(
-      projectIds.map((projectId) => ({
-        tenantId: values.tenantId,
-        conferenceId: conference.id,
-        projectId,
-      })),
-    );
+    if (projectIds.length > 0) {
+      await this.drizzle.db.insert(conferenceProjects).values(
+        projectIds.map((projectId) => ({
+          tenantId: values.tenantId,
+          conferenceId: conference.id,
+          projectId,
+        })),
+      );
+    }
 
     return conference;
   }
@@ -290,13 +306,15 @@ export class ConferencesRepository {
           ),
         );
 
-      await this.drizzle.db.insert(conferenceProjects).values(
-        projectIds.map((projectId) => ({
-          tenantId,
-          conferenceId,
-          projectId,
-        })),
-      );
+      if (projectIds.length > 0) {
+        await this.drizzle.db.insert(conferenceProjects).values(
+          projectIds.map((projectId) => ({
+            tenantId,
+            conferenceId,
+            projectId,
+          })),
+        );
+      }
     }
 
     return conference;

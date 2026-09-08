@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
-import { ArrowUpDown, NotebookPen, Pencil, Plus, Save, Search, Trash2, X } from "lucide-react";
-import { Link, useNavigate, useParams } from "react-router-dom";
+import { NotebookPen, Pencil, Plus, Save, Search, Trash2, Unlink, X } from "lucide-react";
+import { Link, useNavigate, useParams, useSearchParams } from "react-router-dom";
 
 import { apiClient } from "@/api/client";
 import {
@@ -17,6 +17,7 @@ import {
   type ApiUserSearchResult,
 } from "@/api/hooks";
 import { NoteMembersManager } from "@/components/notes/note-members";
+import { BackButton } from "@/components/shared/back-button";
 import { ErrorState } from "@/components/shared/error-state";
 import { LoadingState } from "@/components/shared/loading-state";
 import { Badge } from "@/components/ui/badge";
@@ -41,6 +42,13 @@ const LINK_TARGET_OPTIONS: { value: LinkTargetType; label: string }[] = [
   { value: "none", label: "General" },
 ];
 const VISIBILITY_OPTIONS = ["Private", "Shared"] as const;
+const SORT_ORDER_OPTIONS = [
+  { value: "newest", label: "Newest first" },
+  { value: "oldest", label: "Oldest first" },
+  { value: "az", label: "Title (A–Z)" },
+  { value: "za", label: "Title (Z–A)" },
+] as const;
+type SortOrder = (typeof SORT_ORDER_OPTIONS)[number]["value"];
 
 interface NoteDraft {
   title: string;
@@ -101,6 +109,7 @@ function linkTargetPillClass(selected: boolean) {
 export default function DailyNotesPage() {
   const { noteId } = useParams();
   const navigate = useNavigate();
+  const [searchParams, setSearchParams] = useSearchParams();
   const workspace = useCurrentWorkspace();
   const tenantId = workspace.data?.id ?? "";
 
@@ -115,7 +124,7 @@ export default function DailyNotesPage() {
   const trackEvent = useTrackEvent(tenantId);
 
   const [selectedId, setSelectedId] = useState<string | null>(noteId ?? null);
-  const [sortOrder, setSortOrder] = useState<"newest" | "oldest">("newest");
+  const [sortOrder, setSortOrder] = useState<SortOrder>("newest");
   const [linkFilter, setLinkFilter] = useState(ALL_NOTES);
   const [editingId, setEditingId] = useState<string | "new" | null>(null);
   const [draft, setDraft] = useState<NoteDraft>(EMPTY_DRAFT);
@@ -138,6 +147,31 @@ export default function DailyNotesPage() {
       setEditingId(null);
     }
   }, [noteId, notes]);
+
+  useEffect(() => {
+    if (searchParams.get("new") !== "true") return;
+    const linkedProjectId = searchParams.get("projectId") ?? "";
+    const linkedModuleId = searchParams.get("moduleId") ?? "";
+    setEditingId("new");
+    setDraft({
+      ...EMPTY_DRAFT,
+      linkTarget: linkedModuleId ? "module" : linkedProjectId ? "project" : "none",
+      projectId: linkedModuleId ? "" : linkedProjectId,
+      moduleId: linkedModuleId,
+    });
+    setMemberSearch("");
+    setMemberPickerOpen(false);
+    setSelectedMembers([]);
+    setSearchParams(
+      (params) => {
+        params.delete("new");
+        params.delete("projectId");
+        params.delete("moduleId");
+        return params;
+      },
+      { replace: true },
+    );
+  }, [searchParams, setSearchParams]);
 
   const projectById = useMemo(() => {
     const map = new Map<string, string>();
@@ -167,6 +201,10 @@ export default function DailyNotesPage() {
     const filtered = notes.filter(
       (note) => linkFilter === ALL_NOTES || linkTargetLabel(note) === linkFilter,
     );
+    if (sortOrder === "az" || sortOrder === "za") {
+      const sorted = [...filtered].sort((a, b) => a.title.localeCompare(b.title));
+      return sortOrder === "za" ? sorted.reverse() : sorted;
+    }
     const sorted = [...filtered].sort(
       (a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime(),
     );
@@ -256,15 +294,24 @@ export default function DailyNotesPage() {
           title,
           content,
           visibility: draft.visibility,
-          projectId: link.projectId,
-          // A note's link is cleared server-side only when this key is present
-          // and falsy — see NotesService.resolveLinkage's changesLinkage check.
-          moduleId: draft.linkTarget === "module" ? link.moduleId : "",
+          projectId: draft.linkTarget === "project" ? link.projectId : null,
+          moduleId: draft.linkTarget === "module" ? link.moduleId : null,
         },
       });
     }
 
     setEditingId(null);
+  }
+
+  async function handleUnlinkNote() {
+    if (!selectedNote) return;
+    if (!window.confirm("Unlink this note from its project or module? It will become a general note.")) {
+      return;
+    }
+    await updateNote.mutateAsync({
+      noteId: selectedNote.id,
+      input: { projectId: null, moduleId: null },
+    });
   }
 
   async function deleteSelectedNote() {
@@ -291,6 +338,8 @@ export default function DailyNotesPage() {
 
   return (
     <div className="page-stack">
+      <BackButton fallback="/" label="Back" />
+
       <PageHeading
         icon={NotebookPen}
         tone="violet"
@@ -310,14 +359,18 @@ export default function DailyNotesPage() {
         <aside className="flex w-full flex-col gap-4 rounded-xl border border-violet-200/60 bg-card/95 p-4 shadow-sm lg:w-80 lg:shrink-0 dark:border-violet-900/50">
           <Heading level="h3">Daily Notes</Heading>
 
-          <button
-            type="button"
-            onClick={() => setSortOrder((prev) => (prev === "newest" ? "oldest" : "newest"))}
-            className="flex items-center gap-1.5 self-start text-xs font-medium text-muted-foreground transition-colors hover:text-foreground"
-          >
-            <ArrowUpDown className="h-3 w-3" />
-            Sort: {sortOrder === "newest" ? "Newest" : "Oldest"}
-          </button>
+          <Select value={sortOrder} onValueChange={(value) => setSortOrder(value as SortOrder)}>
+            <SelectTrigger aria-label="Sort notes by">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              {SORT_ORDER_OPTIONS.map((option) => (
+                <SelectItem key={option.value} value={option.value}>
+                  {option.label}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
 
           <Select value={linkFilter} onValueChange={setLinkFilter}>
             <SelectTrigger>
@@ -672,7 +725,15 @@ export default function DailyNotesPage() {
               </div>
 
               <section className="mt-8" aria-labelledby="note-linked-work">
-                <h2 id="note-linked-work" className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Linked work</h2>
+                <div className="flex items-center justify-between gap-3">
+                  <h2 id="note-linked-work" className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Linked work</h2>
+                  {sameTenant && (selectedNote.projectId || selectedNote.moduleId) ? (
+                    <Button variant="ghost" size="sm" onClick={() => void handleUnlinkNote()} disabled={updateNote.isPending}>
+                      <Unlink />
+                      Unlink
+                    </Button>
+                  ) : null}
+                </div>
                 {selectedNote.projectId ? (
                   <Link to={`/projects/${selectedNote.projectId}`} className="mt-3 block max-w-md rounded-lg border border-border p-4 transition-colors hover:border-primary/40 hover:bg-muted/40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring">
                     <span className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Project</span>

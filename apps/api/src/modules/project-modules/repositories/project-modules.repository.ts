@@ -134,6 +134,7 @@ export class ProjectModulesRepository {
     values: Partial<{
       title: string;
       description: string;
+      projectId: string | null;
       tagId: string;
       statusId: string;
       pipelineStageId: string;

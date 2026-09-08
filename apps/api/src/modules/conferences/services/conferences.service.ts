@@ -193,10 +193,11 @@ export class ConferencesService {
   }
 
   /**
-   * Confirms that:
-   * - At least one project is supplied.
+   * When projects are supplied, confirms that:
    * - Every project exists inside the tenant.
    * - The caller has the Owner role on every project.
+   *
+   * A conference may also have no linked projects at all.
    */
   private async validateProjectOwnership(
     tenantId: string,
@@ -206,9 +207,7 @@ export class ConferencesService {
     const uniqueProjectIds = [...new Set(projectIds)];
 
     if (uniqueProjectIds.length === 0) {
-      throw new BadRequestException(
-        'At least one project must be linked to the conference',
-      );
+      return;
     }
 
     const projects = await this.repository.findProjectsByIds(

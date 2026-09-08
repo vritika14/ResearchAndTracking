@@ -14,9 +14,9 @@ import { Wordmark } from "@/components/layout/wordmark";
 import { Button } from "@/components/ui/button";
 
 const HIGHLIGHTS = [
-  { icon: FlaskConical, text: "Track every project from idea to publication" },
-  { icon: Users, text: "Share tasks, modules and notes with collaborators" },
-  { icon: TrendingUp, text: "See your pipeline and deadlines at a glance" },
+  { icon: FlaskConical, text: "Track every project from idea to acceptance" },
+  { icon: Users, text: "Share projects, papers, tasks, notes with collaborators" },
+  { icon: TrendingUp, text: "See your pipeline, tasks and deadlines at a glance" },
 ];
 
 export default function SignInPage() {
@@ -27,7 +27,7 @@ export default function SignInPage() {
   return (
     <div className="grid min-h-screen lg:grid-cols-2">
       {/* Brand panel — hidden below lg, where the sign-in card takes the full screen */}
-      <div className="relative isolate hidden overflow-hidden bg-gradient-to-br from-primary via-primary to-primary/80 lg:flex lg:flex-col lg:justify-between lg:p-12 lg:py-16">
+      <div className="relative isolate hidden overflow-hidden bg-gradient-to-br from-primary via-primary to-primary/80 lg:flex lg:flex-col lg:p-12 lg:py-16">
         <div
           aria-hidden="true"
           className="pointer-events-none absolute -left-24 -top-24 h-96 w-96 rounded-full bg-white/10 blur-3xl"
@@ -45,18 +45,13 @@ export default function SignInPage() {
           className="pointer-events-none absolute right-10 top-24 h-40 w-40 -rotate-12 text-white/10"
         />
 
-        <span className="relative z-10 inline-flex w-fit items-center gap-1.5 rounded-full bg-white/15 px-3 py-1 text-xs font-semibold uppercase tracking-wide text-white ring-1 ring-white/25">
-          <Sparkles className="h-3.5 w-3.5" />
-          Built for research teams
-        </span>
-
-        <div className="relative z-10 max-w-md">
+        <div className="relative z-10 my-auto max-w-md">
           <h1 className="text-3xl font-bold leading-tight text-white sm:text-4xl">
             Where your research momentum lives
           </h1>
-          <p className="mt-4 text-base leading-7 text-white/80">
+          <p className="mt-4 text-base leading-7 text-white/80 text-balance">
             One place to plan projects, assign tasks, organise notes, and
-            follow your pipeline from first idea to publication.
+            follow your pipeline from first idea to acceptance.
           </p>
           <ul className="mt-8 flex flex-col gap-4">
             {HIGHLIGHTS.map(({ icon: Icon, text }) => (

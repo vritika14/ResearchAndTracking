@@ -225,6 +225,7 @@ export class ProjectModulesService {
     input: Partial<{
       title: string;
       description: string;
+      projectId: string | null;
       tag: string;
       status: string;
       pipelineStage: string;
@@ -247,6 +248,7 @@ export class ProjectModulesService {
     const module = await this.repository.update(tenantId, moduleId, {
       title: input.title,
       description: input.description,
+      projectId: input.projectId,
       tagId,
       statusId,
       pipelineStageId,

@@ -1,4 +1,4 @@
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 import { X } from "lucide-react";
 
 import {
@@ -11,6 +11,7 @@ import {
 import { InvitationPanel } from "@/components/sharing/invitation-panel";
 import { LoadingState } from "@/components/shared/loading-state";
 import { Badge } from "@/components/ui/badge";
+import { Input } from "@/components/ui/input";
 
 interface ModuleCollaboratorsManagerProps {
   tenantId: string;
@@ -29,6 +30,7 @@ export function ModuleCollaboratorsManager({
   const removeCollaborator = useRemoveModuleCollaborator(tenantId, moduleId);
   const me = useMe();
   const rolesQuery = useEnumValues("project_role");
+  const [search, setSearch] = useState("");
 
   const memberByUserId = useMemo(() => {
     const map = new Map<string, Membership>();
@@ -49,10 +51,28 @@ export function ModuleCollaboratorsManager({
     return <LoadingState title="Loading collaborators" className="min-h-32" />;
   }
 
+  const collaborators = collaboratorsQuery.data ?? [];
+  const query = search.trim().toLowerCase();
+  const filteredCollaborators = collaborators.filter((collaborator) => {
+    if (!query) return true;
+    const member = memberByUserId.get(collaborator.userId);
+    const displayName = collaborator.displayName ?? member?.displayName ?? "";
+    return displayName.toLowerCase().includes(query);
+  });
+
   return (
     <div className="flex flex-col gap-4">
+      {collaborators.length > 0 ? (
+        <Input
+          value={search}
+          onChange={(event) => setSearch(event.target.value)}
+          placeholder="Search collaborators by name…"
+          aria-label="Search collaborators by name"
+          className="sm:max-w-xs"
+        />
+      ) : null}
       <div className="flex flex-col gap-2">
-        {(collaboratorsQuery.data ?? []).map((collaborator) => {
+        {filteredCollaborators.map((collaborator) => {
           const member = memberByUserId.get(collaborator.userId);
           const displayName =
             collaborator.displayName ?? member?.displayName ?? "Unknown collaborator";
@@ -90,8 +110,10 @@ export function ModuleCollaboratorsManager({
             </div>
           );
         })}
-        {(collaboratorsQuery.data ?? []).length === 0 ? (
+        {collaborators.length === 0 ? (
           <p className="text-sm text-muted-foreground">No collaborators added yet.</p>
+        ) : filteredCollaborators.length === 0 ? (
+          <p className="text-sm text-muted-foreground">No collaborators match "{search.trim()}".</p>
         ) : null}
       </div>
 

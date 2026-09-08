@@ -1,6 +1,5 @@
 import { ApiProperty } from '@nestjs/swagger';
 import {
-  ArrayMinSize,
   ArrayUnique,
   IsArray,
   IsDateString,
@@ -49,10 +48,10 @@ export class CreateConferenceDto {
   @ApiProperty({
     type: [String],
     description: 'Projects linked to this conference',
+    required: false,
   })
   @IsArray()
-  @ArrayMinSize(1)
   @ArrayUnique()
   @IsUUID('4', { each: true })
-  projectIds!: string[];
+  projectIds: string[] = [];
 }

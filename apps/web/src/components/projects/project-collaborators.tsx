@@ -1,4 +1,4 @@
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 import { X } from "lucide-react";
 
 import {
@@ -9,6 +9,7 @@ import {
 import { LoadingState } from "@/components/shared/loading-state";
 import { InvitationPanel } from "@/components/sharing/invitation-panel";
 import { Badge } from "@/components/ui/badge";
+import { Input } from "@/components/ui/input";
 
 interface ProjectCollaboratorsProps {
   tenantId: string;
@@ -29,6 +30,7 @@ export function ProjectCollaborators({
 }: ProjectCollaboratorsProps) {
   const collaboratorsQuery = useProjectCollaborators(tenantId, projectId);
   const removeCollaborator = useRemoveProjectCollaborator(tenantId, projectId);
+  const [search, setSearch] = useState("");
 
   const memberByUserId = useMemo(() => {
     const map = new Map<string, Membership>();
@@ -48,23 +50,43 @@ export function ProjectCollaborators({
     (collaborator) => collaborator.userId !== ownerUserId,
   );
 
+  const query = search.trim().toLowerCase();
+  const owner = ownerUserId ? memberByUserId.get(ownerUserId) : undefined;
+  const showOwnerRow =
+    !ownerIsReturned && owner && (!query || owner.displayName.toLowerCase().includes(query));
+  const filteredCollaborators = collaborators.filter((collaborator) => {
+    if (!query) return true;
+    const member = memberByUserId.get(collaborator.userId);
+    const displayName = collaborator.displayName ?? member?.displayName ?? "";
+    return displayName.toLowerCase().includes(query);
+  });
+
   return (
     <div className="flex flex-col gap-4">
+      {collaborators.length > 0 ? (
+        <Input
+          value={search}
+          onChange={(event) => setSearch(event.target.value)}
+          placeholder="Search collaborators by name…"
+          aria-label="Search collaborators by name"
+          className="sm:max-w-xs"
+        />
+      ) : null}
       <div className="flex flex-col gap-2">
-        {!ownerIsReturned && ownerUserId && memberByUserId.has(ownerUserId) ? (
+        {showOwnerRow ? (
           <div className="flex items-center justify-between gap-3 rounded-md border border-border bg-card p-3">
             <span className="min-w-0">
               <span className="block truncate text-sm font-medium">
-                {memberByUserId.get(ownerUserId)!.displayName}
+                {owner!.displayName}
               </span>
               <span className="block truncate text-xs text-muted-foreground">
-                {memberByUserId.get(ownerUserId)!.email}
+                {owner!.email}
               </span>
             </span>
             <Badge variant="outline">Owner</Badge>
           </div>
         ) : null}
-        {collaborators.map((collaborator) => {
+        {filteredCollaborators.map((collaborator) => {
           const member = memberByUserId.get(collaborator.userId);
           const displayName =
             collaborator.displayName ?? member?.displayName ?? "Unknown collaborator";
@@ -100,6 +122,8 @@ export function ProjectCollaborators({
         })}
         {!hasAdditionalCollaborators ? (
           <p className="text-sm text-muted-foreground">No additional collaborators yet.</p>
+        ) : !showOwnerRow && filteredCollaborators.length === 0 ? (
+          <p className="text-sm text-muted-foreground">No collaborators match "{search.trim()}".</p>
         ) : null}
       </div>
 

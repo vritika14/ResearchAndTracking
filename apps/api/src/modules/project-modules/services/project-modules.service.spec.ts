@@ -430,6 +430,92 @@ describe('ProjectModulesService', () => {
     });
   });
 
+  describe('update', () => {
+    it('links an independent module to a project', async () => {
+      repository.findById.mockResolvedValue({
+        id: 'module-1',
+        projectId: null,
+        tagId: null,
+        statusId: null,
+      });
+      collaboratorsRepository.findByModuleAndUser.mockResolvedValue({
+        roleId: 'role-1',
+      });
+      repository.update.mockResolvedValue({
+        id: 'module-1',
+        projectId: 'project-2',
+        tagId: null,
+        statusId: null,
+      });
+
+      await service.update('tenant-1', 'module-1', 'user-1', {
+        projectId: 'project-2',
+      });
+
+      expect(repository.update).toHaveBeenCalledWith(
+        'tenant-1',
+        'module-1',
+        expect.objectContaining({ projectId: 'project-2' }),
+      );
+    });
+
+    it('unlinks a module from its project, making it independent', async () => {
+      repository.findById.mockResolvedValue({
+        id: 'module-1',
+        projectId: 'project-1',
+        tagId: null,
+        statusId: null,
+      });
+      projectCollaboratorsRepository.findByProjectAndUser.mockResolvedValue({
+        roleId: 'role-1',
+      });
+      repository.update.mockResolvedValue({
+        id: 'module-1',
+        projectId: null,
+        tagId: null,
+        statusId: null,
+      });
+
+      await service.update('tenant-1', 'module-1', 'user-1', {
+        projectId: null,
+      });
+
+      expect(repository.update).toHaveBeenCalledWith(
+        'tenant-1',
+        'module-1',
+        expect.objectContaining({ projectId: null }),
+      );
+    });
+
+    it('leaves the project link untouched when projectId is omitted', async () => {
+      repository.findById.mockResolvedValue({
+        id: 'module-1',
+        projectId: 'project-1',
+        tagId: null,
+        statusId: null,
+      });
+      projectCollaboratorsRepository.findByProjectAndUser.mockResolvedValue({
+        roleId: 'role-1',
+      });
+      repository.update.mockResolvedValue({
+        id: 'module-1',
+        projectId: 'project-1',
+        tagId: null,
+        statusId: null,
+      });
+
+      await service.update('tenant-1', 'module-1', 'user-1', {
+        title: 'Renamed module',
+      });
+
+      expect(repository.update).toHaveBeenCalledWith(
+        'tenant-1',
+        'module-1',
+        expect.objectContaining({ projectId: undefined }),
+      );
+    });
+  });
+
   describe('archive', () => {
     it('resolves the Archived status and sets archivedAt, returning a warning', async () => {
       repository.findById.mockResolvedValue({

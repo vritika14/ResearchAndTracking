@@ -1,4 +1,9 @@
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import {
+  useMutation,
+  useQuery,
+  useQueryClient,
+  type QueryClient,
+} from "@tanstack/react-query";
 
 import {
   ApiError,
@@ -694,6 +699,20 @@ const myProjectKey = (projectId: string) =>
   ["api", "me", "projects", projectId] as const;
 
 /**
+ * "My*" mutations act on a resource without knowing which tenant it
+ * belongs to, so they can't target a specific `apiKeys.projects(tenantId)`
+ * key. Instead this invalidates every cached query for the resource across
+ * all workspaces — otherwise a tenant-scoped list (e.g. the Projects page)
+ * keeps showing pre-edit data until the tab is reloaded, since editing via
+ * a "My*" endpoint never touches that list's cache entry.
+ */
+function invalidateResourceEverywhere(queryClient: QueryClient, resource: string) {
+  return queryClient.invalidateQueries({
+    predicate: (query) => query.queryKey.includes(resource),
+  });
+}
+
+/**
  * Tenant-agnostic: every project the caller owns or collaborates on,
  * regardless of which workspace it lives in — see MyProjectsController on
  * the backend.
@@ -749,7 +768,10 @@ export function useUpdateMyProject() {
       ),
     async onSuccess(project) {
       queryClient.setQueryData(myProjectKey(project.id), project);
-      await queryClient.invalidateQueries({ queryKey: myProjectsKey });
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: myProjectsKey }),
+        invalidateResourceEverywhere(queryClient, "projects"),
+      ]);
     },
   });
 }
@@ -764,7 +786,10 @@ export function useArchiveMyProject() {
         }),
       ),
     async onSuccess() {
-      await queryClient.invalidateQueries({ queryKey: myProjectsKey });
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: myProjectsKey }),
+        invalidateResourceEverywhere(queryClient, "projects"),
+      ]);
     },
   });
 }
@@ -841,7 +866,10 @@ export interface CreateModuleInput {
   dueDate?: string;
   assignedToUserId?: string;
 }
-export type UpdateModuleInput = Partial<CreateModuleInput>;
+export type UpdateModuleInput = Omit<Partial<CreateModuleInput>, "projectId"> & {
+  /** `null` unlinks the module (makes it independent); omit to leave unchanged. */
+  projectId?: string | null;
+};
 
 export function useModules(
   tenantId: string,
@@ -926,7 +954,10 @@ export function useUpdateModule(tenantId: string) {
       responseData<ApiModule>(
         await apiClient.PATCH("/api/v1/tenant/{tenantId}/modules/{moduleId}", {
           params: { path: { tenantId, moduleId } },
-          body: input,
+          // The generated type only allows `string | undefined` for
+          // projectId, but the backend accepts an explicit `null` to unlink
+          // the module — see ProjectModulesService.update.
+          body: input as typeof input & { projectId?: string },
         }),
       ),
     async onSuccess(module) {
@@ -1079,12 +1110,17 @@ export function useUpdateMyModule() {
       responseData<ApiModule>(
         await apiClient.PATCH("/api/v1/me/modules/{moduleId}", {
           params: { path: { moduleId } },
-          body: input,
+          // See the tenant-scoped useUpdateModule above — the generated type
+          // doesn't know `projectId: null` is valid for unlinking.
+          body: input as typeof input & { projectId?: string },
         }),
       ),
     async onSuccess(module) {
       queryClient.setQueryData(myModuleKey(module.id), module);
-      await queryClient.invalidateQueries({ queryKey: myModulesKey });
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: myModulesKey }),
+        invalidateResourceEverywhere(queryClient, "modules"),
+      ]);
     },
   });
 }
@@ -1099,7 +1135,10 @@ export function useArchiveMyModule() {
         }),
       ),
     async onSuccess() {
-      await queryClient.invalidateQueries({ queryKey: myModulesKey });
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: myModulesKey }),
+        invalidateResourceEverywhere(queryClient, "modules"),
+      ]);
     },
   });
 }
@@ -1120,7 +1159,11 @@ export interface CreateTaskInput {
   estimatedHours?: string;
   dueDate?: string;
 }
-export type UpdateTaskInput = Partial<CreateTaskInput>;
+export type UpdateTaskInput = Omit<Partial<CreateTaskInput>, "projectId" | "moduleId"> & {
+  /** `null` clears the link (project unset, or unlinked from its module); omit to leave unchanged. */
+  projectId?: string | null;
+  moduleId?: string | null;
+};
 
 export function useTasks(tenantId: string, projectId?: string, enabled = true) {
   return useQuery({
@@ -1184,7 +1227,10 @@ export function useUpdateTask(tenantId: string) {
       responseData<ApiTask>(
         await apiClient.PATCH("/api/v1/tenant/{tenantId}/tasks/{taskId}", {
           params: { path: { tenantId, taskId } },
-          body: input,
+          // The generated type only allows `string | undefined` for
+          // projectId/moduleId, but the backend accepts an explicit `null`
+          // to clear either link — see TasksService.resolveLinkage.
+          body: input as typeof input & { projectId?: string; moduleId?: string },
         }),
       ),
     async onSuccess(task) {
@@ -1258,12 +1304,16 @@ export function useUpdateMyTask() {
       responseData<ApiTask>(
         await apiClient.PATCH("/api/v1/me/tasks/{taskId}", {
           params: { path: { taskId } },
-          body: input,
+          // See the tenant-scoped useUpdateTask above.
+          body: input as typeof input & { projectId?: string; moduleId?: string },
         }),
       ),
     async onSuccess(task) {
       queryClient.setQueryData(myTaskKey(task.id), task);
-      await queryClient.invalidateQueries({ queryKey: myTasksKey });
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: myTasksKey }),
+        invalidateResourceEverywhere(queryClient, "tasks"),
+      ]);
     },
   });
 }
@@ -1278,7 +1328,10 @@ export function useDeleteMyTask() {
         }),
       ),
     async onSuccess() {
-      await queryClient.invalidateQueries({ queryKey: myTasksKey });
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: myTasksKey }),
+        invalidateResourceEverywhere(queryClient, "tasks"),
+      ]);
     },
   });
 }
@@ -1353,7 +1406,11 @@ export interface CreateNoteInput {
   moduleId?: string;
   visibility?: string;
 }
-export type UpdateNoteInput = Partial<CreateNoteInput>;
+export type UpdateNoteInput = Omit<Partial<CreateNoteInput>, "projectId" | "moduleId"> & {
+  /** `null` clears the link (project unset, or unlinked from its module); omit to leave unchanged. */
+  projectId?: string | null;
+  moduleId?: string | null;
+};
 
 export function useNotes(tenantId: string, projectId?: string, enabled = true) {
   return useQuery({
@@ -1417,7 +1474,10 @@ export function useUpdateNote(tenantId: string) {
       responseData<ApiNote>(
         await apiClient.PATCH("/api/v1/tenant/{tenantId}/notes/{noteId}", {
           params: { path: { tenantId, noteId } },
-          body: input,
+          // The generated type only allows `string | undefined` for
+          // projectId/moduleId, but the backend accepts an explicit `null`
+          // to clear either link — see NotesService.resolveLinkage.
+          body: input as typeof input & { projectId?: string; moduleId?: string },
         }),
       ),
     async onSuccess(note) {
@@ -1547,7 +1607,8 @@ export function useUpdateMyNote() {
       responseData<ApiNote>(
         await apiClient.PATCH("/api/v1/me/notes/{noteId}", {
           params: { path: { noteId } },
-          body: input,
+          // See the tenant-scoped useUpdateNote above.
+          body: input as typeof input & { projectId?: string; moduleId?: string },
         }),
       ),
     async onSuccess(note) {

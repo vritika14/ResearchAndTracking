@@ -52,6 +52,8 @@ interface ModuleDialogProps {
   projects: ApiProject[];
   members: Membership[];
   module?: ApiModule | null;
+  /** Pre-links a new module to this project when the dialog is opened for creation. */
+  initialProjectId?: string;
   onSave: (input: ModuleFormInput) => Promise<void> | void;
 }
 
@@ -91,6 +93,7 @@ export function ModuleDialog({
   projects,
   members,
   module,
+  initialProjectId,
   onSave,
 }: ModuleDialogProps) {
   const tagValuesQuery = useEnumValues("module_type", open);
@@ -123,12 +126,16 @@ export function ModuleDialog({
         assignedToUserId: module.assignedToUserId,
       });
       setIsIndependent(module.projectId === null);
+    } else if (initialProjectId) {
+      setForm({ ...INITIAL_FORM, projectId: initialProjectId });
+      setIsIndependent(false);
+      setStagesInitialized(false);
     } else {
       setForm(INITIAL_FORM);
       setIsIndependent(true);
       setStagesInitialized(false);
     }
-  }, [open, module]);
+  }, [open, module, initialProjectId]);
 
   useEffect(() => {
     if (!open || module || stagesInitialized || !stageValuesQuery.data?.length) return;
