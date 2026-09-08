@@ -61,15 +61,23 @@ vi.mock("@/api/hooks", () => ({
     isPending: false,
   }),
   useMembers: () => ({
-    data: [
-      {
-        id: "membership-owner",
-        userId: "user-owner",
-        displayName: "Avi Researcher",
-        email: "owner@example.com",
-        role: "owner",
+    data: {
+      data: [
+        {
+          id: "membership-owner",
+          userId: "user-owner",
+          displayName: "Avi Researcher",
+          email: "owner@example.com",
+          role: "owner",
+        },
+      ],
+      meta: {
+        page: 1,
+        pageSize: 20,
+        totalItems: 1,
+        totalPages: 1,
       },
-    ],
+    },
     isPending: false,
   }),
   useMyProject: () => ({

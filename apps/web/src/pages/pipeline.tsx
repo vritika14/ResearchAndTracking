@@ -284,6 +284,7 @@ export default function PipelinePage() {
   const tasksQuery = useTasks(tenantId);
   const tasks = tasksQuery.data?.data ?? [];
   const membersQuery = useMembers(tenantId);
+  const members = membersQuery.data?.data ?? [];
   const me = useMe();
   const preferences = usePreferences();
 
@@ -434,11 +435,11 @@ export default function PipelinePage() {
 
   const memberNameById = useMemo(() => {
     const map = new Map<string, string>();
-    for (const member of membersQuery.data ?? []) {
+    for (const member of members) {
       if (member.displayName) map.set(member.userId, member.displayName);
     }
     return map;
-  }, [membersQuery.data]);
+  }, [members]);
 
   const roleOptions = useMemo(() => {
     const roles = new Set<string>();

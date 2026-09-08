@@ -11,6 +11,7 @@ describe('WorkspacesService', () => {
     findWorkspaceForMember: jest.Mock;
     setCurrentWorkspace: jest.Mock;
     deleteById: jest.Mock;
+    findPageByMemberUserId: jest.Mock;
   };
   let drizzle: { db: { insert: jest.Mock } };
 
@@ -21,6 +22,7 @@ describe('WorkspacesService', () => {
       findWorkspaceForMember: jest.fn(),
       setCurrentWorkspace: jest.fn(),
       deleteById: jest.fn(),
+      findPageByMemberUserId: jest.fn(),
     };
     drizzle = { db: { insert: jest.fn() } };
     service = new WorkspacesService(
@@ -55,11 +57,31 @@ describe('WorkspacesService', () => {
     expect(drizzle.db.insert).toHaveBeenCalledTimes(3);
   });
 
-  it('lists every active workspace available to the user', async () => {
+  it('returns a paginated list of active workspaces available to the user', async () => {
     const available = [{ id: 'tenant-1' }, { id: 'tenant-2' }];
-    repository.findAllByMemberUserId.mockResolvedValue(available);
 
-    await expect(service.listWorkspaces('user-1')).resolves.toBe(available);
+    repository.findPageByMemberUserId.mockResolvedValue({
+      data: available,
+      totalItems: 45,
+    });
+
+    const result = await service.listWorkspaces('user-1', 2, 20);
+
+    expect(repository.findPageByMemberUserId).toHaveBeenCalledWith(
+      'user-1',
+      20,
+      20,
+    );
+
+    expect(result).toEqual({
+      data: available,
+      meta: {
+        page: 2,
+        pageSize: 20,
+        totalItems: 45,
+        totalPages: 3,
+      },
+    });
   });
 
   it('returns an existing persisted current workspace', async () => {

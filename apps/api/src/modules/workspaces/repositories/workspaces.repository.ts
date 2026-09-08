@@ -4,7 +4,7 @@ import {
   tenants,
   workspaceContexts,
 } from '@research-tracker/migrations';
-import { and, asc, eq } from 'drizzle-orm';
+import { and, asc, eq, sql } from 'drizzle-orm';
 import { DrizzleService } from '../../../db/drizzle.service';
 
 @Injectable()
@@ -33,6 +33,47 @@ export class WorkspacesRepository {
         ),
       )
       .orderBy(asc(tenants.name));
+  }
+
+  async findPageByMemberUserId(userId: string, offset: number, limit: number) {
+    const whereCondition = and(
+      eq(tenantMemberships.userId, userId),
+      eq(tenantMemberships.status, 'active'),
+      eq(tenants.status, 'active'),
+    );
+
+    const [data, countResult] = await Promise.all([
+      this.drizzle.db
+        .select({
+          id: tenants.id,
+          name: tenants.name,
+          slug: tenants.slug,
+          ownerUserId: tenants.ownerUserId,
+          status: tenants.status,
+          createdAt: tenants.createdAt,
+          updatedAt: tenants.updatedAt,
+          membershipRole: tenantMemberships.role,
+        })
+        .from(tenantMemberships)
+        .innerJoin(tenants, eq(tenants.id, tenantMemberships.tenantId))
+        .where(whereCondition)
+        .orderBy(asc(tenants.name), asc(tenants.id))
+        .limit(limit)
+        .offset(offset),
+
+      this.drizzle.db
+        .select({
+          count: sql<number>`count(*)::int`,
+        })
+        .from(tenantMemberships)
+        .innerJoin(tenants, eq(tenants.id, tenantMemberships.tenantId))
+        .where(whereCondition),
+    ]);
+
+    return {
+      data,
+      totalItems: countResult[0]?.count ?? 0,
+    };
   }
 
   async findWorkspaceForMember(userId: string, tenantId: string) {

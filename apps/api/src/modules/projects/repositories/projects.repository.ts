@@ -4,7 +4,7 @@ import {
   projectCollaborators,
   projects,
 } from '@research-tracker/migrations';
-import { and, eq, inArray, isNull, sql } from 'drizzle-orm';
+import { and, desc, eq, isNull, sql } from 'drizzle-orm';
 import { DrizzleService } from '../../../db/drizzle.service';
 
 @Injectable()
@@ -29,12 +29,55 @@ export class ProjectsRepository {
   }
 
   /** Tenant-agnostic multi-project fetch, for listing across a caller's collaborations. */
-  async findByIds(ids: string[]) {
-    if (ids.length === 0) return [];
-    return this.drizzle.db
-      .select()
-      .from(projects)
-      .where(inArray(projects.id, ids));
+  async findAccessiblePageByUser(
+    userId: string,
+    offset: number,
+    limit: number,
+  ) {
+    const whereCondition = and(
+      eq(projectCollaborators.userId, userId),
+      isNull(projects.archivedAt),
+    );
+
+    const [rows, countResult] = await Promise.all([
+      this.drizzle.db
+        .selectDistinct({
+          project: projects,
+        })
+        .from(projectCollaborators)
+        .innerJoin(
+          projects,
+          and(
+            eq(projects.id, projectCollaborators.projectId),
+            eq(projects.tenantId, projectCollaborators.tenantId),
+          ),
+        )
+        .where(whereCondition)
+        .orderBy(desc(projects.createdAt), desc(projects.id))
+        .limit(limit)
+        .offset(offset),
+
+      this.drizzle.db
+        .select({
+          count: sql<number>`
+            count(distinct ${projects.id})::int
+          `,
+        })
+        .from(projectCollaborators)
+        .innerJoin(
+          projects,
+          and(
+            eq(projects.id, projectCollaborators.projectId),
+            eq(projects.tenantId, projectCollaborators.tenantId),
+          ),
+        )
+        .where(whereCondition),
+    ]);
+
+    return {
+      data: rows.map((row) => row.project),
+      totalItems: countResult[0]?.count ?? 0,
+    };
   }
 
   async findActiveByTenant(tenantId: string, offset: number, limit: number) {

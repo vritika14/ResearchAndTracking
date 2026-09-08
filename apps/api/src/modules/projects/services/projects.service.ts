@@ -65,13 +65,24 @@ export class ProjectsService {
    * as a project_collaborators row at creation time, so a single query over
    * that table already covers both cases — mirrors TasksService.listForCaller.
    */
-  async listForCaller(callerUserId: string) {
-    const projectIds =
-      await this.collaboratorsRepository.findProjectIdsByUser(callerUserId);
-    const rows = (await this.repository.findByIds(projectIds)).filter(
-      (project) => project.archivedAt === null,
+  async listForCaller(callerUserId: string, page: number, pageSize: number) {
+    const offset = paginationOffset(page, pageSize);
+
+    const { data, totalItems } = await this.repository.findAccessiblePageByUser(
+      callerUserId,
+      offset,
+      pageSize,
     );
-    return this.withDisplayValues(rows, callerUserId);
+
+    const projectsWithDisplayValues = await this.withDisplayValues(
+      data,
+      callerUserId,
+    );
+
+    return {
+      data: projectsWithDisplayValues,
+      meta: buildPaginationMeta(page, pageSize, totalItems),
+    };
   }
 
   /** Tenant-agnostic single-project fetch — see listForCaller. */

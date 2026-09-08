@@ -99,25 +99,24 @@ export class ProjectModulesService {
    * module the caller is a direct module_collaborators row on. Mirrors
    * ProjectsService.listForCaller / TasksService.listForCaller.
    */
-  async listForCaller(callerUserId: string) {
-    const [projectIds, moduleIds] = await Promise.all([
-      this.projectCollaboratorsRepository.findProjectIdsByUser(callerUserId),
-      this.collaboratorsRepository.findModuleIdsByUser(callerUserId),
-    ]);
-    const [byProject, byCollaborator] = await Promise.all([
-      this.repository.findByProjectIds(projectIds),
-      this.repository.findByIds(moduleIds),
-    ]);
+  async listForCaller(callerUserId: string, page: number, pageSize: number) {
+    const offset = paginationOffset(page, pageSize);
 
-    const seen = new Set<string>();
-    const rows = [...byProject, ...byCollaborator].filter((module) => {
-      if (module.archivedAt !== null) return false;
-      if (seen.has(module.id)) return false;
-      seen.add(module.id);
-      return true;
-    });
+    const { data, totalItems } = await this.repository.findAccessiblePageByUser(
+      callerUserId,
+      offset,
+      pageSize,
+    );
 
-    return this.withDisplayValues(rows, callerUserId);
+    const modulesWithDisplayValues = await this.withDisplayValues(
+      data,
+      callerUserId,
+    );
+
+    return {
+      data: modulesWithDisplayValues,
+      meta: buildPaginationMeta(page, pageSize, totalItems),
+    };
   }
 
   /** Tenant-agnostic single-module fetch — see listForCaller. */

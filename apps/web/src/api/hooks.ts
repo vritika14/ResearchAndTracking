@@ -250,9 +250,20 @@ export interface InvitationPreview extends ApiInvitation {
 export const apiKeys = {
   me: ["api", "me"] as const,
   workspaces: ["api", "workspaces"] as const,
+  workspacesPage: (page = 1) =>
+    ["api", "workspaces", page] as const,
   currentWorkspace: ["api", "workspace", "current"] as const,
-  members: (tenantId: string) =>
-    ["api", "tenant", tenantId, "members"] as const,
+  members: (
+    tenantId: string,
+    page = 1,
+  ) =>
+    [
+      "api",
+      "tenant",
+      tenantId,
+      "members",
+      page,
+    ] as const,
   projects: (tenantId: string) =>
     ["api", "tenant", tenantId, "projects"] as const,
   project: (tenantId: string, projectId: string) =>
@@ -496,11 +507,17 @@ export function useCurrentWorkspace(enabled = true) {
   });
 }
 
-export function useWorkspaces() {
+export function useWorkspaces(page = 1) {
   return useQuery({
-    queryKey: apiKeys.workspaces,
+    queryKey: apiKeys.workspacesPage(page),
     queryFn: async () =>
-      responseData<Workspace[]>(await apiClient.GET("/api/v1/workspaces")),
+      responseData<PaginatedResponse<Workspace>>(
+        await apiClient.GET("/api/v1/workspaces", {
+          params: {
+            query: { page },
+          } as never,
+        }),
+      ),
   });
 }
 
@@ -587,19 +604,30 @@ export function useDeleteWorkspace() {
   });
 }
 
-export function useMembers(tenantId: string, enabled = true) {
+export function useMembers(
+  tenantId: string,
+  page = 1,
+  enabled = true,
+) {
   return useQuery({
-    queryKey: apiKeys.members(tenantId),
+    queryKey: apiKeys.members(tenantId, page),
     enabled: Boolean(tenantId) && enabled,
     queryFn: async () => {
-      const result = await apiClient.GET("/api/v1/tenant/{tenantId}/members", {
-        params: { path: { tenantId } },
-      });
+      const result = await apiClient.GET(
+        "/api/v1/tenant/{tenantId}/members",
+        {
+          params: {
+            path: { tenantId },
+            query: { page },
+          } as never,
+        },
+      );
+
       // The generated MembershipResponseDto mis-describes `joinedAt` as `{}`
-      // (the backend DTO lacks an explicit Swagger type hint on that Date
-      // field) — joinedAt isn't used anywhere in the UI, so trust our own
-      // shape here rather than the lossy generated one.
-      return responseData<Membership[]>(result as never);
+      // because the backend DTO lacks an explicit Swagger type hint.
+      return responseData<PaginatedResponse<Membership>>(
+        result as never,
+      );
     },
   });
 }
@@ -731,7 +759,18 @@ export function useArchiveProject(tenantId: string) {
   });
 }
 
-const myProjectsKey = ["api", "me", "projects"] as const;
+const myProjectsKey = [
+  "api",
+  "me",
+  "projects",
+] as const;
+
+const myProjectsPageKey = (page = 1) =>
+  [
+    ...myProjectsKey,
+    page,
+  ] as const;
+
 const myProjectKey = (projectId: string) =>
   ["api", "me", "projects", projectId] as const;
 
@@ -740,12 +779,21 @@ const myProjectKey = (projectId: string) =>
  * regardless of which workspace it lives in — see MyProjectsController on
  * the backend.
  */
-export function useMyProjects(enabled = true) {
+export function useMyProjects(
+  page = 1,
+  enabled = true,
+) {
   return useQuery({
-    queryKey: myProjectsKey,
+    queryKey: myProjectsPageKey(page),
     enabled,
     queryFn: async () =>
-      responseData<ApiProject[]>(await apiClient.GET("/api/v1/me/projects")),
+      responseData<PaginatedResponse<ApiProject>>(
+        await apiClient.GET("/api/v1/me/projects", {
+          params: {
+            query: { page },
+          } as never,
+        }),
+      ),
   });
 }
 

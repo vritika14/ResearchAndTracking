@@ -39,6 +39,17 @@ vi.mock("@/api/hooks", () => ({
     isPending: false,
   }),
   useWorkspaces: () => ({
+    data: {
+      data: [
+        {
+          id: "workspace-1",
+          name: "Research Operations",
+          slug: "research-operations",
+          membershipRole: "owner",
+        },
+      ],
+      useWorkspaces: () => ({
+  data: {
     data: [
       {
         id: "workspace-1",
@@ -47,6 +58,17 @@ vi.mock("@/api/hooks", () => ({
         membershipRole: "owner",
       },
     ],
+    meta: {
+      page: 1,
+      pageSize: 20,
+      totalItems: 1,
+      totalPages: 1,
+    },
+  },
+  isPending: false,
+  isError: false,
+}),
+    },
     isPending: false,
     isError: false,
   }),

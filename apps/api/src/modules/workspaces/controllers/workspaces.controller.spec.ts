@@ -3,6 +3,7 @@ import { NotFoundException } from '@nestjs/common';
 import { WorkspacesController } from './workspaces.controller';
 import { WorkspacesService } from '../services/workspaces.service';
 import { UsersService } from '../../users/users.service';
+import { ConfigService } from '@nestjs/config';
 
 describe('WorkspacesController', () => {
   let controller: WorkspacesController;
@@ -14,6 +15,9 @@ describe('WorkspacesController', () => {
     deleteWorkspace: jest.Mock;
   };
   let usersService: { findOrProvisionFromAccessToken: jest.Mock };
+  let configService: {
+    get: jest.Mock;
+  };
 
   beforeEach(async () => {
     workspacesService = {
@@ -26,12 +30,25 @@ describe('WorkspacesController', () => {
     usersService = {
       findOrProvisionFromAccessToken: jest.fn(),
     };
+    configService = {
+      get: jest.fn().mockReturnValue(20),
+    };
 
     const moduleRef: TestingModule = await Test.createTestingModule({
       controllers: [WorkspacesController],
       providers: [
-        { provide: WorkspacesService, useValue: workspacesService },
-        { provide: UsersService, useValue: usersService },
+        {
+          provide: WorkspacesService,
+          useValue: workspacesService,
+        },
+        {
+          provide: UsersService,
+          useValue: usersService,
+        },
+        {
+          provide: ConfigService,
+          useValue: configService,
+        },
       ],
     }).compile();
 
@@ -39,19 +56,46 @@ describe('WorkspacesController', () => {
   });
 
   describe('list', () => {
-    it('lists workspaces for the provisioned caller', async () => {
+    it('lists paginated workspaces for the provisioned caller', async () => {
       usersService.findOrProvisionFromAccessToken.mockResolvedValue({
         id: 'user-1',
       });
-      const available = [{ id: 'tenant-1' }, { id: 'tenant-2' }];
-      workspacesService.listWorkspaces.mockResolvedValue(available);
+
+      const response = {
+        data: [{ id: 'tenant-1' }, { id: 'tenant-2' }],
+        meta: {
+          page: 2,
+          pageSize: 20,
+          totalItems: 22,
+          totalPages: 2,
+        },
+      };
+
+      workspacesService.listWorkspaces.mockResolvedValue(response);
 
       const req = {
-        user: { sub: 'cognito-sub-1', accessToken: 'token-1' },
+        user: {
+          sub: 'cognito-sub-1',
+          accessToken: 'token-1',
+        },
       } as any;
 
-      await expect(controller.list(req)).resolves.toBe(available);
-      expect(workspacesService.listWorkspaces).toHaveBeenCalledWith('user-1');
+      const result = await controller.list(req, { page: 2 });
+
+      expect(usersService.findOrProvisionFromAccessToken).toHaveBeenCalledWith(
+        'cognito-sub-1',
+        'token-1',
+      );
+
+      expect(configService.get).toHaveBeenCalledWith('PAGE_SIZE', 20);
+
+      expect(workspacesService.listWorkspaces).toHaveBeenCalledWith(
+        'user-1',
+        2,
+        20,
+      );
+
+      expect(result).toBe(response);
     });
   });
 

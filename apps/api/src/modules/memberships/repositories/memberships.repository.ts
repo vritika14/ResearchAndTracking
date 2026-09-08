@@ -1,35 +1,57 @@
 import { Injectable } from '@nestjs/common';
 import { tenantMemberships, users } from '@research-tracker/migrations';
-import { and, eq, sql } from 'drizzle-orm';
+import { and, asc, eq, sql } from 'drizzle-orm';
 import { DrizzleService } from '../../../db/drizzle.service';
 
 @Injectable()
 export class MembershipsRepository {
   constructor(private readonly drizzle: DrizzleService) {}
 
-  async findActiveMembersByTenant(tenantId: string) {
-    return this.drizzle.db
-      .select({
-        id: tenantMemberships.id,
-        tenantId: tenantMemberships.tenantId,
-        userId: tenantMemberships.userId,
-        email: users.email,
-        displayName: users.displayName,
-        role: tenantMemberships.role,
-        status: tenantMemberships.status,
-        invitedAt: tenantMemberships.invitedAt,
-        joinedAt: tenantMemberships.joinedAt,
-        createdAt: tenantMemberships.createdAt,
-        updatedAt: tenantMemberships.updatedAt,
-      })
-      .from(tenantMemberships)
-      .innerJoin(users, eq(users.id, tenantMemberships.userId))
-      .where(
-        and(
-          eq(tenantMemberships.tenantId, tenantId),
-          eq(tenantMemberships.status, 'active'),
-        ),
-      );
+  async findActiveMembersPageByTenant(
+    tenantId: string,
+    offset: number,
+    limit: number,
+  ) {
+    const whereCondition = and(
+      eq(tenantMemberships.tenantId, tenantId),
+      eq(tenantMemberships.status, 'active'),
+    );
+
+    const [data, countResult] = await Promise.all([
+      this.drizzle.db
+        .select({
+          id: tenantMemberships.id,
+          tenantId: tenantMemberships.tenantId,
+          userId: tenantMemberships.userId,
+          email: users.email,
+          displayName: users.displayName,
+          role: tenantMemberships.role,
+          status: tenantMemberships.status,
+          invitedAt: tenantMemberships.invitedAt,
+          joinedAt: tenantMemberships.joinedAt,
+          createdAt: tenantMemberships.createdAt,
+          updatedAt: tenantMemberships.updatedAt,
+        })
+        .from(tenantMemberships)
+        .innerJoin(users, eq(users.id, tenantMemberships.userId))
+        .where(whereCondition)
+        .orderBy(asc(users.displayName), asc(tenantMemberships.id))
+        .limit(limit)
+        .offset(offset),
+
+      this.drizzle.db
+        .select({
+          count: sql<number>`count(*)::int`,
+        })
+        .from(tenantMemberships)
+        .innerJoin(users, eq(users.id, tenantMemberships.userId))
+        .where(whereCondition),
+    ]);
+
+    return {
+      data,
+      totalItems: countResult[0]?.count ?? 0,
+    };
   }
 
   async findMembershipByTenantAndUser(tenantId: string, userId: string) {
