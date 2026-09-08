@@ -10,7 +10,8 @@ export class ModulePipelineStagesService {
   constructor(private readonly repository: EnumRepository) {}
 
   async list(moduleId: string) {
-    const { baseStages, customStages } = await this.repository.findPipelineStagesForModule(moduleId);
+    const { baseStages, customStages } =
+      await this.repository.findPipelineStagesForModule(moduleId);
     return customStages.length > 0 ? customStages : baseStages;
   }
 
@@ -26,11 +27,14 @@ export class ModulePipelineStagesService {
       }
       return row;
     } catch (err) {
-      const causeMessage = err instanceof Error && 'cause' in err && err.cause instanceof Error
-        ? err.cause.message
-        : '';
+      const causeMessage =
+        err instanceof Error && 'cause' in err && err.cause instanceof Error
+          ? err.cause.message
+          : '';
       if (causeMessage.includes('enum_module_category_value_key')) {
-        throw new ConflictException(`A pipeline stage named "${value}" already exists for this module`);
+        throw new ConflictException(
+          `A pipeline stage named "${value}" already exists for this module`,
+        );
       }
       throw err;
     }

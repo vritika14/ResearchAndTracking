@@ -235,6 +235,7 @@ export default function DashboardPage() {
   const tasksQuery = useTasks(tenantId);
   const modulesQuery = useModules(tenantId);
   const tasks = tasksQuery.data?.data ?? [];
+  const modules = modulesQuery.data?.data ?? [];
   const stagesQuery = usePipelineStages(tenantId);
   const me = useMe();
   const createProject = useCreateProject(tenantId);
@@ -260,10 +261,10 @@ export default function DashboardPage() {
 
   const ownedModules = useMemo(() => {
     const ownedProjectIds = new Set(ownedProjects.map((project) => project.id));
-    return (modulesQuery.data ?? []).filter(
+    return modules.filter(
       (module) => module.projectId && ownedProjectIds.has(module.projectId),
     );
-  }, [modulesQuery.data, ownedProjects]);
+  }, [modules, ownedProjects]);
 
   const summary = useMemo(
     () =>
@@ -278,13 +279,12 @@ export default function DashboardPage() {
         reviewStage: projects.filter(
           (project) => project.pipelineStage === REVIEW_STAGE,
         ).length,
-        activeModules: (modulesQuery.data ?? []).filter(
+        activeModules: modules.filter(
           (module) => module.status === "Active",
         ).length,
-        totalModules: (modulesQuery.data ?? []).length,
+        totalModules: modules.length,
       }),
-    [projects, tasksQuery.data, modulesQuery.data],
-    [projects, tasks],
+    [projects, tasks, modules],
   );
   const visibleWidgets = new Set(
     layout.order.filter((id) => !layout.hidden.includes(id)),
@@ -494,7 +494,7 @@ export default function DashboardPage() {
         onOpenChange={setIsNewTaskOpen}
         tenantId={tenantId}
         projects={projects}
-        modules={modulesQuery.data ?? []}
+        modules={modules}
         onSave={handleCreateTask}
       />
       <ConferenceSubmissionDialog
@@ -503,10 +503,6 @@ export default function DashboardPage() {
         projects={ownedProjects}
         modules={ownedModules}
         onSave={handleCreateConference}
-        tasks={tasks}
-        stages={stagesQuery.data ?? []}
-        order={insightOrder}
-        visible={visibleInsights}
       />
 
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">

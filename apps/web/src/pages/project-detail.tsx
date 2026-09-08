@@ -795,7 +795,7 @@ export default function ProjectDetailPage() {
         onOpenChange={setIsAddTaskOpen}
         tenantId={tenantId}
         projects={[project]}
-        modules={modulesQuery.data ?? []}
+        modules={modules}
         initialProjectId={project.id}
         onSave={handleCreateTask}
       />
@@ -805,7 +805,7 @@ export default function ProjectDetailPage() {
         onOpenChange={setIsAddModuleOpen}
         tenantId={tenantId}
         projects={[project]}
-        members={membersQuery.data ?? []}
+        members={members}
         initialProjectId={project.id}
         onSave={handleCreateModule}
       />
@@ -1128,23 +1128,20 @@ export default function ProjectDetailPage() {
             aria-label="Linked work"
           >
             <ProjectModulesDetails
-              modules={modulesQuery.data ?? []}
+              modules={modules}
               onAddModule={() => setIsAddModuleOpen(true)}
               onUnlinkModule={(module) => void handleUnlinkModule(module)}
             />
             <ProjectTasksDetails
-              tasks={tasksQuery.data ?? []}
+              tasks={tasks}
               onAddTask={() => setIsAddTaskOpen(true)}
               onUnlinkTask={(task) => void handleUnlinkTask(task)}
             />
             <ProjectNotesDetails
-              notes={notesQuery.data ?? []}
+              notes={notes}
               projectId={project.id}
               onUnlinkNote={(note) => void handleUnlinkNote(note)}
             />
-            <ProjectModulesDetails modules={modules} />
-            <ProjectTasksDetails tasks={tasks} />
-            <ProjectNotesDetails notes={notes} />
           </section>
 
           <ProjectPipeline

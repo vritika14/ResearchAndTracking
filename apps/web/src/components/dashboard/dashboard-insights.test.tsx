@@ -37,7 +37,10 @@ vi.mock("@/api/hooks", () => ({
     data: { data: fixtures.projects, meta: { page: 1, pageSize: 20, totalItems: fixtures.projects.length, totalPages: 1 } },
     isPending: false,
   }),
-  useTasks: () => ({ data: fixtures.tasks, isPending: false }),
+  useTasks: () => ({
+    data: { data: fixtures.tasks, meta: { page: 1, pageSize: 20, totalItems: fixtures.tasks.length, totalPages: 1 } },
+    isPending: false,
+  }),
   usePipelineStages: () => ({ data: fixtures.stages, isPending: false }),
 }));
 

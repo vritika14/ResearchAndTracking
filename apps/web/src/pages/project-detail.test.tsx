@@ -112,38 +112,35 @@ vi.mock("@/api/hooks", () => ({
   useTrackEvent: () => vi.fn(),
   useEnumValues: () => ({ data: [], isPending: false }),
   useModulePipelineStages: () => ({ data: [], isPending: false }),
-  useModules: () => ({ data: fixtures.modules }),
-  useTasks: () => ({ data: fixtures.tasks }),
-  useNotes: () => ({ data: fixtures.notes }),
   useModules: () => ({
     data: {
-      data: [],
+      data: fixtures.modules,
       meta: {
         page: 1,
         pageSize: 20,
-        totalItems: 0,
+        totalItems: fixtures.modules.length,
         totalPages: 1,
       },
     },
   }),
   useTasks: () => ({
     data: {
-      data: [],
+      data: fixtures.tasks,
       meta: {
         page: 1,
         pageSize: 20,
-        totalItems: 0,
+        totalItems: fixtures.tasks.length,
         totalPages: 1,
       },
     },
   }),
   useNotes: () => ({
     data: {
-      data: [],
+      data: fixtures.notes,
       meta: {
         page: 1,
         pageSize: 20,
-        totalItems: 0,
+        totalItems: fixtures.notes.length,
         totalPages: 1,
       },
     },

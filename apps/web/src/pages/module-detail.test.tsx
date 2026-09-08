@@ -95,27 +95,24 @@ vi.mock("@/api/hooks", () => ({
   useUpdateTask: () => ({ mutateAsync: fixtures.updateTask, isPending: false }),
   useUpdateNote: () => ({ mutateAsync: fixtures.updateNote, isPending: false }),
   useTrackEvent: () => vi.fn(),
-  useTasks: () => ({ data: fixtures.tasks }),
-  useNotes: () => ({ data: fixtures.notes }),
-  useMembers: () => ({ data: [], isPending: false }),
   useTasks: () => ({
     data: {
-      data: [],
+      data: fixtures.tasks,
       meta: {
         page: 1,
         pageSize: 20,
-        totalItems: 0,
+        totalItems: fixtures.tasks.length,
         totalPages: 1,
       },
     },
   }),
   useNotes: () => ({
     data: {
-      data: [],
+      data: fixtures.notes,
       meta: {
         page: 1,
         pageSize: 20,
-        totalItems: 0,
+        totalItems: fixtures.notes.length,
         totalPages: 1,
       },
     },

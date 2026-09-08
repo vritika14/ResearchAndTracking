@@ -9,6 +9,8 @@ describe('ConferencesService', () => {
     findOwnedProjectIds: jest.Mock;
     findLinkedProjects: jest.Mock;
     findVisibleById: jest.Mock;
+    findVisiblePageByUser: jest.Mock;
+    findLinkedProjectsForConferences: jest.Mock;
     create: jest.Mock;
     update: jest.Mock;
   };
@@ -22,19 +24,10 @@ describe('ConferencesService', () => {
       findOwnedProjectIds: jest.fn(),
       findLinkedProjects: jest.fn().mockResolvedValue([]),
       findVisibleById: jest.fn(),
-      create: jest.fn(),
-      update: jest.fn(),
-    };
-
-  let repository: {
-    findVisiblePageByUser: jest.Mock;
-    findLinkedProjectsForConferences: jest.Mock;
-  };
-
-  beforeEach(() => {
-    repository = {
       findVisiblePageByUser: jest.fn(),
       findLinkedProjectsForConferences: jest.fn(),
+      create: jest.fn(),
+      update: jest.fn(),
     };
 
     service = new ConferencesService(
@@ -115,6 +108,9 @@ describe('ConferencesService', () => {
         expect.any(Object),
         [],
       );
+    });
+  });
+
   describe('list', () => {
     it('returns a paginated list of visible conferences', async () => {
       const conference = {

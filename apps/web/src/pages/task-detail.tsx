@@ -476,7 +476,7 @@ export default function TaskDetailPage() {
         <LinkedWorkCard
           task={task}
           projects={projects}
-          modules={modulesQuery.data ?? []}
+          modules={modules}
           linkedProjectTitle={linkedProjectQuery.data?.title}
           linkedProjectError={linkedProjectQuery.isError}
           linkedModuleTitle={linkedModule?.title}

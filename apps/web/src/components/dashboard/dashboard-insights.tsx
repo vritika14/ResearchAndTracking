@@ -148,7 +148,7 @@ export function TaskHealthCard() {
   const workspace = useCurrentWorkspace();
   const tenantId = workspace.data?.id ?? "";
   const tasksQuery = useTasks(tenantId);
-  const tasks = tasksQuery.data ?? [];
+  const tasks = tasksQuery.data?.data ?? [];
 
   const today = new Date().toISOString().slice(0, 10);
   const nextWeek = addDays(new Date(), 7);
@@ -229,7 +229,7 @@ export function PriorityWorkloadCard() {
   const workspace = useCurrentWorkspace();
   const tenantId = workspace.data?.id ?? "";
   const tasksQuery = useTasks(tenantId);
-  const activeTasks = (tasksQuery.data ?? []).filter((task) => task.status !== "Complete");
+  const activeTasks = (tasksQuery.data?.data ?? []).filter((task) => task.status !== "Complete");
 
   const priorityCounts = PRIORITY_ROWS.map((priority) => ({
     ...priority,
@@ -289,7 +289,7 @@ export function ProjectProgressCard() {
   const projectsQuery = useProjects(tenantId);
   const projects = projectsQuery.data?.data ?? [];
   const tasksQuery = useTasks(tenantId);
-  const tasks = tasksQuery.data ?? [];
+  const tasks = tasksQuery.data?.data ?? [];
 
   const taskCountsByProject = new Map<string, { completed: number; total: number }>();
   for (const task of tasks) {

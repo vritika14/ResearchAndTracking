@@ -186,8 +186,7 @@ export default function ModulesPage() {
 
   const visibleModules = useMemo(() => {
     const query = search.trim().toLowerCase();
-    const filtered = (modulesQuery.data ?? []).filter((module) => {
-    return (modules).filter((module) => {
+    const filtered = modules.filter((module) => {
       if (status !== "All" && module.status !== status) return false;
       const linkedProject = projectName(module.projectId);
       return (
@@ -201,8 +200,7 @@ export default function ModulesPage() {
       (a, b) => compareModules(a, b, sortColumn) * (sortDirection === "asc" ? 1 : -1),
     );
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [modulesQuery.data, search, status, projectName, assigneeName, sortColumn, sortDirection]);
-  }, [modules, search, status, projectName]);
+  }, [modules, search, status, projectName, assigneeName, sortColumn, sortDirection]);
 
   const hasActiveFilters = search !== "" || status !== "All";
 

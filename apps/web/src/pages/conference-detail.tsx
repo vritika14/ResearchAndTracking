@@ -51,7 +51,7 @@ export default function ConferenceDetailPage() {
   const projectsQuery = useProjects(tenantId);
   const projects = projectsQuery.data?.data ?? [];
   const modulesQuery = useModules(tenantId);
-  const modules = modulesQuery.data ?? [];
+  const modules = modulesQuery.data?.data ?? [];
   const meQuery = useMe();
   const updateConference = useUpdateConference(tenantId);
   const deleteConference = useDeleteConference(tenantId);

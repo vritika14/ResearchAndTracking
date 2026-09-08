@@ -6,8 +6,7 @@ import {
   projectCollaborators,
   projects,
 } from '@research-tracker/migrations';
-import { and, eq, inArray, isNotNull, or } from 'drizzle-orm';
-import { and, asc, eq, inArray, sql } from 'drizzle-orm';
+import { and, asc, eq, inArray, isNotNull, or, sql } from 'drizzle-orm';
 import { DrizzleService } from '../../../db/drizzle.service';
 
 interface CreateConferenceValues {
@@ -37,7 +36,7 @@ export class ConferencesRepository {
   constructor(private readonly drizzle: DrizzleService) {}
 
   /**
-   * Lists conferences visible to the caller.
+   * Lists conferences visible to the caller, one page at a time.
    *
    * A conference is visible when the caller owns it directly, or is a
    * collaborator on at least one project linked to the conference (project
@@ -45,58 +44,34 @@ export class ConferencesRepository {
    * owners and collaborators too). Conferences with no linked projects are
    * only visible to their direct owner.
    */
-
-  async findVisibleByUser(tenantId: string, userId: string) {
-    const rows = await this.drizzle.db
-      .selectDistinct({
-        conference: conferences,
-      })
-      .from(conferences)
-      .leftJoin(
-        conferenceProjects,
-        and(
-          eq(conferenceProjects.conferenceId, conferences.id),
-          eq(conferenceProjects.tenantId, tenantId),
-        ),
-      )
-      .leftJoin(
-        projectCollaborators,
-        and(
-          eq(projectCollaborators.projectId, conferenceProjects.projectId),
-          eq(projectCollaborators.tenantId, tenantId),
-          eq(projectCollaborators.userId, userId),
-        ),
-      )
-      .where(
-        and(
-          eq(conferences.tenantId, tenantId),
-          or(
-            eq(conferences.ownerUserId, userId),
-            isNotNull(projectCollaborators.userId),
-          ),
-        ),
-      );
-
   async findVisiblePageByUser(
     tenantId: string,
     userId: string,
     offset: number,
     limit: number,
   ) {
+    const visibility = and(
+      eq(conferences.tenantId, tenantId),
+      or(
+        eq(conferences.ownerUserId, userId),
+        isNotNull(projectCollaborators.userId),
+      ),
+    );
+
     const [rows, countResult] = await Promise.all([
       this.drizzle.db
         .selectDistinct({
           conference: conferences,
         })
         .from(conferences)
-        .innerJoin(
+        .leftJoin(
           conferenceProjects,
           and(
             eq(conferenceProjects.conferenceId, conferences.id),
             eq(conferenceProjects.tenantId, tenantId),
           ),
         )
-        .innerJoin(
+        .leftJoin(
           projectCollaborators,
           and(
             eq(projectCollaborators.projectId, conferenceProjects.projectId),
@@ -104,7 +79,7 @@ export class ConferencesRepository {
             eq(projectCollaborators.userId, userId),
           ),
         )
-        .where(eq(conferences.tenantId, tenantId))
+        .where(visibility)
         .orderBy(asc(conferences.submissionDue), asc(conferences.id))
         .limit(limit)
         .offset(offset),
@@ -116,14 +91,14 @@ export class ConferencesRepository {
           `,
         })
         .from(conferences)
-        .innerJoin(
+        .leftJoin(
           conferenceProjects,
           and(
             eq(conferenceProjects.conferenceId, conferences.id),
             eq(conferenceProjects.tenantId, tenantId),
           ),
         )
-        .innerJoin(
+        .leftJoin(
           projectCollaborators,
           and(
             eq(projectCollaborators.projectId, conferenceProjects.projectId),
@@ -131,7 +106,7 @@ export class ConferencesRepository {
             eq(projectCollaborators.userId, userId),
           ),
         )
-        .where(eq(conferences.tenantId, tenantId)),
+        .where(visibility),
     ]);
 
     return {
