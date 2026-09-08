@@ -146,7 +146,17 @@ vi.mock("@/api/hooks", async () => {
         },
       },
     }),
-    useMembers: () => ({ data: [] }),
+    useMembers: () => ({
+      data: {
+        data: [],
+        meta: {
+          page: 1,
+          pageSize: 20,
+          totalItems: 0,
+          totalPages: 1,
+        },
+      },
+    }),
     useModules: () => {
       const moduleRows = useSyncExternalStore(
         modules.subscribe,

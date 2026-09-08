@@ -251,8 +251,17 @@ export const apiKeys = {
   me: ["api", "me"] as const,
   workspaces: ["api", "workspaces"] as const,
   currentWorkspace: ["api", "workspace", "current"] as const,
-  members: (tenantId: string) =>
-    ["api", "tenant", tenantId, "members"] as const,
+  members: (
+    tenantId: string,
+    page = 1,
+  ) =>
+    [
+      "api",
+      "tenant",
+      tenantId,
+      "members",
+      page,
+    ] as const,
   projects: (tenantId: string) =>
     ["api", "tenant", tenantId, "projects"] as const,
   project: (tenantId: string, projectId: string) =>
@@ -587,19 +596,30 @@ export function useDeleteWorkspace() {
   });
 }
 
-export function useMembers(tenantId: string, enabled = true) {
+export function useMembers(
+  tenantId: string,
+  page = 1,
+  enabled = true,
+) {
   return useQuery({
-    queryKey: apiKeys.members(tenantId),
+    queryKey: apiKeys.members(tenantId, page),
     enabled: Boolean(tenantId) && enabled,
     queryFn: async () => {
-      const result = await apiClient.GET("/api/v1/tenant/{tenantId}/members", {
-        params: { path: { tenantId } },
-      });
+      const result = await apiClient.GET(
+        "/api/v1/tenant/{tenantId}/members",
+        {
+          params: {
+            path: { tenantId },
+            query: { page },
+          } as never,
+        },
+      );
+
       // The generated MembershipResponseDto mis-describes `joinedAt` as `{}`
-      // (the backend DTO lacks an explicit Swagger type hint on that Date
-      // field) — joinedAt isn't used anywhere in the UI, so trust our own
-      // shape here rather than the lossy generated one.
-      return responseData<Membership[]>(result as never);
+      // because the backend DTO lacks an explicit Swagger type hint.
+      return responseData<PaginatedResponse<Membership>>(
+        result as never,
+      );
     },
   });
 }

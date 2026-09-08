@@ -87,7 +87,18 @@ vi.mock("@/api/hooks", () => ({
       },
     },
   }),
-  useMembers: () => ({ data: [], isPending: false }),
+  useMembers: () => ({
+    data: {
+      data: [],
+      meta: {
+        page: 1,
+        pageSize: 20,
+        totalItems: 0,
+        totalPages: 1,
+      },
+    },
+    isPending: false,
+  }),
   useEnumValues: () => ({ data: [] }),
   useProject: () => ({ data: undefined, isError: false }),
   useModuleCollaborators: () => ({ data: [], isPending: false }),

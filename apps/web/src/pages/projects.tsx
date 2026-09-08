@@ -225,7 +225,12 @@ export default function ProjectsPage() {
 
   const [isNewProjectOpen, setIsNewProjectOpen] = useState(false);
   const [sharingProject, setSharingProject] = useState<ApiProject | null>(null);
-  const membersQuery = useMembers(tenantId, sharingProject !== null);
+  const membersQuery = useMembers(
+    tenantId,
+    1,
+    sharingProject !== null,
+  );
+  const members = membersQuery.data?.data ?? [];
   const [search, setSearch] = useState("");
   const [status, setStatus] = useState<StatusFilter>("All");
   const [role, setRole] = useState<RoleFilter>("All roles");
@@ -387,7 +392,7 @@ export default function ProjectsPage() {
               tenantId={tenantId}
               projectId={sharingProject.id}
               ownerUserId={sharingProject.userId}
-              members={membersQuery.data ?? []}
+              members={members}
               entityTitle={sharingProject.title}
               canManage={me.data?.id === sharingProject.userId}
             />

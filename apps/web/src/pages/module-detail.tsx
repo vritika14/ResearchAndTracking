@@ -152,6 +152,7 @@ export default function ModuleDetailPage() {
   const notesQuery = useNotes(tenantId);
   const notes = notesQuery.data?.data ?? [];
   const membersQuery = useMembers(tenantId);
+  const members = membersQuery.data?.data ?? [];
   const updateModule = useUpdateMyModule();
   const tagValuesQuery = useEnumValues("module_type");
 
@@ -224,7 +225,7 @@ export default function ModuleDetailPage() {
   }
 
   const assignee = module.assignedToUserId
-    ? (membersQuery.data ?? []).find((member) => member.userId === module.assignedToUserId)
+    ? (members).find((member) => member.userId === module.assignedToUserId)
     : undefined;
     const moduleTasks = tasks.filter(
       (task) => task.moduleId === module.id,
@@ -272,7 +273,7 @@ export default function ModuleDetailPage() {
               <FormField label="Type" htmlFor="edit-module-type"><Select value={form.tag} onValueChange={(value) => setForm({ ...form, tag: value })}><SelectTrigger id="edit-module-type"><SelectValue placeholder="Select a type" /></SelectTrigger><SelectContent>{(tagValuesQuery.data ?? []).map((value) => <SelectItem key={value.id} value={value.value}>{value.value}</SelectItem>)}</SelectContent></Select></FormField>
               <FormField label="Pipeline stage" htmlFor="edit-module-stage"><Select value={form.pipelineStage} onValueChange={(value) => setForm({ ...form, pipelineStage: value })}><SelectTrigger id="edit-module-stage"><SelectValue placeholder="Select a stage" /></SelectTrigger><SelectContent>{(stagesQuery.data ?? []).map((value) => <SelectItem key={value.id} value={value.value}>{value.value}</SelectItem>)}</SelectContent></Select></FormField>
               <FormField label="Due date" htmlFor="edit-module-due"><DatePickerInput id="edit-module-due" label="Due date" value={form.dueDate} onChange={(value) => setForm({ ...form, dueDate: value })} /></FormField>
-              <FormField label="Assigned to" htmlFor="edit-module-assignee"><Select value={form.assignedToUserId || "__unassigned__"} onValueChange={(value) => setForm({ ...form, assignedToUserId: value === "__unassigned__" ? "" : value })}><SelectTrigger id="edit-module-assignee"><SelectValue /></SelectTrigger><SelectContent><SelectItem value="__unassigned__">Unassigned</SelectItem>{(membersQuery.data ?? []).map((member) => <SelectItem key={member.userId} value={member.userId}>{member.displayName}</SelectItem>)}</SelectContent></Select></FormField>
+              <FormField label="Assigned to" htmlFor="edit-module-assignee"><Select value={form.assignedToUserId || "__unassigned__"} onValueChange={(value) => setForm({ ...form, assignedToUserId: value === "__unassigned__" ? "" : value })}><SelectTrigger id="edit-module-assignee"><SelectValue /></SelectTrigger><SelectContent><SelectItem value="__unassigned__">Unassigned</SelectItem>{(members).map((member) => <SelectItem key={member.userId} value={member.userId}>{member.displayName}</SelectItem>)}</SelectContent></Select></FormField>
             </div>
             {updateModule.isError ? (
               <p role="alert" className="text-sm text-destructive">
@@ -310,7 +311,7 @@ export default function ModuleDetailPage() {
                       tenantId={tenantId}
                       moduleId={module.id}
                       moduleTitle={module.title}
-                      members={membersQuery.data ?? []}
+                      members={members}
                     />
                   </div>
                 ) : (
