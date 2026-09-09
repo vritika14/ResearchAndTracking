@@ -18,7 +18,6 @@ export const projects = pgTable(
     description: text('description'),
     researchArea: text('research_area'),
     statusId: uuid('status_id').references((): AnyPgColumn => enumTable.id),
-    pipelineStageId: uuid('pipeline_stage_id').references((): AnyPgColumn => enumTable.id),
     importanceId: uuid('importance_id').references((): AnyPgColumn => enumTable.id),
     scheduledFor: date('scheduled_for'),
     dueDate: date('due_date'),

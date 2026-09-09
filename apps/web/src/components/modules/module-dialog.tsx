@@ -1,14 +1,13 @@
-import { useEffect, useState, type FormEvent, type ReactNode } from "react";
+import { useEffect, useMemo, useState, type FormEvent, type ReactNode } from "react";
 
 import {
   useEnumValues,
-  useModulePipelineStages,
+  useModulePipelineStagePool,
   type ApiModule,
   type ApiProject,
   type Membership,
 } from "@/api/hooks";
 import { ModuleCollaboratorsManager } from "@/components/modules/module-collaborators";
-import { StageListBuilder } from "@/components/pipeline/stage-list-builder";
 import { Button } from "@/components/ui/button";
 import { DatePickerInput } from "@/components/ui/date-picker-input";
 import {
@@ -39,7 +38,6 @@ export interface ModuleFormInput {
   projectId: string | null;
   status: string;
   pipelineStage: string;
-  pipelineStages: string[];
   tag: string;
   dueDate: string;
   assignedToUserId: string | null;
@@ -63,7 +61,6 @@ const INITIAL_FORM: ModuleFormInput = {
   projectId: null,
   status: "Active",
   pipelineStage: "",
-  pipelineStages: [],
   tag: "",
   dueDate: "",
   assignedToUserId: null,
@@ -97,17 +94,19 @@ export function ModuleDialog({
   onSave,
 }: ModuleDialogProps) {
   const tagValuesQuery = useEnumValues("module_type", open);
-  const stageValuesQuery = useEnumValues("module_pipeline_stage", open);
+  const stagesQuery = useModulePipelineStagePool(tenantId, open);
   const [form, setForm] = useState<ModuleFormInput>(INITIAL_FORM);
   const [isIndependent, setIsIndependent] = useState(true);
-  const [stagesInitialized, setStagesInitialized] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [saveError, setSaveError] = useState<string | null>(null);
   const isEditing = Boolean(module);
-  const moduleStageValuesQuery = useModulePipelineStages(
-    module?.tenantId ?? tenantId,
-    module?.id ?? "",
-    open && isEditing,
+
+  const visibleStages = useMemo(
+    () =>
+      [...(stagesQuery.data ?? [])]
+        .filter((stage) => !stage.hidden)
+        .sort((a, b) => a.sortOrder - b.sortOrder),
+    [stagesQuery.data],
   );
 
   useEffect(() => {
@@ -120,7 +119,6 @@ export function ModuleDialog({
         projectId: module.projectId,
         status: module.status ?? "Active",
         pipelineStage: module.pipelineStage ?? "",
-        pipelineStages: [],
         tag: module.tag ?? "",
         dueDate: module.dueDate ?? "",
         assignedToUserId: module.assignedToUserId,
@@ -129,26 +127,16 @@ export function ModuleDialog({
     } else if (initialProjectId) {
       setForm({ ...INITIAL_FORM, projectId: initialProjectId });
       setIsIndependent(false);
-      setStagesInitialized(false);
     } else {
       setForm(INITIAL_FORM);
       setIsIndependent(true);
-      setStagesInitialized(false);
     }
   }, [open, module, initialProjectId]);
 
   useEffect(() => {
-    if (!open || module || stagesInitialized || !stageValuesQuery.data?.length) return;
-    const stages = [...stageValuesQuery.data]
-      .sort((left, right) => left.sortOrder - right.sortOrder)
-      .map((stage) => stage.value);
-    setForm((current) => ({
-      ...current,
-      pipelineStages: stages,
-      pipelineStage: current.pipelineStage || stages[0] || "",
-    }));
-    setStagesInitialized(true);
-  }, [open, module, stageValuesQuery.data, stagesInitialized]);
+    if (!open || module || form.pipelineStage || !visibleStages.length) return;
+    setForm((current) => ({ ...current, pipelineStage: visibleStages[0]!.value }));
+  }, [open, module, form.pipelineStage, visibleStages]);
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -161,7 +149,6 @@ export function ModuleDialog({
         title: form.title.trim(),
         description: form.description.trim(),
         projectId: isIndependent ? null : form.projectId,
-        pipelineStage: form.pipelineStage || form.pipelineStages[0] || "",
       });
       onOpenChange(false);
     } catch (error) {
@@ -175,19 +162,19 @@ export function ModuleDialog({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-4xl">
         <DialogHeader>
-          <DialogTitle>{isEditing ? "Edit module" : "Create a new module"}</DialogTitle>
+          <DialogTitle>{isEditing ? "Edit paper" : "Create a new paper"}</DialogTitle>
           <DialogDescription>
-            Add an independent module or connect it to an existing project.
+            Add an independent paper or connect it to an existing project.
           </DialogDescription>
         </DialogHeader>
 
         <form onSubmit={(event) => void handleSubmit(event)} className="grid gap-5">
-          <FormField label="Module title" htmlFor="module-title" required>
+          <FormField label="Paper title" htmlFor="module-title" required>
             <Input
               id="module-title"
               value={form.title}
               onChange={(event) => setForm((current) => ({ ...current, title: event.target.value }))}
-              placeholder="What area of work does this module cover?"
+              placeholder="What area of work does this paper cover?"
               autoFocus
               required
             />
@@ -218,10 +205,10 @@ export function ModuleDialog({
               className="mt-0.5 h-4 w-4 accent-primary"
             />
             <span>
-              <span className="block text-sm font-medium">Independent module</span>
+              <span className="block text-sm font-medium">Independent paper</span>
               <span className="block text-xs text-muted-foreground">
-                Only explicitly added collaborators can see an independent module. Project-linked
-                modules are visible to anyone who can see the project.
+                Only explicitly added collaborators can see an independent paper. Project-linked
+                papers are visible to anyone who can see the project.
               </span>
             </span>
           </label>
@@ -283,7 +270,6 @@ export function ModuleDialog({
               />
             </FormField>
 
-            {isEditing ? (
             <FormField label="Pipeline stage" htmlFor="module-pipeline-stage" required>
               <Select
                 value={form.pipelineStage}
@@ -296,15 +282,14 @@ export function ModuleDialog({
                   <SelectValue placeholder="Select a stage" />
                 </SelectTrigger>
                 <SelectContent>
-                  {(moduleStageValuesQuery.data ?? stageValuesQuery.data ?? []).map((stageValue) => (
-                    <SelectItem key={stageValue.id} value={stageValue.value}>
-                      {stageValue.value}
+                  {visibleStages.map((stage) => (
+                    <SelectItem key={stage.id} value={stage.value}>
+                      {stage.value}
                     </SelectItem>
                   ))}
                 </SelectContent>
               </Select>
             </FormField>
-            ) : null}
 
             <FormField label="Assigned to" htmlFor="module-assignee">
               <Select
@@ -329,43 +314,6 @@ export function ModuleDialog({
             </FormField>
           </div>
 
-          {!isEditing ? (
-            <>
-              <StageListBuilder
-                availableStages={stageValuesQuery.data ?? []}
-                selectedStages={form.pipelineStages}
-                entityLabel="module"
-                onChange={(stages) =>
-                  setForm((current) => ({
-                    ...current,
-                    pipelineStages: stages,
-                    pipelineStage: stages.includes(current.pipelineStage)
-                      ? current.pipelineStage
-                      : stages[0] ?? "",
-                  }))
-                }
-              />
-              <FormField label="Starting stage" htmlFor="module-pipeline-stage" required>
-                <Select
-                  value={form.pipelineStage || form.pipelineStages[0] || ""}
-                  onValueChange={(value) =>
-                    setForm((current) => ({ ...current, pipelineStage: value }))
-                  }
-                  required
-                >
-                  <SelectTrigger id="module-pipeline-stage">
-                    <SelectValue placeholder="Select a stage" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {form.pipelineStages.map((stage) => (
-                      <SelectItem key={stage} value={stage}>{stage}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </FormField>
-            </>
-          ) : null}
-
           {isEditing && module && module.tenantId === tenantId ? (
             <div className="flex flex-col gap-2 border-t border-border pt-4">
               <span className="text-sm font-medium">Collaborators</span>
@@ -380,7 +328,7 @@ export function ModuleDialog({
             <div className="flex flex-col gap-2 border-t border-border pt-4">
               <span className="text-sm font-medium">Collaborators</span>
               <p className="text-sm text-muted-foreground">
-                This module was shared with you from another workspace. Only members of that
+                This paper was shared with you from another workspace. Only members of that
                 workspace can manage who has access.
               </p>
             </div>
@@ -388,7 +336,7 @@ export function ModuleDialog({
 
           {!isEditing ? (
             <p className="rounded-lg border border-dashed bg-muted/30 p-3 text-xs text-muted-foreground">
-              After creating the module, open it to invite collaborators by email using a secure acceptance link.
+              After creating the paper, open it to invite collaborators by email using a secure acceptance link.
             </p>
           ) : null}
 
@@ -400,8 +348,8 @@ export function ModuleDialog({
 
           <DialogFooter className="border-t pt-4">
             <DialogClose asChild><Button type="button" variant="outline" disabled={isSaving}>Cancel</Button></DialogClose>
-            <Button type="submit" disabled={isSaving || (!isEditing && !form.pipelineStages.length)}>
-              {isSaving ? "Saving…" : isEditing ? "Save Changes" : "Create Module"}
+            <Button type="submit" disabled={isSaving}>
+              {isSaving ? "Saving…" : isEditing ? "Save Changes" : "Create Paper"}
             </Button>
           </DialogFooter>
         </form>

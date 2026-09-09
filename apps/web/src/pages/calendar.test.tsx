@@ -116,7 +116,7 @@ describe("CalendarPage", () => {
     expect(screen.getAllByRole("link", { name: "Research Conference — submission deadline" })).not.toHaveLength(0);
 
     expect(screen.getByRole("button", { name: /Projects/ })).toHaveAttribute("aria-pressed", "false");
-    expect(screen.getByRole("button", { name: /Modules/ })).toHaveAttribute("aria-pressed", "false");
+    expect(screen.getByRole("button", { name: /Papers/ })).toHaveAttribute("aria-pressed", "false");
     expect(screen.getByRole("button", { name: /Tasks/ })).toHaveAttribute("aria-pressed", "false");
     expect(screen.getByRole("button", { name: /Conferences/ })).toHaveAttribute("aria-pressed", "false");
   });
@@ -143,7 +143,7 @@ describe("CalendarPage", () => {
       </MemoryRouter>,
     );
 
-    fireEvent.click(screen.getByRole("button", { name: /Modules/ }));
+    fireEvent.click(screen.getByRole("button", { name: /Papers/ }));
     expect(screen.getAllByRole("link", { name: "Analysis module" })).not.toHaveLength(0);
     expect(screen.queryByRole("link", { name: "Research launch" })).not.toBeInTheDocument();
 

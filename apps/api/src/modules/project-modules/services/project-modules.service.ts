@@ -128,14 +128,6 @@ export class ProjectModulesService {
     return this.findOne(module.tenantId, moduleId, callerUserId);
   }
 
-  /** Tenant-agnostic module pipeline lookup for the module details page. */
-  async listPipelineStagesForCaller(moduleId: string, callerUserId: string) {
-    await this.findOneForCaller(moduleId, callerUserId);
-    const { baseStages, customStages } =
-      await this.enumRepository.findPipelineStagesForModule(moduleId);
-    return customStages.length > 0 ? customStages : baseStages;
-  }
-
   async create(
     tenantId: string,
     callerUserId: string,
@@ -146,26 +138,15 @@ export class ProjectModulesService {
       tag?: string;
       status?: string;
       pipelineStage?: string;
-      pipelineStages?: string[];
       assignedToUserId?: string;
       dueDate?: string;
     },
   ) {
     const tagId = await this.resolveEnum('module_type', input.tag);
     const statusId = await this.resolveEnum('project_status', input.status);
-    const pipelineStages = normalizePipelineStages(input.pipelineStages);
-    if (pipelineStages.length) {
-      // So a brand-new stage typed at creation time shows up in the
-      // tenant-wide Pipeline view too, not just this module's own pipeline.
-      await this.enumRepository.ensureTenantPipelineStages(
-        tenantId,
-        'module_pipeline_stage',
-        pipelineStages,
-      );
-    }
-    const pipelineStageId = pipelineStages.length
-      ? undefined
-      : await this.resolveEnum('module_pipeline_stage', input.pipelineStage);
+    const pipelineStageId = input.pipelineStage
+      ? await this.resolveModulePipelineStage(tenantId, input.pipelineStage)
+      : undefined;
     const ownerRoleId = await this.resolveEnum('project_role', 'Owner');
     const displayId = await this.sequences.nextDisplayId(tenantId, 'module');
 
@@ -181,7 +162,7 @@ export class ProjectModulesService {
       dueDate: input.dueDate,
       displayId,
     };
-    let module = await this.repository.create(createValues);
+    const module = await this.repository.create(createValues);
 
     if (!module) {
       throw new NotFoundException('Failed to create module');
@@ -198,22 +179,6 @@ export class ProjectModulesService {
       userId: callerUserId,
       roleId: ownerRoleId,
     });
-
-    // Module-scoped enum rows are protected by RLS and require the caller to
-    // already be the module Owner. Create that relationship first, then add
-    // the selected stages within the request transaction.
-    if (pipelineStages.length) {
-      module = await this.repository.configurePipelineStages(
-        module.id,
-        pipelineStages,
-        pipelineStages.includes(input.pipelineStage ?? '')
-          ? input.pipelineStage
-          : pipelineStages[0],
-      );
-      if (!module) {
-        throw new NotFoundException('Failed to configure module pipeline');
-      }
-    }
 
     const [shaped] = await this.withDisplayValues([module], callerUserId);
     return shaped;
@@ -242,7 +207,7 @@ export class ProjectModulesService {
         ? this.resolveEnum('project_status', input.status)
         : undefined,
       input.pipelineStage
-        ? this.resolveModulePipelineStage(moduleId, input.pipelineStage)
+        ? this.resolveModulePipelineStage(tenantId, input.pipelineStage)
         : undefined,
     ]);
 
@@ -378,9 +343,9 @@ export class ProjectModulesService {
     return match.id;
   }
 
-  private async resolveModulePipelineStage(moduleId: string, value: string) {
-    const match = await this.enumRepository.findPipelineStageForModuleByValue(
-      moduleId,
+  private async resolveModulePipelineStage(tenantId: string, value: string) {
+    const match = await this.enumRepository.findModuleStageByValueForTenant(
+      tenantId,
       value,
     );
     if (!match) {
@@ -390,10 +355,4 @@ export class ProjectModulesService {
     }
     return match.id;
   }
-}
-
-function normalizePipelineStages(stages?: string[]) {
-  return [
-    ...new Set((stages ?? []).map((stage) => stage.trim()).filter(Boolean)),
-  ];
 }

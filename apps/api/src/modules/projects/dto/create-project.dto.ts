@@ -4,10 +4,6 @@ import {
   IsOptional,
   IsNumberString,
   IsDateString,
-  IsArray,
-  ArrayMinSize,
-  ArrayMaxSize,
-  ArrayUnique,
   Length,
 } from 'class-validator';
 
@@ -31,26 +27,6 @@ export class CreateProjectDto {
   @IsOptional()
   @IsString()
   status?: string;
-
-  @ApiProperty({ required: false, example: 'Concept & Ideation' })
-  @IsOptional()
-  @IsString()
-  pipelineStage?: string;
-
-  @ApiProperty({
-    required: false,
-    type: [String],
-    description:
-      'Ordered pipeline stages configured specifically for this project',
-  })
-  @IsOptional()
-  @IsArray()
-  @ArrayMinSize(1)
-  @ArrayMaxSize(30)
-  @ArrayUnique()
-  @IsString({ each: true })
-  @Length(2, 100, { each: true })
-  pipelineStages?: string[];
 
   @ApiProperty({ required: false, example: 'High' })
   @IsOptional()

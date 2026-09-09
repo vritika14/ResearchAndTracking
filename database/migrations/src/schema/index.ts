@@ -15,8 +15,6 @@ export * from "./task-members";
 export * from "./note-members";
 export * from "./project-invitations";
 export * from "./module-invitations";
-export * from "./project-pipeline-selections";
-export * from "./module-pipeline-selections";
 export * from './conferences';
 export * from './conference-projects';
 export * from './feedback';

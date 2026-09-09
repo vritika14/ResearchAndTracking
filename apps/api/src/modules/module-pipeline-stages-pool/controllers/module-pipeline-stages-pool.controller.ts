@@ -2,23 +2,18 @@
 import {
   Body,
   Controller,
-  Delete,
   Get,
   Param,
   Patch,
   Post,
+  Put,
   UseGuards,
 } from '@nestjs/common';
-import {
-  ApiBearerAuth,
-  ApiOperation,
-  ApiResponse,
-  ApiTags,
-} from '@nestjs/swagger';
+import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
 import { JwtAuthGuard } from '../../auth/jwt-auth.guard';
 import { TenantMemberGuard } from '../../memberships/policies/tenant-member.guard';
-import { CreatePipelineStageDto } from '../dto/create-pipeline-stage.dto';
-import { UpdatePipelineStageDto } from '../dto/update-pipeline-stage.dto';
+import { UpdateStageVisibilityDto } from '../dto/update-pipeline-stage.dto';
+import { ReorderStagesDto } from '../dto/reorder-stages.dto';
 import { ModulePipelineStagesPoolService } from '../services/module-pipeline-stages-pool.service';
 
 @ApiTags('module-pipeline-stages-pool')
@@ -29,7 +24,7 @@ export class ModulePipelineStagesPoolController {
 
   @ApiOperation({
     summary:
-      'List module pipeline stages available to this workspace (base + custom)',
+      "List the workspace's paper pipeline stages, in order, with hidden state",
   })
   @UseGuards(JwtAuthGuard, TenantMemberGuard)
   @Get()
@@ -38,38 +33,36 @@ export class ModulePipelineStagesPoolController {
   }
 
   @ApiOperation({
+    summary: 'Show or hide one of the fixed paper pipeline stages',
+  })
+  @UseGuards(JwtAuthGuard, TenantMemberGuard)
+  @Patch('visibility')
+  async updateVisibility(
+    @Param('tenantId') tenantId: string,
+    @Body() dto: UpdateStageVisibilityDto,
+  ) {
+    return this.service.updateVisibility(tenantId, dto.value, dto.hidden);
+  }
+
+  @ApiOperation({
+    summary: "Reorder the workspace's paper pipeline stages",
+  })
+  @UseGuards(JwtAuthGuard, TenantMemberGuard)
+  @Put('order')
+  async reorder(
+    @Param('tenantId') tenantId: string,
+    @Body() dto: ReorderStagesDto,
+  ) {
+    return this.service.reorder(tenantId, dto.order);
+  }
+
+  @ApiOperation({
     summary:
-      'Create a custom module pipeline stage for this workspace (owner only)',
-  })
-  @ApiResponse({ status: 201 })
-  @UseGuards(JwtAuthGuard, TenantMemberGuard)
-  @Post()
-  async create(
-    @Param('tenantId') tenantId: string,
-    @Body() dto: CreatePipelineStageDto,
-  ) {
-    return this.service.create(tenantId, dto.value, dto.sortOrder ?? 0);
-  }
-
-  @ApiOperation({
-    summary: 'Rename or reorder a custom module pipeline stage (owner only)',
+      'Reset the workspace back to the default stage order and visibility',
   })
   @UseGuards(JwtAuthGuard, TenantMemberGuard)
-  @Patch(':id')
-  async update(
-    @Param('tenantId') tenantId: string,
-    @Param('id') id: string,
-    @Body() dto: UpdatePipelineStageDto,
-  ) {
-    return this.service.update(tenantId, id, dto);
-  }
-
-  @ApiOperation({
-    summary: 'Remove a custom module pipeline stage (owner only)',
-  })
-  @UseGuards(JwtAuthGuard, TenantMemberGuard)
-  @Delete(':id')
-  async remove(@Param('tenantId') tenantId: string, @Param('id') id: string) {
-    return this.service.remove(tenantId, id);
+  @Post('reset')
+  async reset(@Param('tenantId') tenantId: string) {
+    return this.service.reset(tenantId);
   }
 }

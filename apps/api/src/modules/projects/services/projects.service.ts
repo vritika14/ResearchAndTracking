@@ -94,14 +94,6 @@ export class ProjectsService {
     return this.findOne(project.tenantId, projectId, callerUserId);
   }
 
-  /** Tenant-agnostic project pipeline lookup for the project details page. */
-  async listPipelineStagesForCaller(projectId: string, callerUserId: string) {
-    await this.findOneForCaller(projectId, callerUserId);
-    const { baseStages, customStages } =
-      await this.enumRepository.findPipelineStagesForProject(projectId);
-    return customStages.length > 0 ? customStages : baseStages;
-  }
-
   async create(
     userId: string,
     tenantId: string,
@@ -110,8 +102,6 @@ export class ProjectsService {
       description?: string;
       researchArea?: string;
       status?: string;
-      pipelineStage?: string;
-      pipelineStages?: string[];
       importance?: string;
       scheduledFor?: string;
       dueDate?: string;
@@ -119,26 +109,12 @@ export class ProjectsService {
       targetJournals?: string;
     },
   ) {
-    const pipelineStages = normalizePipelineStages(input.pipelineStages);
-    if (pipelineStages.length) {
-      // So a brand-new stage typed at creation time shows up in the
-      // tenant-wide Pipeline view too, not just this project's own pipeline.
-      await this.enumRepository.ensureTenantPipelineStages(
-        tenantId,
-        'project_pipeline_stage',
-        pipelineStages,
-      );
-    }
-    const [statusId, pipelineStageId, importanceId, ownerRoleId, displayId] =
-      await Promise.all([
-        this.resolveEnum('project_status', input.status),
-        pipelineStages.length
-          ? undefined
-          : this.resolveEnum('project_pipeline_stage', input.pipelineStage),
-        this.resolveEnum('importance', input.importance),
-        this.resolveEnum('project_role', 'Owner'),
-        this.sequences.nextDisplayId(tenantId, 'project'),
-      ]);
+    const [statusId, importanceId, ownerRoleId, displayId] = await Promise.all([
+      this.resolveEnum('project_status', input.status),
+      this.resolveEnum('importance', input.importance),
+      this.resolveEnum('project_role', 'Owner'),
+      this.sequences.nextDisplayId(tenantId, 'project'),
+    ]);
 
     if (!ownerRoleId) {
       throw new NotFoundException(
@@ -153,7 +129,6 @@ export class ProjectsService {
       description: input.description,
       researchArea: input.researchArea,
       statusId,
-      pipelineStageId,
       importanceId,
       scheduledFor: input.scheduledFor,
       dueDate: input.dueDate,
@@ -161,16 +136,7 @@ export class ProjectsService {
       targetJournals: input.targetJournals,
       displayId,
     };
-    const project = pipelineStages.length
-      ? await this.repository.create(
-          createValues,
-          ownerRoleId,
-          pipelineStages,
-          pipelineStages.includes(input.pipelineStage ?? '')
-            ? input.pipelineStage
-            : pipelineStages[0],
-        )
-      : await this.repository.create(createValues, ownerRoleId);
+    const project = await this.repository.create(createValues, ownerRoleId);
 
     if (!project) {
       throw new NotFoundException('Failed to create project');
@@ -189,7 +155,6 @@ export class ProjectsService {
       description: string;
       researchArea: string;
       status: string;
-      pipelineStage: string;
       importance: string;
       scheduledFor: string;
       dueDate: string;
@@ -199,12 +164,9 @@ export class ProjectsService {
   ) {
     await this.findOne(tenantId, projectId, callerUserId);
 
-    const [statusId, pipelineStageId, importanceId] = await Promise.all([
+    const [statusId, importanceId] = await Promise.all([
       input.status
         ? this.resolveEnum('project_status', input.status)
-        : undefined,
-      input.pipelineStage
-        ? this.resolveProjectPipelineStage(projectId, input.pipelineStage)
         : undefined,
       input.importance
         ? this.resolveEnum('importance', input.importance)
@@ -216,7 +178,6 @@ export class ProjectsService {
       description: input.description,
       researchArea: input.researchArea,
       statusId,
-      pipelineStageId,
       importanceId,
       scheduledFor: input.scheduledFor,
       dueDate: input.dueDate,
@@ -298,12 +259,11 @@ export class ProjectsService {
       id: string;
       tenantId: string;
       statusId: string | null;
-      pipelineStageId: string | null;
       importanceId: string | null;
     },
   >(rows: T[], callerUserId: string) {
     const enumIds = rows
-      .flatMap((r) => [r.statusId, r.pipelineStageId, r.importanceId])
+      .flatMap((r) => [r.statusId, r.importanceId])
       .filter((id): id is string => id !== null);
 
     const projectIds = rows.map((r) => r.id);
@@ -321,23 +281,18 @@ export class ProjectsService {
       .filter((id): id is string => !!id);
     const roleValuesById = await this.enumRepository.findValuesByIds(roleIds);
 
-    return rows.map(
-      ({ id, statusId, pipelineStageId, importanceId, ...rest }) => {
-        const roleId = roleByProjectId.get(id)?.roleId;
-        return {
-          id,
-          ...rest,
-          status: statusId ? (valuesById.get(statusId) ?? null) : null,
-          pipelineStage: pipelineStageId
-            ? (valuesById.get(pipelineStageId) ?? null)
-            : null,
-          importance: importanceId
-            ? (valuesById.get(importanceId) ?? null)
-            : null,
-          role: roleId ? (roleValuesById.get(roleId) ?? null) : null,
-        };
-      },
-    );
+    return rows.map(({ id, statusId, importanceId, ...rest }) => {
+      const roleId = roleByProjectId.get(id)?.roleId;
+      return {
+        id,
+        ...rest,
+        status: statusId ? (valuesById.get(statusId) ?? null) : null,
+        importance: importanceId
+          ? (valuesById.get(importanceId) ?? null)
+          : null,
+        role: roleId ? (roleValuesById.get(roleId) ?? null) : null,
+      };
+    });
   }
 
   private async resolveEnum(
@@ -354,21 +309,4 @@ export class ProjectsService {
     }
     return match.id;
   }
-
-  private async resolveProjectPipelineStage(projectId: string, value: string) {
-    const match = await this.enumRepository.findPipelineStageForProjectByValue(
-      projectId,
-      value,
-    );
-    if (!match) {
-      throw new NotFoundException(`Unknown project pipeline stage: "${value}"`);
-    }
-    return match.id;
-  }
-}
-
-function normalizePipelineStages(stages?: string[]) {
-  return [
-    ...new Set((stages ?? []).map((stage) => stage.trim()).filter(Boolean)),
-  ];
 }

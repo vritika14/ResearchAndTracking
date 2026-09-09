@@ -40,7 +40,7 @@ import { cn } from "@/lib/utils";
 
 const STATUS_FILTERS = ["All", "Active", "Review", "Stalled", "Complete"] as const;
 const MODULE_COLUMNS = [
-  { id: "module", label: "Module", width: "minmax(280px,2fr)" },
+  { id: "module", label: "Paper", width: "minmax(280px,2fr)" },
   { id: "project", label: "Project", width: "180px" },
   { id: "status", label: "Status", width: "110px" },
   { id: "stage", label: "Stage", width: "170px" },
@@ -147,7 +147,7 @@ export default function ModulesPage() {
   }, [members]);
 
   const projectName = useCallback((projectId: string | null) => {
-    if (!projectId) return "Independent module";
+    if (!projectId) return "Independent paper";
     return projectById.get(projectId) ?? "Unknown project";
   }, [projectById]);
 
@@ -211,7 +211,6 @@ export default function ModulesPage() {
       projectId: input.projectId ?? undefined,
       status: input.status,
       pipelineStage: input.pipelineStage,
-      pipelineStages: input.pipelineStages,
       tag: input.tag || undefined,
       dueDate: input.dueDate || undefined,
       assignedToUserId: input.assignedToUserId ?? undefined,
@@ -228,17 +227,17 @@ export default function ModulesPage() {
       await archiveModule.mutateAsync(module.id);
       setSharingModule((current) => (current?.id === module.id ? null : current));
     } catch (error) {
-      setActionError(error instanceof Error ? error.message : "The module could not be archived.");
+      setActionError(error instanceof Error ? error.message : "The paper could not be archived.");
     }
   }
 
   if (workspace.isPending || modulesQuery.isPending) {
-    return <LoadingState title="Loading modules" className="min-h-[50vh]" />;
+    return <LoadingState title="Loading papers" className="min-h-[50vh]" />;
   }
   if (modulesQuery.isError) {
     return (
       <ErrorState
-        title="Modules could not be loaded"
+        title="Papers could not be loaded"
         description={modulesQuery.error.message}
         onRetry={() => void modulesQuery.refetch()}
       />
@@ -251,9 +250,9 @@ export default function ModulesPage() {
         tone="violet"
         icon={Boxes}
         eyebrow="Workflows"
-        title="Modules"
+        title="Papers"
         description="Organise project-related or independent areas of work by status, type and assignee."
-        actions={<Button onClick={() => setIsNewModuleOpen(true)}>New Module</Button>}
+        actions={<Button onClick={() => setIsNewModuleOpen(true)}>New Paper</Button>}
       />
 
       <ModuleDialog
@@ -272,9 +271,9 @@ export default function ModulesPage() {
       >
         <DialogContent className="max-h-[85vh] overflow-y-auto sm:max-w-xl">
           <DialogHeader>
-            <DialogTitle>Module collaborators</DialogTitle>
+            <DialogTitle>Paper collaborators</DialogTitle>
             <DialogDescription>
-              Invite collaborators to {sharingModule?.title ?? "this module"} by email and manage pending access.
+              Invite collaborators to {sharingModule?.title ?? "this paper"} by email and manage pending access.
             </DialogDescription>
           </DialogHeader>
           {sharingModule ? (
@@ -287,7 +286,7 @@ export default function ModulesPage() {
               />
             ) : (
               <p className="text-sm text-muted-foreground">
-                This module belongs to another workspace. Only its owner can manage collaborators.
+                This paper belongs to another workspace. Only its owner can manage collaborators.
               </p>
             )
           ) : null}
@@ -305,7 +304,7 @@ export default function ModulesPage() {
         <Input
           value={search}
           onChange={(event) => setSearch(event.target.value)}
-          placeholder="Search modules…"
+          placeholder="Search papers…"
           className="sm:max-w-xs"
         />
         <Select value={status} onValueChange={(value) => setStatus(value as StatusFilter)}>
@@ -360,7 +359,7 @@ export default function ModulesPage() {
           <div className="flex flex-col gap-3">
             {visibleModules.length === 0 ? (
               <div className="rounded-lg border border-dashed p-8 text-center text-sm text-muted-foreground">
-                No modules match the current filters.
+                No papers match the current filters.
               </div>
             ) : (
               visibleModules.map((module) => (
@@ -396,7 +395,7 @@ export default function ModulesPage() {
                           <Link
                             to={`/modules/${module.id}?edit=true`}
                             aria-label={`Edit ${module.title}`}
-                            title="Edit module"
+                            title="Edit paper"
                             className="inline-flex h-6 w-6 shrink-0 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-accent hover:text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
                           >
                             <Pencil className="h-3.5 w-3.5" />
@@ -404,7 +403,7 @@ export default function ModulesPage() {
                           <button
                             type="button"
                             aria-label={`Archive ${module.title}`}
-                            title="Archive module"
+                            title="Archive paper"
                             onClick={() => void archive(module)}
                             disabled={archiveModule.isPending}
                             className="inline-flex h-6 w-6 shrink-0 items-center justify-center rounded-md text-destructive transition-colors hover:bg-destructive/10 hover:text-destructive focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
@@ -424,7 +423,7 @@ export default function ModulesPage() {
                         {projectName(module.projectId)}
                       </Link>
                     ) : (
-                      <span className="max-w-56 text-sm text-muted-foreground">Independent module</span>
+                      <span className="max-w-56 text-sm text-muted-foreground">Independent paper</span>
                     )
                   ) : null}
                   {columns.isColumnVisible("status") ? (

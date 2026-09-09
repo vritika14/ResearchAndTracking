@@ -1,23 +1,19 @@
 import {
   useEffect,
   useState,
-  type DragEvent,
   type FormEvent,
   type ReactNode,
 } from "react";
 import {
-  Check,
   ChevronDown,
   ChevronUp,
   FolderKanban,
-  GripVertical,
   Pencil,
   Plus,
   Save,
   Trash2,
   Unlink,
   Users,
-  Workflow,
   X,
 } from "lucide-react";
 import {
@@ -39,7 +35,6 @@ import {
   useModules,
   useMyProject,
   useNotes,
-  useMyProjectPipelineStages,
   useTasks,
   useTrackEvent,
   useUpdateModule,
@@ -49,7 +44,6 @@ import {
   type ApiModule,
   type ApiNote,
   type ApiProject,
-  type ApiPipelineStage,
   type ApiTask,
 } from "@/api/hooks";
 import { ModuleDialog, type ModuleFormInput } from "@/components/modules/module-dialog";
@@ -83,7 +77,6 @@ interface EditableProject {
   researchArea: string;
   status: string;
   importance: string;
-  pipelineStage: string;
   scheduledFor: string;
   dueDate: string;
   totalBudget: string;
@@ -97,7 +90,6 @@ function editableValues(project: ApiProject): EditableProject {
     researchArea: project.researchArea ?? "",
     status: project.status ?? "Active",
     importance: project.importance ?? "Medium",
-    pipelineStage: project.pipelineStage ?? "",
     scheduledFor: project.scheduledFor ?? "",
     dueDate: project.dueDate ?? "",
     totalBudget: project.totalBudget ?? "",
@@ -167,11 +159,11 @@ function ProjectModulesDetails({
   return (
     <Card>
       <CardHeader className="flex-row items-center justify-between gap-3 space-y-0">
-        <CardTitle>Modules ({modules.length})</CardTitle>
+        <CardTitle>Papers ({modules.length})</CardTitle>
         <div className="flex items-center gap-2">
           <Button variant="outline" size="sm" onClick={onAddModule}>
             <Plus />
-            Add module
+            Add paper
           </Button>
           <Button asChild variant="ghost" size="sm">
             <Link to="/modules">View all</Link>
@@ -181,7 +173,7 @@ function ProjectModulesDetails({
       <CardContent>
         {modules.length === 0 ? (
           <p className="text-sm text-muted-foreground">
-            No modules are linked to this project.
+            No papers are linked to this project.
           </p>
         ) : (
           <div className="grid gap-2">
@@ -369,209 +361,6 @@ function ProjectNotesDetails({
   );
 }
 
-function ProjectPipeline({
-  project,
-  stages,
-  isPending,
-  isError,
-  isUpdating,
-  updateError,
-  onStageChange,
-}: {
-  project: ApiProject;
-  stages: ApiPipelineStage[];
-  isPending: boolean;
-  isError: boolean;
-  isUpdating: boolean;
-  updateError: string | null;
-  onStageChange: (stage: string) => void;
-}) {
-  const orderedStages = [...stages].sort((a, b) => a.sortOrder - b.sortOrder);
-  const [isDragging, setIsDragging] = useState(false);
-  const [dragOverStage, setDragOverStage] = useState<string | null>(null);
-
-  function handleDragStart(event: DragEvent<HTMLDivElement>) {
-    event.dataTransfer.effectAllowed = "move";
-    event.dataTransfer.setData("text/plain", project.id);
-    setIsDragging(true);
-  }
-
-  function finishDragging() {
-    setIsDragging(false);
-    setDragOverStage(null);
-  }
-
-  function handleDragOver(event: DragEvent<HTMLLIElement>, stageValue: string) {
-    if (isUpdating || stageValue === project.pipelineStage) return;
-    event.preventDefault();
-    event.dataTransfer.dropEffect = "move";
-    setDragOverStage(stageValue);
-  }
-
-  function handleDrop(event: DragEvent<HTMLLIElement>, stageValue: string) {
-    event.preventDefault();
-    const draggedProjectId = event.dataTransfer.getData("text/plain");
-    if (
-      !isUpdating &&
-      draggedProjectId === project.id &&
-      stageValue !== project.pipelineStage
-    ) {
-      onStageChange(stageValue);
-    }
-    finishDragging();
-  }
-
-  return (
-    <Card role="region" aria-labelledby="project-pipeline-heading">
-      <CardHeader>
-        <div className="flex items-center gap-3">
-          <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-primary/10 text-primary">
-            <Workflow className="h-5 w-5" />
-          </span>
-          <div>
-            <CardTitle id="project-pipeline-heading">
-              Project pipeline
-            </CardTitle>
-            <p className="mt-1 text-sm text-muted-foreground">
-              Drag the project card between the stages selected when this
-              project was created.
-            </p>
-          </div>
-        </div>
-      </CardHeader>
-      <CardContent>
-        {isPending ? (
-          <p className="text-sm text-muted-foreground">
-            Loading project pipeline…
-          </p>
-        ) : isError ? (
-          <p className="text-sm text-destructive">
-            The project pipeline could not be loaded.
-          </p>
-        ) : orderedStages.length === 0 ? (
-          <p className="text-sm text-muted-foreground">
-            No pipeline stages are configured for this project.
-          </p>
-        ) : (
-          <>
-          {updateError ? (
-            <p role="alert" className="mb-4 text-sm text-destructive">
-              {updateError}
-            </p>
-          ) : null}
-          <ol
-            className="grid gap-4 overflow-x-auto pb-2 md:grid-flow-col md:auto-cols-[minmax(14rem,1fr)]"
-            aria-label="Project pipeline stages"
-          >
-            {orderedStages.map((stage, index) => {
-              const isCurrent = stage.value === project.pipelineStage;
-              const isDragTarget = dragOverStage === stage.value;
-              return (
-                <li
-                  key={stage.id}
-                  role="group"
-                  aria-label={`${stage.value} stage${isCurrent ? ", current stage" : ""}`}
-                  onDragOver={(event) => handleDragOver(event, stage.value)}
-                  onDrop={(event) => handleDrop(event, stage.value)}
-                  className={`relative flex min-h-44 min-w-56 flex-col rounded-xl border p-3 transition-colors ${
-                    isDragTarget
-                      ? "border-primary bg-primary/10 ring-2 ring-primary/20"
-                      : isCurrent
-                        ? "border-primary/50 bg-primary/5"
-                        : "border-border bg-muted/20"
-                  }`}
-                >
-                  {index > 0 ? (
-                    <span
-                      className="absolute -left-4 top-8 hidden h-0.5 w-4 bg-border md:block"
-                      aria-hidden="true"
-                    />
-                  ) : null}
-                  <div className="mb-3 flex items-center gap-2 border-b border-border/70 pb-3">
-                    <span
-                      className={`flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-xs font-bold ${
-                        isCurrent
-                          ? "bg-primary text-primary-foreground"
-                          : "bg-muted text-muted-foreground"
-                      }`}
-                    >
-                      {isCurrent ? <Check className="h-4 w-4" /> : index + 1}
-                    </span>
-                    <span className="min-w-0 text-sm font-semibold leading-snug">
-                      {stage.value}
-                    </span>
-                  </div>
-
-                  {isCurrent ? (
-                    <div
-                      draggable={!isUpdating}
-                      aria-label={`Drag ${project.title}`}
-                      onDragStart={handleDragStart}
-                      onDragEnd={finishDragging}
-                      className={`mt-auto flex cursor-grab flex-col gap-2 rounded-lg border border-primary/30 bg-card p-3 shadow-sm active:cursor-grabbing ${
-                        isDragging ? "opacity-50" : ""
-                      }`}
-                    >
-                      <div className="flex items-start gap-2">
-                        <GripVertical
-                          className="mt-0.5 h-4 w-4 shrink-0 text-muted-foreground"
-                          aria-hidden="true"
-                        />
-                        <div className="min-w-0">
-                          <span className="block font-mono text-[10px] text-muted-foreground">
-                            {project.displayId ?? project.id}
-                          </span>
-                          <span className="block text-sm font-semibold leading-snug">
-                            {project.title}
-                          </span>
-                        </div>
-                      </div>
-                      <div className="flex flex-wrap gap-1.5">
-                        <StatusBadge status={project.status ?? "—"} />
-                        <StatusBadge status={project.importance ?? "—"} />
-                      </div>
-                      <label className="grid gap-1 text-xs font-medium text-muted-foreground">
-                        Move to stage
-                        <select
-                          aria-label="Move project to stage"
-                          value={project.pipelineStage ?? ""}
-                          disabled={isUpdating}
-                          onMouseDown={(event) => event.stopPropagation()}
-                          onChange={(event) =>
-                            onStageChange(event.target.value)
-                          }
-                          className="h-8 rounded-md border border-input bg-background px-2 text-xs text-foreground focus:outline-none focus:ring-2 focus:ring-ring"
-                        >
-                          {orderedStages.map((option) => (
-                            <option key={option.id} value={option.value}>
-                              {option.value}
-                            </option>
-                          ))}
-                        </select>
-                      </label>
-                    </div>
-                  ) : (
-                    <div
-                      className={`flex flex-1 items-center justify-center rounded-lg border border-dashed p-4 text-center text-xs ${
-                        isDragTarget
-                          ? "border-primary text-primary"
-                          : "border-border text-muted-foreground"
-                      }`}
-                    >
-                      Drop project here
-                    </div>
-                  )}
-                </li>
-              );
-            })}
-          </ol>
-          </>
-        )}
-      </CardContent>
-    </Card>
-  );
-}
-
 export default function ProjectDetailPage() {
   const { projectId = "" } = useParams();
   const navigate = useNavigate();
@@ -609,7 +398,6 @@ export default function ProjectDetailPage() {
   const sameTenant = Boolean(
     project && tenantId && project.tenantId === tenantId,
   );
-  const pipelineStagesQuery = useMyProjectPipelineStages(projectId);
   const [isEditing, setIsEditing] = useState(
     () => searchParams.get("edit") === "true",
   );
@@ -692,7 +480,6 @@ export default function ProjectDetailPage() {
         researchArea: form.researchArea.trim() || undefined,
         status: form.status,
         importance: form.importance,
-        pipelineStage: form.pipelineStage || undefined,
         scheduledFor: form.scheduledFor || undefined,
         dueDate: form.dueDate || undefined,
         totalBudget: form.totalBudget || undefined,
@@ -704,13 +491,6 @@ export default function ProjectDetailPage() {
     if (searchParams.get("edit") === "true") {
       navigate(projectPath, { replace: true });
     }
-  }
-
-  function changePipelineStage(stage: string) {
-    void updateProject.mutateAsync({
-      projectId,
-      input: { pipelineStage: stage },
-    });
   }
 
   async function handleCreateTask(input: TaskFormInput) {
@@ -745,7 +525,6 @@ export default function ProjectDetailPage() {
       projectId: input.projectId ?? undefined,
       status: input.status,
       pipelineStage: input.pipelineStage,
-      pipelineStages: input.pipelineStages,
       tag: input.tag || undefined,
       dueDate: input.dueDate || undefined,
       assignedToUserId: input.assignedToUserId ?? undefined,
@@ -754,7 +533,7 @@ export default function ProjectDetailPage() {
   }
 
   async function handleUnlinkModule(module: ApiModule) {
-    if (!window.confirm(`Unlink "${module.title}" from this project? It will become an independent module.`)) {
+    if (!window.confirm(`Unlink "${module.title}" from this project? It will become an independent paper.`)) {
       return;
     }
     await updateModule.mutateAsync({
@@ -853,8 +632,8 @@ export default function ProjectDetailPage() {
             <HeaderStat label="Role" value={myRole} />
             <HeaderStat label="Importance" value={project.importance ?? "—"} />
             <HeaderStat
-              label="Pipeline stage"
-              value={project.pipelineStage ?? "Unknown stage"}
+              label="Status"
+              value={project.status ?? "Unknown status"}
             />
             <HeaderStat
               label="Research area"
@@ -969,26 +748,6 @@ export default function ProjectDetailPage() {
                       {PROJECT_STATUSES.map((status) => (
                         <SelectItem key={status} value={status}>
                           {status}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </FormField>
-
-                <FormField label="Pipeline stage" htmlFor="edit-project-stage">
-                  <Select
-                    value={form.pipelineStage}
-                    onValueChange={(value) =>
-                      setForm({ ...form, pipelineStage: value })
-                    }
-                  >
-                    <SelectTrigger id="edit-project-stage">
-                      <SelectValue placeholder="Select a stage" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {(pipelineStagesQuery.data ?? []).map((stage) => (
-                        <SelectItem key={stage.id} value={stage.value}>
-                          {stage.value}
                         </SelectItem>
                       ))}
                     </SelectContent>
@@ -1143,16 +902,6 @@ export default function ProjectDetailPage() {
               onUnlinkNote={(note) => void handleUnlinkNote(note)}
             />
           </section>
-
-          <ProjectPipeline
-            project={project}
-            stages={pipelineStagesQuery.data ?? []}
-            isPending={pipelineStagesQuery.isPending}
-            isError={pipelineStagesQuery.isError}
-            isUpdating={updateProject.isPending}
-            updateError={updateProject.isError ? updateProject.error.message : null}
-            onStageChange={changePipelineStage}
-          />
         </div>
       )}
     </div>

@@ -20,9 +20,6 @@ import { ProjectCollaboratorsModule } from './modules/project-collaborators/proj
 import { ModuleCollaboratorsModule } from './modules/module-collaborators/module-collaborators.module';
 import { TaskMembersModule } from './modules/task-members/task-members.module';
 import { NoteMembersModule } from './modules/note-members/note-members.module';
-import { ProjectPipelineStagesModule } from './modules/project-pipeline-stages/project-pipeline-stages.module';
-import { ModulePipelineStagesModule } from './modules/module-pipeline-stages/module-pipeline-stages.module';
-import { PipelineStagesModule } from './modules/pipeline-stages/pipeline-stages.module';
 import { ModulePipelineStagesPoolModule } from './modules/module-pipeline-stages-pool/module-pipeline-stages-pool.module';
 import { ProjectInvitationsModule } from './modules/project-invitations/project-invitations.module';
 import { ConferencesModule } from './modules/conferences/conferences.module';
@@ -88,9 +85,6 @@ import { ArchiveCleanupModule } from './modules/archive-cleanup/archive-cleanup.
     ModuleCollaboratorsModule,
     TaskMembersModule,
     NoteMembersModule,
-    ProjectPipelineStagesModule,
-    ModulePipelineStagesModule,
-    PipelineStagesModule,
     ModulePipelineStagesPoolModule,
     ProjectInvitationsModule,
     ConferencesModule,

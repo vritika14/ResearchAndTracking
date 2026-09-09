@@ -90,7 +90,7 @@ describe("MindMapPage", () => {
 
     expect(screen.getByRole("group", { name: "Bubble relationship map" })).toBeInTheDocument();
     expect(screen.getByRole("link", { name: "Project: Climate study" })).toHaveAttribute("href", "/projects/project-1");
-    expect(screen.getByRole("link", { name: "Module: Fieldwork" })).toHaveAttribute("href", "/modules/module-1");
+    expect(screen.getByRole("link", { name: "Paper: Fieldwork" })).toHaveAttribute("href", "/modules/module-1");
     expect(screen.getByRole("link", { name: "Task: Calibrate sensors" })).toHaveAttribute("href", "/tasks/task-1");
     expect(screen.getByRole("link", { name: "Note: Site observation" })).toHaveAttribute("href", "/daily-notes/note-1");
   });
@@ -99,16 +99,16 @@ describe("MindMapPage", () => {
     render(<MemoryRouter><MindMapPage /></MemoryRouter>);
 
     fireEvent.click(screen.getByRole("button", { name: /Bubbles/ }));
-    expect(screen.getByRole("link", { name: "Module: Fieldwork" })).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "Paper: Fieldwork" })).toBeInTheDocument();
 
     fireEvent.click(screen.getByRole("button", { name: "Collapse project Climate study" }));
     expect(screen.getByRole("link", { name: "Project: Climate study" })).toBeInTheDocument();
-    expect(screen.queryByRole("link", { name: "Module: Fieldwork" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("link", { name: "Paper: Fieldwork" })).not.toBeInTheDocument();
     expect(screen.queryByRole("link", { name: "Task: Calibrate sensors" })).not.toBeInTheDocument();
     expect(screen.queryByRole("link", { name: "Note: Site observation" })).not.toBeInTheDocument();
 
     fireEvent.click(screen.getByRole("button", { name: "Expand project Climate study" }));
-    expect(screen.getByRole("link", { name: "Module: Fieldwork" })).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "Paper: Fieldwork" })).toBeInTheDocument();
     expect(screen.getByRole("link", { name: "Task: Calibrate sensors" })).toBeInTheDocument();
   });
 });

@@ -38,7 +38,7 @@ import { cn } from "@/lib/utils";
 const ALL_NOTES = "All notes";
 const LINK_TARGET_OPTIONS: { value: LinkTargetType; label: string }[] = [
   { value: "project", label: "Project" },
-  { value: "module", label: "Module" },
+  { value: "module", label: "Paper" },
   { value: "none", label: "General" },
 ];
 const VISIBILITY_OPTIONS = ["Private", "Shared"] as const;
@@ -187,7 +187,7 @@ export default function DailyNotesPage() {
   }, [modules]);
 
   function linkTargetLabel(note: ApiNote) {
-    if (note.moduleId) return moduleById.get(note.moduleId) ?? "Unknown module";
+    if (note.moduleId) return moduleById.get(note.moduleId) ?? "Unknown paper";
     if (note.projectId) return projectById.get(note.projectId) ?? "Unknown project";
     return "General";
   }
@@ -306,7 +306,7 @@ export default function DailyNotesPage() {
 
   async function handleUnlinkNote() {
     if (!selectedNote) return;
-    if (!window.confirm("Unlink this note from its project or module? It will become a general note.")) {
+    if (!window.confirm("Unlink this note from its project or paper? It will become a general note.")) {
       return;
     }
     await updateNote.mutateAsync({
@@ -346,7 +346,7 @@ export default function DailyNotesPage() {
         tone="violet"
         eyebrow="Research journal"
         title="Daily Notes"
-        description="Capture research updates, decisions and observations, then connect them to projects or modules."
+        description="Capture research updates, decisions and observations, then connect them to projects or papers."
         actions={
           <Button onClick={startAdding}>
             <Plus />
@@ -541,7 +541,7 @@ export default function DailyNotesPage() {
 
                 {draft.linkTarget === "module" ? (
                 <div className="grid gap-2">
-                  <label className="text-xs font-semibold text-muted-foreground">Module</label>
+                  <label className="text-xs font-semibold text-muted-foreground">Paper</label>
                   <Select
                     value={draft.moduleId}
                     onValueChange={(moduleId) =>
@@ -549,7 +549,7 @@ export default function DailyNotesPage() {
                     }
                   >
                     <SelectTrigger>
-                      <SelectValue placeholder="Select a module" />
+                      <SelectValue placeholder="Select a paper" />
                     </SelectTrigger>
                     <SelectContent>
                       {(modules).map((module) => (
@@ -742,11 +742,11 @@ export default function DailyNotesPage() {
                   </Link>
                 ) : selectedNote.moduleId ? (
                   <Link to={`/modules/${selectedNote.moduleId}`} className="mt-3 block max-w-md rounded-lg border border-border p-4 transition-colors hover:border-primary/40 hover:bg-muted/40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring">
-                    <span className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Module</span>
+                    <span className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Paper</span>
                     <span className="mt-1 block font-semibold text-primary">{linkTargetLabel(selectedNote)}</span>
                   </Link>
                 ) : (
-                  <p className="mt-3 text-sm text-muted-foreground">This is a general note with no linked project or module.</p>
+                  <p className="mt-3 text-sm text-muted-foreground">This is a general note with no linked project or paper.</p>
                 )}
               </section>
 

@@ -129,7 +129,7 @@ export function ModuleCollaboratorsManager({
         />
       ) : (
         <p className="border-t pt-4 text-sm text-muted-foreground">
-          Only the module owner can invite or remove collaborators.
+          Only the paper owner can invite or remove collaborators.
         </p>
       )}
     </div>

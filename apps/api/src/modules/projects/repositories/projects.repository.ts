@@ -1,9 +1,5 @@
 import { Injectable } from '@nestjs/common';
-import {
-  enumTable,
-  projectCollaborators,
-  projects,
-} from '@research-tracker/migrations';
+import { projectCollaborators, projects } from '@research-tracker/migrations';
 import { and, desc, eq, isNull, sql } from 'drizzle-orm';
 import { DrizzleService } from '../../../db/drizzle.service';
 
@@ -108,7 +104,6 @@ export class ProjectsRepository {
       description?: string;
       researchArea?: string;
       statusId?: string;
-      pipelineStageId?: string;
       importanceId?: string;
       scheduledFor?: string;
       dueDate?: string;
@@ -117,10 +112,8 @@ export class ProjectsRepository {
       displayId?: string;
     },
     ownerRoleId: string,
-    pipelineStages?: string[],
-    initialPipelineStage?: string,
   ) {
-    let [project] = await this.drizzle.db
+    const [project] = await this.drizzle.db
       .insert(projects)
       .values(values)
       .returning();
@@ -128,36 +121,10 @@ export class ProjectsRepository {
     if (!project) {
       return undefined;
     }
-    const projectId = project.id;
-
-    if (pipelineStages?.length) {
-      const stageRows = await this.drizzle.db
-        .insert(enumTable)
-        .values(
-          pipelineStages.map((value, index) => ({
-            projectId,
-            category: 'project_pipeline_stage',
-            value,
-            sortOrder: index + 1,
-          })),
-        )
-        .returning();
-      const initialStage =
-        stageRows.find((stage) => stage.value === initialPipelineStage) ??
-        stageRows[0];
-      if (initialStage) {
-        const [updatedProject] = await this.drizzle.db
-          .update(projects)
-          .set({ pipelineStageId: initialStage.id, updatedAt: new Date() })
-          .where(eq(projects.id, projectId))
-          .returning();
-        if (updatedProject) project = updatedProject;
-      }
-    }
 
     await this.drizzle.db.insert(projectCollaborators).values({
       tenantId: values.tenantId,
-      projectId,
+      projectId: project.id,
       userId: values.userId,
       roleId: ownerRoleId,
     });
@@ -173,7 +140,6 @@ export class ProjectsRepository {
       description: string;
       researchArea: string;
       statusId: string;
-      pipelineStageId: string;
       importanceId: string;
       scheduledFor: string;
       dueDate: string;

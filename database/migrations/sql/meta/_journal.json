@@ -183,6 +183,20 @@
       "when": 1788823731749,
       "tag": "0041_batch_module_invitation_title_lookup",
       "breakpoints": true
+    },
+    {
+      "idx": 42,
+      "version": "7",
+      "when": 1788914165891,
+      "tag": "0042_drop_project_pipeline_and_selection_tables",
+      "breakpoints": true
+    },
+    {
+      "idx": 43,
+      "version": "7",
+      "when": 1788914165892,
+      "tag": "0043_reset_pipeline_stage_data",
+      "breakpoints": true
     }
   ]
 }

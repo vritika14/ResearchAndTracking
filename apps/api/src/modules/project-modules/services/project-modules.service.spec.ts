@@ -13,16 +13,14 @@ describe('ProjectModulesService', () => {
     findByIdGlobal: jest.Mock;
     findVisibleActiveByTenant: jest.Mock;
     create: jest.Mock;
-    configurePipelineStages: jest.Mock;
     update: jest.Mock;
     archive: jest.Mock;
     findAccessiblePageByUser: jest.Mock;
   };
   let enumRepository: {
     findByCategoryAndValue: jest.Mock;
-    findPipelineStageForModuleByValue: jest.Mock;
+    findModuleStageByValueForTenant: jest.Mock;
     findValuesByIds: jest.Mock;
-    ensureTenantPipelineStages: jest.Mock;
   };
   let collaboratorsRepository: {
     findByModuleAndUser: jest.Mock;
@@ -39,16 +37,14 @@ describe('ProjectModulesService', () => {
       findByIdGlobal: jest.fn(),
       findVisibleActiveByTenant: jest.fn(),
       create: jest.fn(),
-      configurePipelineStages: jest.fn(),
       update: jest.fn(),
       archive: jest.fn(),
       findAccessiblePageByUser: jest.fn(),
     };
     enumRepository = {
       findByCategoryAndValue: jest.fn(),
-      findPipelineStageForModuleByValue: jest.fn(),
+      findModuleStageByValueForTenant: jest.fn(),
       findValuesByIds: jest.fn().mockResolvedValue(new Map()),
-      ensureTenantPipelineStages: jest.fn().mockResolvedValue(undefined),
     };
     collaboratorsRepository = {
       findByModuleAndUser: jest.fn().mockResolvedValue(undefined),
@@ -335,52 +331,50 @@ describe('ProjectModulesService', () => {
       );
     });
 
-    it('creates the owner before configuring module-specific pipeline stages', async () => {
+    it("resolves the pipeline stage against the tenant's shared stage list", async () => {
       enumRepository.findByCategoryAndValue.mockImplementation(
         (category: string, value: string) =>
           Promise.resolve({ id: `${category}-${value}-id` }),
       );
+      enumRepository.findModuleStageByValueForTenant.mockResolvedValue({
+        id: 'tenant-stage-drafting',
+        value: 'Drafting & Writing',
+      });
       repository.create.mockResolvedValue({
         id: 'module-1',
         tagId: null,
         statusId: null,
-        pipelineStageId: null,
-      });
-      repository.configurePipelineStages.mockResolvedValue({
-        id: 'module-1',
-        tagId: null,
-        statusId: null,
-        pipelineStageId: 'scoped-stage-1',
+        pipelineStageId: 'tenant-stage-drafting',
       });
 
       await service.create('tenant-1', 'user-1', {
-        title: 'Custom workflow module',
-        pipelineStage: 'Drafting',
-        pipelineStages: ['Drafting', 'Internal Review', 'Published'],
+        title: 'Paper in progress',
+        pipelineStage: 'Drafting & Writing',
       });
 
-      expect(repository.create).toHaveBeenCalledWith(
-        expect.objectContaining({ pipelineStageId: undefined }),
-      );
-      expect(repository.configurePipelineStages).toHaveBeenCalledWith(
-        'module-1',
-        ['Drafting', 'Internal Review', 'Published'],
-        'Drafting',
-      );
       expect(
-        collaboratorsRepository.create.mock.invocationCallOrder[0],
-      ).toBeLessThan(
-        repository.configurePipelineStages.mock.invocationCallOrder[0]!,
+        enumRepository.findModuleStageByValueForTenant,
+      ).toHaveBeenCalledWith('tenant-1', 'Drafting & Writing');
+      expect(repository.create).toHaveBeenCalledWith(
+        expect.objectContaining({ pipelineStageId: 'tenant-stage-drafting' }),
       );
-      expect(enumRepository.findByCategoryAndValue).not.toHaveBeenCalledWith(
-        'module_pipeline_stage',
-        expect.any(String),
+    });
+
+    it('throws NotFoundException for an unknown pipeline stage', async () => {
+      enumRepository.findByCategoryAndValue.mockImplementation(
+        (category: string, value: string) =>
+          Promise.resolve({ id: `${category}-${value}-id` }),
       );
-      expect(enumRepository.ensureTenantPipelineStages).toHaveBeenCalledWith(
-        'tenant-1',
-        'module_pipeline_stage',
-        ['Drafting', 'Internal Review', 'Published'],
+      enumRepository.findModuleStageByValueForTenant.mockResolvedValue(
+        undefined,
       );
+
+      await expect(
+        service.create('tenant-1', 'user-1', {
+          title: 'Paper in progress',
+          pipelineStage: 'Not A Real Stage',
+        }),
+      ).rejects.toThrow(NotFoundException);
     });
 
     it('throws NotFoundException for an unknown tag value', async () => {

@@ -17,7 +17,6 @@ const fixtures = vi.hoisted(() => ({
     description: "A study of enzyme kinetics under varying temperature.",
     researchArea: "Biochemistry",
     status: "Active",
-    pipelineStage: "Data Collection",
     importance: "Low",
     scheduledFor: "2026-07-01",
     dueDate: "2026-08-01",
@@ -73,26 +72,6 @@ const fixtures = vi.hoisted(() => ({
     createdAt: "2026-01-01T00:00:00.000Z",
     updatedAt: "2026-01-01T00:00:00.000Z",
   },
-  pipelineStages: [
-    {
-      id: "stage-1",
-      tenantId: null,
-      category: "pipeline_stage",
-      value: "Data Collection",
-      sortOrder: 1,
-      createdAt: "2026-01-01T00:00:00.000Z",
-      updatedAt: "2026-01-01T00:00:00.000Z",
-    },
-    {
-      id: "stage-2",
-      tenantId: null,
-      category: "pipeline_stage",
-      value: "Analysis",
-      sortOrder: 2,
-      createdAt: "2026-01-01T00:00:00.000Z",
-      updatedAt: "2026-01-01T00:00:00.000Z",
-    },
-  ],
 }));
 
 vi.mock("@/api/client", () => ({
@@ -169,7 +148,6 @@ vi.mock("@/api/hooks", () => ({
       },
     },
   }),
-  usePipelineStages: () => ({ data: fixtures.pipelineStages }),
 }));
 
 vi.mock("@/components/projects/project-collaborators", () => ({
@@ -262,7 +240,7 @@ describe("ProjectsPage", () => {
     fireEvent.click(projectRow!);
 
     const overview = screen.getByText("Overview").parentElement!;
-    expect(within(overview).getByText("Modules").nextElementSibling).toHaveTextContent("1");
+    expect(within(overview).getByText("Papers").nextElementSibling).toHaveTextContent("1");
     expect(within(overview).getByText("Tasks").nextElementSibling).toHaveTextContent("1");
     expect(within(overview).getByText("Notes").nextElementSibling).toHaveTextContent("1");
 
@@ -270,16 +248,6 @@ describe("ProjectsPage", () => {
       "href",
       "/projects/PRJ-101",
     );
-  });
-
-  it("shows a project's pipeline stage in the table", () => {
-    renderPage();
-
-    const projectLink = screen.getByRole("link", {
-      name: "Enzyme Kinetics Inhibition Study Across Temperature Gradients",
-    });
-    const projectRow = projectLink.closest('[role="button"]');
-    expect(projectRow).toHaveTextContent("Data Collection");
   });
 
   it("sorts by column, toggling direction on repeated clicks", () => {

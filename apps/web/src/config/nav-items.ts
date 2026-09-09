@@ -49,7 +49,7 @@ export const navGroups: NavGroup[] = [
     items: [
       { label: "Dashboard", to: "/", icon: LayoutDashboard, end: true },
       { label: "Major Projects", to: "/projects", icon: FolderKanban },
-      { label: "Modules", to: "/modules", icon: Boxes },
+      { label: "Papers", to: "/modules", icon: Boxes },
       { label: "Tasks and to do", to: "/tasks", icon: ClipboardList },
       { label: "Calendar", to: "/calendar", icon: Calendar },
       { label: "Mind map", to: "/mind-map", icon: Network },

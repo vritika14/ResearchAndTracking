@@ -10,7 +10,6 @@ describe('MyProjectsController', () => {
     findOneForCaller: jest.Mock;
     updateForCaller: jest.Mock;
     archiveForCaller: jest.Mock;
-    listPipelineStagesForCaller: jest.Mock;
   };
   let usersService: { findByExternalAuthId: jest.Mock };
   let configService: {
@@ -23,7 +22,6 @@ describe('MyProjectsController', () => {
       findOneForCaller: jest.fn(),
       updateForCaller: jest.fn(),
       archiveForCaller: jest.fn(),
-      listPipelineStagesForCaller: jest.fn(),
     };
     usersService = {
       findByExternalAuthId: jest.fn().mockResolvedValue({ id: 'user-1' }),
@@ -76,18 +74,6 @@ describe('MyProjectsController', () => {
       'user-1',
     );
     expect(result).toEqual({ id: 'project-1' });
-  });
-
-  it('listPipelineStages() returns only the accessible project pipeline', async () => {
-    projectsService.listPipelineStagesForCaller.mockResolvedValue([
-      { id: 'stage-1', value: 'Analysis' },
-    ]);
-    const result = await controller.listPipelineStages('project-1', req());
-    expect(projectsService.listPipelineStagesForCaller).toHaveBeenCalledWith(
-      'project-1',
-      'user-1',
-    );
-    expect(result).toEqual([{ id: 'stage-1', value: 'Analysis' }]);
   });
 
   it('update() delegates to updateForCaller with the project id, caller id, and body', async () => {

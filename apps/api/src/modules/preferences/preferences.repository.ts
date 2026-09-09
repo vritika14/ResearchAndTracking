@@ -59,9 +59,6 @@ export class PreferencesRepository {
       : {};
     const topLevelJson = JSON.stringify(topLevelPatch);
     const tableColumnsJson = JSON.stringify(patch.tableColumns ?? {});
-    const pipelineHiddenStagesJson = JSON.stringify(
-      patch.pipelineHiddenStages ?? {},
-    );
     const [row] = await this.drizzle.db
       .insert(userWorkspacePreferences)
       .values({ userId, tenantId, preferences: patch })
@@ -78,11 +75,6 @@ export class PreferencesRepository {
               'tableColumns',
               COALESCE(${userWorkspacePreferences.preferences}->'tableColumns', '{}'::jsonb)
               || ${tableColumnsJson}::jsonb
-            )
-            || jsonb_build_object(
-              'pipelineHiddenStages',
-              COALESCE(${userWorkspacePreferences.preferences}->'pipelineHiddenStages', '{}'::jsonb)
-              || ${pipelineHiddenStagesJson}::jsonb
             )
           `,
           updatedAt: new Date(),

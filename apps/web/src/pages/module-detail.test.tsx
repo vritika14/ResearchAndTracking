@@ -55,6 +55,7 @@ const fixtures = vi.hoisted(() => ({
       category: "module_pipeline_stage",
       value: "Concept",
       sortOrder: 1,
+      hidden: false,
       createdAt: "",
       updatedAt: "",
     },
@@ -64,6 +65,7 @@ const fixtures = vi.hoisted(() => ({
       category: "module_pipeline_stage",
       value: "Publication",
       sortOrder: 2,
+      hidden: false,
       createdAt: "",
       updatedAt: "",
     },
@@ -82,7 +84,7 @@ vi.mock("@/api/hooks", () => ({
     error: undefined,
     refetch: vi.fn(),
   }),
-  useMyModulePipelineStages: () => ({
+  useModulePipelineStagePool: () => ({
     data: fixtures.stages,
     isPending: false,
     isError: false,

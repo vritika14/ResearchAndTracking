@@ -3,10 +3,6 @@ import { describe, expect, it, vi } from "vitest";
 
 import { NewProjectDialog } from "@/components/projects/new-project-dialog";
 
-const pipelineStages = [
-  { id: "stage-1", value: "Concept & Ideation", sortOrder: 1 } as never,
-];
-
 describe("NewProjectDialog", () => {
   it("shows an error and keeps the dialog open when creation fails", async () => {
     const onCreate = vi.fn().mockRejectedValue(new Error("Title already in use"));
@@ -17,7 +13,6 @@ describe("NewProjectDialog", () => {
         open
         onOpenChange={onOpenChange}
         onCreate={onCreate}
-        pipelineStages={pipelineStages}
       />,
     );
 
@@ -41,7 +36,6 @@ describe("NewProjectDialog", () => {
         open
         onOpenChange={onOpenChange}
         onCreate={onCreate}
-        pipelineStages={pipelineStages}
       />,
     );
 

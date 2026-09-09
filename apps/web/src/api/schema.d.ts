@@ -247,23 +247,6 @@ export interface paths {
         patch: operations["MyProjectsController_update"];
         trace?: never;
     };
-    "/api/v1/me/projects/{projectId}/pipeline-stages": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /** List the selected pipeline stages for an accessible project */
-        get: operations["MyProjectsController_listPipelineStages"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
     "/api/v1/tenant/{tenantId}/projects/{projectId}/collaborators": {
         parameters: {
             query?: never;
@@ -371,23 +354,6 @@ export interface paths {
         head?: never;
         /** Update a module the caller can access */
         patch: operations["MyModulesController_update"];
-        trace?: never;
-    };
-    "/api/v1/me/modules/{moduleId}/pipeline-stages": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /** List the selected pipeline stages for an accessible module */
-        get: operations["MyModulesController_listPipelineStages"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
         trace?: never;
     };
     "/api/v1/tenant/{tenantId}/modules/{moduleId}/collaborators": {
@@ -642,114 +608,6 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/v1/tenant/{tenantId}/projects/{projectId}/pipeline-stages": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /** List pipeline stages available to this project (base + custom) */
-        get: operations["ProjectPipelineStagesController_list"];
-        put?: never;
-        /** Create a custom pipeline stage for this project (owner only) */
-        post: operations["ProjectPipelineStagesController_create"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/v1/tenant/{tenantId}/projects/{projectId}/pipeline-stages/{id}": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        post?: never;
-        /** Remove a custom pipeline stage (owner only) */
-        delete: operations["ProjectPipelineStagesController_remove"];
-        options?: never;
-        head?: never;
-        /** Rename or reorder a custom pipeline stage (owner only) */
-        patch: operations["ProjectPipelineStagesController_update"];
-        trace?: never;
-    };
-    "/api/v1/tenant/{tenantId}/modules/{moduleId}/pipeline-stages": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /** List pipeline stages available to this module (base + custom) */
-        get: operations["ModulePipelineStagesController_list"];
-        put?: never;
-        /** Create a custom pipeline stage for this module (owner only) */
-        post: operations["ModulePipelineStagesController_create"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/v1/tenant/{tenantId}/modules/{moduleId}/pipeline-stages/{id}": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        post?: never;
-        /** Remove a custom pipeline stage (owner only) */
-        delete: operations["ModulePipelineStagesController_remove"];
-        options?: never;
-        head?: never;
-        /** Rename or reorder a custom pipeline stage (owner only) */
-        patch: operations["ModulePipelineStagesController_update"];
-        trace?: never;
-    };
-    "/api/v1/tenant/{tenantId}/pipeline-stages": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /** List pipeline stages available to this workspace (base + custom) */
-        get: operations["PipelineStagesController_list"];
-        put?: never;
-        /** Create a custom pipeline stage for this workspace (owner only) */
-        post: operations["PipelineStagesController_create"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/v1/tenant/{tenantId}/pipeline-stages/{id}": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        post?: never;
-        /** Remove a custom pipeline stage (owner only) */
-        delete: operations["PipelineStagesController_remove"];
-        options?: never;
-        head?: never;
-        /** Rename or reorder a custom pipeline stage (owner only) */
-        patch: operations["PipelineStagesController_update"];
-        trace?: never;
-    };
     "/api/v1/tenant/{tenantId}/module-pipeline-stages": {
         parameters: {
             query?: never;
@@ -757,18 +615,17 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** List module pipeline stages available to this workspace (base + custom) */
+        /** List the workspace's paper pipeline stages, in order, with hidden state */
         get: operations["ModulePipelineStagesPoolController_list"];
         put?: never;
-        /** Create a custom module pipeline stage for this workspace (owner only) */
-        post: operations["ModulePipelineStagesPoolController_create"];
+        post?: never;
         delete?: never;
         options?: never;
         head?: never;
         patch?: never;
         trace?: never;
     };
-    "/api/v1/tenant/{tenantId}/module-pipeline-stages/{id}": {
+    "/api/v1/tenant/{tenantId}/module-pipeline-stages/visibility": {
         parameters: {
             query?: never;
             header?: never;
@@ -778,12 +635,45 @@ export interface paths {
         get?: never;
         put?: never;
         post?: never;
-        /** Remove a custom module pipeline stage (owner only) */
-        delete: operations["ModulePipelineStagesPoolController_remove"];
+        delete?: never;
         options?: never;
         head?: never;
-        /** Rename or reorder a custom module pipeline stage (owner only) */
-        patch: operations["ModulePipelineStagesPoolController_update"];
+        /** Show or hide one of the fixed paper pipeline stages */
+        patch: operations["ModulePipelineStagesPoolController_updateVisibility"];
+        trace?: never;
+    };
+    "/api/v1/tenant/{tenantId}/module-pipeline-stages/order": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /** Reorder the workspace's paper pipeline stages */
+        put: operations["ModulePipelineStagesPoolController_reorder"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/tenant/{tenantId}/module-pipeline-stages/reset": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Reset the workspace back to the default stage order and visibility */
+        post: operations["ModulePipelineStagesPoolController_reset"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
         trace?: never;
     };
     "/api/v1/tenant/{tenantId}/projects/{projectId}/invitations": {
@@ -1103,10 +993,6 @@ export interface components {
             researchArea?: string;
             /** @example Active */
             status?: string;
-            /** @example Concept & Ideation */
-            pipelineStage?: string;
-            /** @description Ordered pipeline stages configured specifically for this project */
-            pipelineStages?: string[];
             /** @example High */
             importance?: string;
             scheduledFor?: string;
@@ -1121,10 +1007,6 @@ export interface components {
             researchArea?: string;
             /** @example Active */
             status?: string;
-            /** @example Concept & Ideation */
-            pipelineStage?: string;
-            /** @description Ordered pipeline stages configured specifically for this project */
-            pipelineStages?: string[];
             /** @example High */
             importance?: string;
             scheduledFor?: string;
@@ -1153,8 +1035,6 @@ export interface components {
             status?: string;
             /** @example Concept & Ideation */
             pipelineStage?: string;
-            /** @description Ordered pipeline stages configured specifically for this module */
-            pipelineStages?: string[];
             assignedToUserId?: string;
             /**
              * @description Module due date in ISO date format
@@ -1173,8 +1053,6 @@ export interface components {
             status?: string;
             /** @example Concept & Ideation */
             pipelineStage?: string;
-            /** @description Ordered pipeline stages configured specifically for this module */
-            pipelineStages?: string[];
             assignedToUserId?: string;
             /**
              * @description Module due date in ISO date format
@@ -1236,17 +1114,15 @@ export interface components {
             estimatedHours?: string;
             dueDate?: string;
         };
-        CreatePipelineStageDto: {
-            /** @example Testing */
+        UpdateStageVisibilityDto: {
+            /** @example Lit Review */
             value: string;
-            /** @example 7 */
-            sortOrder?: number;
+            /** @example true */
+            hidden: boolean;
         };
-        UpdatePipelineStageDto: {
-            /** @example Testing */
-            value?: string;
-            /** @example 7 */
-            sortOrder?: number;
+        ReorderStagesDto: {
+            /** @description Every pipeline stage value, in the desired order — validated against the fixed stage catalog */
+            order: string[];
         };
         InviteCollaboratorDto: {
             /** @example colleague@example.com */
@@ -1268,7 +1144,7 @@ export interface components {
             /** @example Abstract */
             submissionType?: string;
             /** @description Projects linked to this conference */
-            projectIds: string[];
+            projectIds?: string[];
         };
         UpdateConferenceDto: {
             /** @example ASM */
@@ -1333,14 +1209,6 @@ export interface components {
              *     }
              */
             tableColumns?: Record<string, never>;
-            /**
-             * @example {
-             *       "projects:all": [
-             *         "Review"
-             *       ]
-             *     }
-             */
-            pipelineHiddenStages?: Record<string, never>;
         };
         CreateAnalyticsEventDto: {
             /**
@@ -1443,7 +1311,9 @@ export interface operations {
     };
     MembershipsController_listMembers: {
         parameters: {
-            query?: never;
+            query?: {
+                page?: number;
+            };
             header?: never;
             path: {
                 tenantId: string;
@@ -1700,7 +1570,9 @@ export interface operations {
     };
     WorkspacesController_list: {
         parameters: {
-            query?: never;
+            query?: {
+                page?: number;
+            };
             header?: never;
             path?: never;
             cookie?: never;
@@ -1924,7 +1796,9 @@ export interface operations {
     };
     MyProjectsController_list: {
         parameters: {
-            query?: never;
+            query?: {
+                page?: number;
+            };
             header?: never;
             path?: never;
             cookie?: never;
@@ -1991,25 +1865,6 @@ export interface operations {
                 "application/json": components["schemas"]["UpdateProjectDto"];
             };
         };
-        responses: {
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
-        };
-    };
-    MyProjectsController_listPipelineStages: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                projectId: string;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
         responses: {
             200: {
                 headers: {
@@ -2112,6 +1967,7 @@ export interface operations {
     ProjectModulesController_list: {
         parameters: {
             query?: {
+                page?: number;
                 projectId?: string;
             };
             header?: never;
@@ -2219,7 +2075,9 @@ export interface operations {
     };
     MyModulesController_list: {
         parameters: {
-            query?: never;
+            query?: {
+                page?: number;
+            };
             header?: never;
             path?: never;
             cookie?: never;
@@ -2286,25 +2144,6 @@ export interface operations {
                 "application/json": components["schemas"]["UpdateModuleDto"];
             };
         };
-        responses: {
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
-        };
-    };
-    MyModulesController_listPipelineStages: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                moduleId: string;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
         responses: {
             200: {
                 headers: {
@@ -2407,6 +2246,7 @@ export interface operations {
     NotesController_list: {
         parameters: {
             query?: {
+                page?: number;
                 projectId?: string;
             };
             header?: never;
@@ -2658,6 +2498,7 @@ export interface operations {
     TasksController_list: {
         parameters: {
             query?: {
+                page?: number;
                 projectId?: string;
             };
             header?: never;
@@ -2906,272 +2747,6 @@ export interface operations {
             };
         };
     };
-    ProjectPipelineStagesController_list: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                tenantId: string;
-                projectId: string;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
-        };
-    };
-    ProjectPipelineStagesController_create: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                tenantId: string;
-                projectId: string;
-            };
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["CreatePipelineStageDto"];
-            };
-        };
-        responses: {
-            201: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
-        };
-    };
-    ProjectPipelineStagesController_remove: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                tenantId: string;
-                projectId: string;
-                id: string;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
-        };
-    };
-    ProjectPipelineStagesController_update: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                tenantId: string;
-                projectId: string;
-                id: string;
-            };
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["UpdatePipelineStageDto"];
-            };
-        };
-        responses: {
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
-        };
-    };
-    ModulePipelineStagesController_list: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                tenantId: string;
-                moduleId: string;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
-        };
-    };
-    ModulePipelineStagesController_create: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                tenantId: string;
-                moduleId: string;
-            };
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["CreatePipelineStageDto"];
-            };
-        };
-        responses: {
-            201: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
-        };
-    };
-    ModulePipelineStagesController_remove: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                tenantId: string;
-                moduleId: string;
-                id: string;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
-        };
-    };
-    ModulePipelineStagesController_update: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                tenantId: string;
-                moduleId: string;
-                id: string;
-            };
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["UpdatePipelineStageDto"];
-            };
-        };
-        responses: {
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
-        };
-    };
-    PipelineStagesController_list: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                tenantId: string;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
-        };
-    };
-    PipelineStagesController_create: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                tenantId: string;
-            };
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["CreatePipelineStageDto"];
-            };
-        };
-        responses: {
-            201: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
-        };
-    };
-    PipelineStagesController_remove: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                tenantId: string;
-                id: string;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
-        };
-    };
-    PipelineStagesController_update: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                tenantId: string;
-                id: string;
-            };
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["UpdatePipelineStageDto"];
-            };
-        };
-        responses: {
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
-        };
-    };
     ModulePipelineStagesPoolController_list: {
         parameters: {
             query?: never;
@@ -3191,7 +2766,7 @@ export interface operations {
             };
         };
     };
-    ModulePipelineStagesPoolController_create: {
+    ModulePipelineStagesPoolController_updateVisibility: {
         parameters: {
             query?: never;
             header?: never;
@@ -3202,11 +2777,11 @@ export interface operations {
         };
         requestBody: {
             content: {
-                "application/json": components["schemas"]["CreatePipelineStageDto"];
+                "application/json": components["schemas"]["UpdateStageVisibilityDto"];
             };
         };
         responses: {
-            201: {
+            200: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -3214,43 +2789,41 @@ export interface operations {
             };
         };
     };
-    ModulePipelineStagesPoolController_remove: {
+    ModulePipelineStagesPoolController_reorder: {
         parameters: {
             query?: never;
             header?: never;
             path: {
                 tenantId: string;
-                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ReorderStagesDto"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    ModulePipelineStagesPoolController_reset: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                tenantId: string;
             };
             cookie?: never;
         };
         requestBody?: never;
         responses: {
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
-        };
-    };
-    ModulePipelineStagesPoolController_update: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                tenantId: string;
-                id: string;
-            };
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["UpdatePipelineStageDto"];
-            };
-        };
-        responses: {
-            200: {
+            201: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -3459,7 +3032,9 @@ export interface operations {
     };
     ConferencesController_list: {
         parameters: {
-            query?: never;
+            query?: {
+                page?: number;
+            };
             header?: never;
             path: {
                 tenantId: string;
@@ -3598,7 +3173,9 @@ export interface operations {
     };
     FeedbackController_list: {
         parameters: {
-            query?: never;
+            query?: {
+                page?: number;
+            };
             header?: never;
             path: {
                 tenantId: string;

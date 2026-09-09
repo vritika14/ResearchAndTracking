@@ -112,7 +112,7 @@ export default function CalendarPage() {
           title: module.title,
           dueDate: module.dueDate,
           href: `/modules/${module.id}`,
-          meta: module.projectId ? (projectById.get(module.projectId)?.title ?? null) : "Independent module",
+          meta: module.projectId ? (projectById.get(module.projectId)?.title ?? null) : "Independent paper",
         });
       }
     }
@@ -204,7 +204,7 @@ export default function CalendarPage() {
         tone="cyan"
         eyebrow="Planning"
         title="Calendar"
-        description="See project, module, task, and conference dates together, month by month."
+        description="See project, paper, task, and conference dates together, month by month."
       />
 
       <section className="overflow-hidden rounded-2xl border border-cyan-200/70 bg-card shadow-sm dark:border-cyan-900/50">
@@ -248,7 +248,7 @@ export default function CalendarPage() {
                   : "border-border bg-background text-muted-foreground hover:bg-accent",
               )}
             >
-              <Boxes className="h-3.5 w-3.5" /> Modules
+              <Boxes className="h-3.5 w-3.5" /> Papers
             </button>
             <button
               type="button"
@@ -315,7 +315,7 @@ export default function CalendarPage() {
                     <Link
                       key={`${event.kind}-${event.id}`}
                       to={event.href}
-                      title={`${event.kind === "project" ? "Project" : event.kind === "module" ? "Module" : event.kind === "conference" ? "Conference" : "Task"}: ${event.title}`}
+                      title={`${event.kind === "project" ? "Project" : event.kind === "module" ? "Paper" : event.kind === "conference" ? "Conference" : "Task"}: ${event.title}`}
                       className={cn(
                         "block truncate rounded-md border-l-4 px-2 py-1 text-xs font-medium transition-opacity hover:opacity-80 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
                         event.kind === "project"
@@ -369,7 +369,7 @@ export default function CalendarPage() {
                       >
                         <span className="font-medium">{event.title}</span>
                         <span className="mt-0.5 block text-xs text-muted-foreground">
-                          {event.kind === "project" ? "Project" : event.kind === "module" ? "Module" : event.kind === "conference" ? "Conference" : "Task"}{event.meta ? ` · ${event.meta}` : ""}
+                          {event.kind === "project" ? "Project" : event.kind === "module" ? "Paper" : event.kind === "conference" ? "Conference" : "Task"}{event.meta ? ` · ${event.meta}` : ""}
                         </span>
                       </Link>
                     ))}

@@ -44,7 +44,6 @@ describe("useCreateProject", () => {
       title: "New project",
       status: "Active",
       importance: "Medium",
-      pipelineStages: ["Concept"],
     });
 
     await waitFor(() => expect(result.current.isSuccess).toBe(true));
