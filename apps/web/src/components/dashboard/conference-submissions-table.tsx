@@ -1,5 +1,5 @@
 import { useMemo, useState } from "react";
-import { Pencil, Plus, Trash2 } from "lucide-react";
+import { Pencil, Plus, Presentation, Trash2 } from "lucide-react";
 import { Link } from "react-router-dom";
 
 import {
@@ -81,9 +81,11 @@ function matchesDeadline(daysRemaining: number, filter: DeadlineFilter) {
 export function ConferenceSubmissionsTable({
   showPast = false,
   dashboardView = false,
+  hideCreateButton = false,
 }: {
   showPast?: boolean;
   dashboardView?: boolean;
+  hideCreateButton?: boolean;
 }) {
   const workspace = useCurrentWorkspace();
   const tenantId = workspace.data?.id ?? "";
@@ -164,14 +166,21 @@ export function ConferenceSubmissionsTable({
   const isLoading = workspace.isPending || conferencesQuery.isPending || projectsQuery.isPending || meQuery.isPending;
 
   return (
-    <Card>
-      <CardHeader className="gap-4">
+    <Card className="relative isolate overflow-hidden">
+      <Presentation
+        aria-hidden="true"
+        className="pointer-events-none absolute -bottom-8 -right-8 h-40 w-40 rotate-12 text-primary/[0.05]"
+      />
+      <CardHeader className="relative z-10 gap-4">
         <div className="flex flex-wrap items-start justify-between gap-3">
           <div>
-            <CardTitle>{showPast ? "Conference Submissions" : "Upcoming Conference Submissions"}</CardTitle>
+            <CardTitle className="flex items-center gap-2">
+              <Presentation className="h-4 w-4 text-cyan-600" />
+              {showPast ? "Conference Submissions" : "Upcoming Conference Submissions"}
+            </CardTitle>
             <CardDescription>Submission deadlines, event dates, and linked projects or modules/papers.</CardDescription>
           </div>
-          {dashboardView ? null : (
+          {dashboardView || hideCreateButton ? null : (
             <Button onClick={() => setIsCreateOpen(true)} disabled={ownedProjects.length === 0 || isLoading}>
               <Plus /> New Conference
             </Button>
@@ -192,7 +201,7 @@ export function ConferenceSubmissionsTable({
           {hasActiveFilters ? <button type="button" onClick={() => { setSearch(""); setType("All"); setDeadline("All"); }}
             className="text-sm font-medium text-muted-foreground underline-offset-4 hover:text-foreground hover:underline">Clear filters</button> : null}
         </div>
-        {!dashboardView && ownedProjects.length === 0 && !isLoading ? <p className="text-sm text-muted-foreground">Create or own a project before adding a conference.</p> : null}
+        {!dashboardView && !hideCreateButton && ownedProjects.length === 0 && !isLoading ? <p className="text-sm text-muted-foreground">Create or own a project before adding a conference.</p> : null}
         {actionError ? <p role="alert" className="text-sm text-destructive">{actionError}</p> : null}
       </CardHeader>
       <CardContent>

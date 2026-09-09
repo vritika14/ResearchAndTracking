@@ -5,6 +5,7 @@ import { describe, expect, it, vi } from "vitest";
 import {
   PriorityWorkloadCard,
   ProjectProgressCard,
+  StalledPapersCard,
   TaskHealthCard,
 } from "@/components/dashboard/dashboard-insights";
 
@@ -29,6 +30,20 @@ const fixtures = vi.hoisted(() => ({
     { value: "Discovery", sortOrder: 1 },
     { value: "Review", sortOrder: 2 },
   ],
+  papers: [
+    {
+      id: "paper-1",
+      title: "Long-stalled paper",
+      pipelineStage: "Concept, Ideation",
+      pipelineStageChangedAt: dateOffset(-30),
+    },
+    {
+      id: "paper-2",
+      title: "Recently moved paper",
+      pipelineStage: "Drafting & Writing",
+      pipelineStageChangedAt: dateOffset(-1),
+    },
+  ],
 }));
 
 vi.mock("@/api/hooks", () => ({
@@ -42,6 +57,10 @@ vi.mock("@/api/hooks", () => ({
     isPending: false,
   }),
   usePipelineStages: () => ({ data: fixtures.stages, isPending: false }),
+  useModules: () => ({
+    data: { data: fixtures.papers, meta: { page: 1, pageSize: 20, totalItems: fixtures.papers.length, totalPages: 1 } },
+    isPending: false,
+  }),
 }));
 
 describe("dashboard insight cards", () => {
@@ -67,5 +86,19 @@ describe("dashboard insight cards", () => {
     const evidenceRow = screen.getByRole("row", { name: /Evidence review/ });
     expect(within(evidenceRow).getByText("1/2")).toBeInTheDocument();
     expect(within(evidenceRow).getByText("50%")).toBeInTheDocument();
+  });
+
+  it("ranks papers by time spent in their current stage on the stalled papers card", () => {
+    render(
+      <MemoryRouter>
+        <StalledPapersCard />
+      </MemoryRouter>,
+    );
+
+    const paperLinks = screen.getAllByRole("link").filter((link) => link.getAttribute("href")?.startsWith("/modules/"));
+    expect(paperLinks[0]).toHaveTextContent("Long-stalled paper");
+    expect(paperLinks[1]).toHaveTextContent("Recently moved paper");
+    expect(screen.getByText("30 days")).toBeInTheDocument();
+    expect(screen.getByText("1 day")).toBeInTheDocument();
   });
 });

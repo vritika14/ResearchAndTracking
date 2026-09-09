@@ -14,11 +14,14 @@ export const modules = pgTable(
     tenantId: uuid('tenant_id')
       .notNull()
       .references(() => tenants.id, { onDelete: 'cascade' }),
-    title: text('title').notNull(),
+    shortTitle: text('short_title'),
+    title: text('title'),
     description: text('description'),
+    abstract: text('abstract'),
     tagId: uuid('tag_id').references((): AnyPgColumn => enumTable.id),
     statusId: uuid('status_id').references((): AnyPgColumn => enumTable.id),
     pipelineStageId: uuid('pipeline_stage_id').references((): AnyPgColumn => enumTable.id),
+    pipelineStageChangedAt: timestamp('pipeline_stage_changed_at', { withTimezone: true }),
     assignedToUserId: uuid('assigned_to_user_id').references(() => users.id),
     dueDate: date('due_date'),
     archivedAt: timestamp('archived_at', { withTimezone: true }),

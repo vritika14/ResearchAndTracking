@@ -271,7 +271,7 @@ export default function SettingsPage() {
                   />
                 </div>
                 <div className="grid gap-2">
-                  <label htmlFor="phone" className="text-sm font-medium">Phone (optional)</label>
+                  <label htmlFor="phone" className="text-sm font-medium">Phone</label>
                   <Input
                     id="phone"
                     type="tel"
@@ -286,7 +286,7 @@ export default function SettingsPage() {
               </div>
               <div className="grid gap-2">
                 <label htmlFor="research-interests" className="text-sm font-medium">
-                  Research interests (optional)
+                  Research interests
                 </label>
                 <Textarea
                   id="research-interests"

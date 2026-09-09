@@ -834,6 +834,42 @@ export interface paths {
         patch: operations["ConferencesController_update"];
         trace?: never;
     };
+    "/api/v1/tenant/{tenantId}/calendar-events": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List calendar events for the workspace */
+        get: operations["CalendarEventsController_list"];
+        put?: never;
+        /** Create a calendar event */
+        post: operations["CalendarEventsController_create"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/tenant/{tenantId}/calendar-events/{eventId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /** Delete a calendar event */
+        delete: operations["CalendarEventsController_remove"];
+        options?: never;
+        head?: never;
+        /** Update a calendar event */
+        patch: operations["CalendarEventsController_update"];
+        trace?: never;
+    };
     "/api/v1/tenant/{tenantId}/feedback": {
         parameters: {
             query?: never;
@@ -1025,9 +1061,19 @@ export interface components {
             role: string;
         };
         CreateModuleDto: {
-            /** @example Draft Manuscript */
-            title: string;
+            /**
+             * @description The working name used day-to-day, often before a formal title exists.
+             * @example Kinase paper
+             */
+            shortTitle: string;
+            /**
+             * @description The formal title, often added later in the process.
+             * @example Draft Manuscript
+             */
+            title?: string;
             description?: string;
+            /** @description The paper's academic abstract. */
+            abstract?: string;
             projectId?: string;
             /** @example Research Paper */
             tag?: string;
@@ -1043,9 +1089,19 @@ export interface components {
             dueDate?: string;
         };
         UpdateModuleDto: {
-            /** @example Draft Manuscript */
+            /**
+             * @description The working name used day-to-day, often before a formal title exists.
+             * @example Kinase paper
+             */
+            shortTitle?: string;
+            /**
+             * @description The formal title, often added later in the process.
+             * @example Draft Manuscript
+             */
             title?: string;
             description?: string;
+            /** @description The paper's academic abstract. */
+            abstract?: string;
             projectId?: string;
             /** @example Research Paper */
             tag?: string;
@@ -1068,6 +1124,8 @@ export interface components {
             moduleId?: string;
             /** @example Private */
             visibility?: string;
+            /** @description A follow-up date shown on the Calendar page as a reminder for this note. */
+            followUpDate?: string;
         };
         UpdateNoteDto: {
             /** @example Meeting notes — kickoff */
@@ -1077,6 +1135,8 @@ export interface components {
             moduleId?: string;
             /** @example Private */
             visibility?: string;
+            /** @description A follow-up date shown on the Calendar page as a reminder for this note. */
+            followUpDate?: string;
         };
         AddMemberDto: {
             /** @description The internal user ID to grant access */
@@ -1163,6 +1223,18 @@ export interface components {
             submissionType?: string;
             /** @description Projects linked to this conference */
             projectIds?: string[];
+        };
+        CreateCalendarEventDto: {
+            /** @example Lab equipment booking closes */
+            title: string;
+            /** @example 2026-09-15 */
+            eventDate: string;
+        };
+        UpdateCalendarEventDto: {
+            /** @example Lab equipment booking closes */
+            title?: string;
+            /** @example 2026-09-15 */
+            eventDate?: string;
         };
         CreateFeedbackDto: {
             /** @example The project dashboard is easy to use, but loading is sometimes slow. */
@@ -3163,6 +3235,112 @@ export interface operations {
                 content?: never;
             };
             /** @description Only the conference owner may update the conference */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    CalendarEventsController_list: {
+        parameters: {
+            query?: {
+                page?: number;
+            };
+            header?: never;
+            path: {
+                tenantId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Calendar events returned successfully */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    CalendarEventsController_create: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                tenantId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CreateCalendarEventDto"];
+            };
+        };
+        responses: {
+            /** @description Calendar event created successfully */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    CalendarEventsController_remove: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                tenantId: string;
+                eventId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Calendar event deleted successfully */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Only the event creator may delete the event */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    CalendarEventsController_update: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                tenantId: string;
+                eventId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["UpdateCalendarEventDto"];
+            };
+        };
+        responses: {
+            /** @description Calendar event updated successfully */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Only the event creator may update the event */
             403: {
                 headers: {
                     [name: string]: unknown;

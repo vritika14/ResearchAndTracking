@@ -3,6 +3,7 @@ import { GripVertical, Pencil, Workflow } from "lucide-react";
 import { Link } from "react-router-dom";
 
 import {
+  useCreateModule,
   useCurrentWorkspace,
   useMe,
   useMembers,
@@ -10,12 +11,15 @@ import {
   useModules,
   useProjects,
   useTasks,
+  useTrackEvent,
   useUpdateModule,
   type ApiPipelineStage,
 } from "@/api/hooks";
+import { ModuleDialog, type ModuleFormInput } from "@/components/modules/module-dialog";
 import { ErrorState } from "@/components/shared/error-state";
 import { LoadingState } from "@/components/shared/loading-state";
 import { PageHeading } from "@/components/typography/heading";
+import { paperDisplayTitle } from "@/lib/paper-title";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
@@ -27,7 +31,7 @@ import {
 } from "@/components/ui/select";
 import { cn } from "@/lib/utils";
 
-const VIEW_OPTIONS = ["Flow", "Columns"] as const;
+const VIEW_OPTIONS = ["List", "Columns"] as const;
 type ViewOption = (typeof VIEW_OPTIONS)[number];
 
 const STATUS_FILTERS = ["All", "Active", "Review", "Stalled", "Complete"] as const;
@@ -238,13 +242,16 @@ export default function PipelinePage() {
 
   const stagesQuery = useModulePipelineStagePool(tenantId);
   const updateModule = useUpdateModule(tenantId);
+  const createModule = useCreateModule(tenantId);
+  const trackEvent = useTrackEvent(tenantId);
 
-  const [view, setView] = useState<ViewOption>("Flow");
+  const [view, setView] = useState<ViewOption>("List");
   const [moduleStatus, setModuleStatus] = useState<StatusFilter>("All");
   const [assignee, setAssignee] = useState<string>("All");
   const [moduleProjectFilter, setModuleProjectFilter] = useState<string>(ALL_ENTITIES);
   const [draggedId, setDraggedId] = useState<string | null>(null);
   const [dragOverStageIndex, setDragOverStageIndex] = useState<number | null>(null);
+  const [isNewPaperOpen, setIsNewPaperOpen] = useState(false);
 
   const stages = useMemo(
     () =>
@@ -317,7 +324,7 @@ export default function PipelinePage() {
         return {
           id: module.id,
           displayId: module.displayId,
-          title: module.title,
+          title: paperDisplayTitle(module),
           status: module.status,
           assignee: assigneeLabel,
           projectId: module.projectId,
@@ -353,6 +360,22 @@ export default function PipelinePage() {
     [filteredRows, stages.length],
   );
   const unassignedRows = filteredRows.filter((row) => row.stageIndex === undefined);
+
+  async function handleCreateModule(input: ModuleFormInput) {
+    await createModule.mutateAsync({
+      shortTitle: input.shortTitle,
+      title: input.title || undefined,
+      description: input.description || undefined,
+      abstract: input.abstract || undefined,
+      projectId: input.projectId ?? undefined,
+      status: input.status,
+      pipelineStage: input.pipelineStage,
+      tag: input.tag || undefined,
+      dueDate: input.dueDate || undefined,
+      assignedToUserId: input.assignedToUserId ?? undefined,
+    });
+    trackEvent({ name: "module_created" });
+  }
 
   function moveItem(id: string, stageIndex: number) {
     const stageValue = stages[stageIndex]?.value;
@@ -406,6 +429,16 @@ export default function PipelinePage() {
         eyebrow="Workflows"
         title="Paper pipeline"
         description="Papers grouped by their current stage in the shared workspace pipeline."
+        actions={<Button onClick={() => setIsNewPaperOpen(true)}>New Paper</Button>}
+      />
+
+      <ModuleDialog
+        open={isNewPaperOpen}
+        onOpenChange={setIsNewPaperOpen}
+        tenantId={tenantId}
+        projects={projects}
+        members={members}
+        onSave={handleCreateModule}
       />
 
       <div className="surface-toolbar flex flex-col gap-4 border-emerald-200/70 bg-emerald-50/40 dark:border-emerald-900/50 dark:bg-emerald-950/10">
@@ -475,7 +508,7 @@ export default function PipelinePage() {
         ) : null}
       </div>
 
-      {view === "Flow" ? (
+      {view === "List" ? (
         <div className="flex flex-col">
           {unassignedRows.length > 0 ? (
             <div className="mb-6 flex gap-4">

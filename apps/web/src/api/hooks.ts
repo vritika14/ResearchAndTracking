@@ -136,11 +136,16 @@ export interface ApiModule {
   displayId: string | null;
   tenantId: string;
   projectId: string | null;
-  title: string;
+  /** The working name used day-to-day, often before a formal title exists. Prefer this for display. */
+  shortTitle: string | null;
+  /** The formal title, often added later in the process. */
+  title: string | null;
   description: string | null;
+  abstract: string | null;
   tag: string | null;
   status: string | null;
   pipelineStage: string | null;
+  pipelineStageChangedAt: string | null;
   dueDate: string | null;
   assignedToUserId: string | null;
   archivedAt: string | null;
@@ -177,6 +182,8 @@ export interface ApiNote {
   title: string;
   content: string | null;
   visibility: string | null;
+  /** A follow-up date shown on the Calendar page as a reminder for this note. */
+  followUpDate: string | null;
   createdAt: string;
   updatedAt: string;
 }
@@ -213,6 +220,21 @@ export interface ConferenceInput {
   endDate: string;
   submissionType?: string;
   projectIds: string[];
+}
+
+export interface ApiCalendarEvent {
+  id: string;
+  tenantId: string;
+  createdBy: string;
+  title: string;
+  eventDate: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface CalendarEventInput {
+  title: string;
+  eventDate: string;
 }
 
 export interface ApiMember {
@@ -352,6 +374,17 @@ export const apiKeys = {
     ] as const,
   conference: (tenantId: string, conferenceId: string) =>
     ["api", "tenant", tenantId, "conferences", conferenceId] as const,
+  calendarEvents: (
+    tenantId: string,
+    page = 1,
+  ) =>
+    [
+      "api",
+      "tenant",
+      tenantId,
+      "calendar-events",
+      page,
+    ] as const,
   accountPreferences: ["api", "me", "preferences"] as const,
   workspacePreferences: (tenantId: string) =>
     ["api", "tenant", tenantId, "me", "preferences"] as const,
@@ -934,8 +967,10 @@ export function useRemoveProjectCollaborator(
 // ---------------------------------------------------------------------------
 
 export interface CreateModuleInput {
-  title: string;
+  shortTitle: string;
+  title?: string;
   description?: string;
+  abstract?: string;
   projectId?: string;
   tag?: string;
   status?: string;
@@ -1483,6 +1518,7 @@ export interface CreateNoteInput {
   projectId?: string;
   moduleId?: string;
   visibility?: string;
+  followUpDate?: string;
 }
 export type UpdateNoteInput = Omit<Partial<CreateNoteInput>, "projectId" | "moduleId"> & {
   /** `null` clears the link (project unset, or unlinked from its module); omit to leave unchanged. */
@@ -1814,6 +1850,92 @@ export function useDeleteConference(tenantId: string) {
       });
       await queryClient.invalidateQueries({
         queryKey: apiKeys.conferences(tenantId),
+      });
+    },
+  });
+}
+
+// ---------------------------------------------------------------------------
+// Calendar events
+// ---------------------------------------------------------------------------
+
+export function useCalendarEvents(
+  tenantId: string,
+  page = 1,
+  enabled = true,
+) {
+  return useQuery({
+    queryKey: apiKeys.calendarEvents(tenantId, page),
+    enabled: Boolean(tenantId) && enabled,
+    queryFn: async () =>
+      responseData<PaginatedResponse<ApiCalendarEvent>>(
+        await apiClient.GET("/api/v1/tenant/{tenantId}/calendar-events", {
+          params: { path: { tenantId }, query: { page } },
+        }),
+      ),
+  });
+}
+
+export function useCreateCalendarEvent(tenantId: string) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async (input: CalendarEventInput) =>
+      responseData<ApiCalendarEvent>(
+        await apiClient.POST("/api/v1/tenant/{tenantId}/calendar-events", {
+          params: { path: { tenantId } },
+          body: input,
+        }),
+      ),
+    async onSuccess() {
+      await queryClient.invalidateQueries({
+        queryKey: ["api", "tenant", tenantId, "calendar-events"],
+      });
+    },
+  });
+}
+
+export function useUpdateCalendarEvent(tenantId: string) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async ({
+      eventId,
+      input,
+    }: {
+      eventId: string;
+      input: CalendarEventInput;
+    }) =>
+      responseData<ApiCalendarEvent>(
+        await apiClient.PATCH(
+          "/api/v1/tenant/{tenantId}/calendar-events/{eventId}",
+          {
+            params: { path: { tenantId, eventId } },
+            body: input,
+          },
+        ),
+      ),
+    async onSuccess() {
+      await queryClient.invalidateQueries({
+        queryKey: ["api", "tenant", tenantId, "calendar-events"],
+      });
+    },
+  });
+}
+
+export function useDeleteCalendarEvent(tenantId: string) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async (eventId: string) =>
+      responseData<{ message: string }>(
+        await apiClient.DELETE(
+          "/api/v1/tenant/{tenantId}/calendar-events/{eventId}",
+          {
+            params: { path: { tenantId, eventId } },
+          },
+        ),
+      ),
+    async onSuccess() {
+      await queryClient.invalidateQueries({
+        queryKey: ["api", "tenant", tenantId, "calendar-events"],
       });
     },
   });

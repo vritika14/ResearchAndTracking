@@ -9,15 +9,37 @@ import {
 } from 'class-validator';
 
 export class CreateModuleDto {
-  @ApiProperty({ example: 'Draft Manuscript' })
+  @ApiProperty({
+    example: 'Kinase paper',
+    description:
+      'The working name used day-to-day, often before a formal title exists.',
+  })
   @IsString()
-  @Length(2, 200)
-  title!: string;
+  @Length(1, 200)
+  shortTitle!: string;
+
+  @ApiProperty({
+    required: false,
+    example: 'Draft Manuscript',
+    description: 'The formal title, often added later in the process.',
+  })
+  @IsOptional()
+  @IsString()
+  @Length(2, 300)
+  title?: string;
 
   @ApiProperty({ required: false })
   @IsOptional()
   @IsString()
   description?: string;
+
+  @ApiProperty({
+    required: false,
+    description: "The paper's academic abstract.",
+  })
+  @IsOptional()
+  @IsString()
+  abstract?: string;
 
   @ApiProperty({ required: false })
   @IsOptional()

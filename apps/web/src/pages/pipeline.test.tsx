@@ -20,7 +20,8 @@ type ModuleFixture = {
   displayId: string | null;
   tenantId: string;
   projectId: string | null;
-  title: string;
+  shortTitle: string | null;
+  title: string | null;
   description: string | null;
   tag: string | null;
   status: string | null;
@@ -132,6 +133,31 @@ vi.mock("@/api/hooks", async () => {
         },
       ),
     }),
+    useCreateModule: () => ({
+      mutateAsync: vi.fn(async (input: Record<string, unknown>) => {
+        const current = modules.get();
+        const module: ModuleFixture = {
+          id: `module-${current.length + 1}`,
+          displayId: `MOD-${String(current.length + 1).padStart(3, "0")}`,
+          tenantId: fixtures.tenantId,
+          projectId: (input.projectId as string | undefined) ?? null,
+          shortTitle: (input.shortTitle as string | undefined) ?? null,
+          title: (input.title as string | undefined) ?? null,
+          description: (input.description as string | undefined) ?? null,
+          tag: (input.tag as string | undefined) ?? null,
+          status: (input.status as string | undefined) ?? "Active",
+          pipelineStage: (input.pipelineStage as string | undefined) ?? null,
+          assignedToUserId: (input.assignedToUserId as string | undefined) ?? null,
+          archivedAt: null,
+          createdAt: "2026-01-01T00:00:00.000Z",
+          updatedAt: "2026-01-01T00:00:00.000Z",
+        };
+        modules.set([...current, module]);
+        return module;
+      }),
+    }),
+    useTrackEvent: () => vi.fn(),
+    useEnumValues: () => ({ data: [], isPending: false }),
   };
 });
 
@@ -177,6 +203,7 @@ function baseModules(): ModuleFixture[] {
       displayId: "MOD-201",
       tenantId: "workspace-1",
       projectId: null,
+      shortTitle: "Sample Preparation Protocol",
       title: "Sample Preparation Protocol",
       description: null,
       tag: null,
@@ -216,6 +243,24 @@ describe("PipelinePage", () => {
     expect(screen.getByRole("link", { name: editLinkName })).toHaveAttribute(
       "href",
       "/modules/MOD-201?edit=true&from=pipeline",
+    );
+  });
+
+  it("creates a new paper from the New Paper button", async () => {
+    render(
+      <MemoryRouter>
+        <PipelinePage />
+      </MemoryRouter>,
+    );
+
+    fireEvent.click(screen.getByRole("button", { name: "New Paper" }));
+    fireEvent.change(screen.getByRole("textbox", { name: /Short title/ }), {
+      target: { value: "New pipeline paper" },
+    });
+    fireEvent.click(screen.getByRole("button", { name: "Create Paper" }));
+
+    await waitFor(() =>
+      expect(screen.getByText("New pipeline paper")).toBeInTheDocument(),
     );
   });
 
@@ -319,6 +364,7 @@ describe("PipelinePage", () => {
         displayId: "MOD-202",
         tenantId: "workspace-1",
         projectId: "project-1",
+        shortTitle: "Reagent Calibration",
         title: "Reagent Calibration",
         description: null,
         tag: null,

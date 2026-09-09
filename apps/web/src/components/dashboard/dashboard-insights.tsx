@@ -4,14 +4,13 @@ import {
   CheckCircle2,
   CircleDashed,
   Clock3,
-  GitBranch,
+  Hourglass,
   TrendingUp,
 } from "lucide-react";
 import { Link } from "react-router-dom";
 
 import {
   useCurrentWorkspace,
-  useModulePipelineStagePool,
   useModules,
   useProjects,
   useTasks,
@@ -33,22 +32,14 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import { paperDisplayTitle } from "@/lib/paper-title";
 import { cn } from "@/lib/utils";
 
 export type DashboardInsightId =
-  | "pipeline-distribution"
+  | "stalled-papers"
   | "task-health"
   | "priority-workload"
   | "project-progress";
-
-const PIPELINE_TONES = [
-  "bg-blue-500",
-  "bg-violet-500",
-  "bg-cyan-500",
-  "bg-amber-500",
-  "bg-emerald-500",
-  "bg-rose-500",
-] as const;
 
 const PRIORITY_ROWS = [
   { label: "Critical", tone: "bg-red-500" },
@@ -64,82 +55,85 @@ function addDays(date: Date, days: number) {
   return next.toISOString().slice(0, 10);
 }
 
-export function PipelineDistributionCard() {
+const STALLED_PAPER_LIMIT = 6;
+/** Papers at or beyond this many days in their current stage are flagged as at-risk. */
+const STALLED_WARNING_DAYS = 14;
+
+function daysSince(iso: string) {
+  const changedAt = new Date(iso).getTime();
+  if (Number.isNaN(changedAt)) return 0;
+  return Math.max(0, Math.floor((Date.now() - changedAt) / (1000 * 60 * 60 * 24)));
+}
+
+export function StalledPapersCard() {
   const workspace = useCurrentWorkspace();
   const tenantId = workspace.data?.id ?? "";
   const modulesQuery = useModules(tenantId);
   const papers = modulesQuery.data?.data ?? [];
-  const stagesQuery = useModulePipelineStagePool(tenantId);
-  const orderedStages = [...(stagesQuery.data ?? [])]
-    .filter((stage) => !stage.hidden)
-    .sort((a, b) => a.sortOrder - b.sortOrder);
-  const knownStages = new Set(orderedStages.map((stage) => stage.value));
-  const stageCounts = orderedStages.map((stage) => ({
-    label: stage.value,
-    count: papers.filter((paper) => paper.pipelineStage === stage.value).length,
-  }));
-  const unassigned = papers.filter(
-    (paper) => !paper.pipelineStage || !knownStages.has(paper.pipelineStage),
-  ).length;
-  if (unassigned > 0) stageCounts.push({ label: "Unassigned", count: unassigned });
-  const largestStage = Math.max(1, ...stageCounts.map((stage) => stage.count));
+
+  const stalled = papers
+    .filter((paper) => paper.pipelineStage && paper.pipelineStageChangedAt)
+    .map((paper) => ({
+      id: paper.id,
+      title: paperDisplayTitle(paper),
+      stage: paper.pipelineStage as string,
+      days: daysSince(paper.pipelineStageChangedAt as string),
+    }))
+    .sort((a, b) => b.days - a.days)
+    .slice(0, STALLED_PAPER_LIMIT);
 
   return (
     <Card className="relative isolate overflow-hidden">
-      <GitBranch
+      <Hourglass
         aria-hidden="true"
         className="pointer-events-none absolute -bottom-8 -right-8 h-40 w-40 rotate-12 text-primary/[0.05]"
       />
       <CardHeader className="relative z-10 border-b border-border/70 bg-muted/50 sm:flex-row sm:items-start sm:justify-between">
         <div className="space-y-1.5">
           <CardTitle className="flex items-center gap-2">
-            <GitBranch className="h-4 w-4 text-blue-600" />
-            Pipeline distribution
+            <Hourglass className="h-4 w-4 text-rose-600" />
+            Stalled papers
           </CardTitle>
-          <CardDescription>Paper volume across each research stage.</CardDescription>
+          <CardDescription>Papers that haven&rsquo;t moved stage in the longest time.</CardDescription>
         </div>
-        <div className="mt-3 flex items-center gap-2 sm:mt-0">
-          <Badge variant="outline" className="w-fit bg-background">
-            {papers.length} {papers.length === 1 ? "paper" : "papers"}
-          </Badge>
-          <Button asChild variant="ghost" size="sm">
-            <Link to="/pipeline">View pipeline</Link>
-          </Button>
-        </div>
+        <Button asChild variant="ghost" size="sm" className="mt-3 sm:mt-0">
+          <Link to="/pipeline">View pipeline</Link>
+        </Button>
       </CardHeader>
       <CardContent className="relative z-10 pt-6">
-        {papers.length === 0 ? (
+        {stalled.length === 0 ? (
           <div className="flex min-h-48 flex-col items-center justify-center rounded-xl border border-dashed bg-muted/40 px-6 text-center">
-            <GitBranch className="mb-3 h-7 w-7 text-muted-foreground/60" />
+            <Hourglass className="mb-3 h-7 w-7 text-muted-foreground/60" />
             <p className="font-medium">No pipeline data yet</p>
             <p className="mt-1 text-sm text-muted-foreground">
-              Papers will appear here after they are assigned to stages.
+              Papers will appear here once they are assigned to stages.
             </p>
           </div>
         ) : (
-          <div className="space-y-4" aria-label="Paper count by pipeline stage">
-            {stageCounts.map((stage, index) => {
-              const share = Math.round((stage.count / papers.length) * 100);
-              return (
-                <Link
-                  key={stage.label}
-                  to="/pipeline"
-                  aria-label={`View pipeline — ${stage.label}: ${stage.count} ${stage.count === 1 ? "paper" : "papers"}`}
-                  className="grid grid-cols-[minmax(7rem,10rem)_1fr_auto] items-center gap-3 rounded-lg p-1.5 -m-1.5 transition-colors hover:bg-muted/60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+          <div className="space-y-1" aria-label="Papers by time in current stage">
+            {stalled.map((paper) => (
+              <Link
+                key={paper.id}
+                to={`/modules/${paper.id}`}
+                aria-label={`${paper.title} — ${paper.days} ${paper.days === 1 ? "day" : "days"} in ${paper.stage}`}
+                className="grid grid-cols-[1fr_auto] items-center gap-3 rounded-lg p-2 -m-2 transition-colors hover:bg-muted/60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+              >
+                <span className="min-w-0">
+                  <span className="block truncate text-sm font-medium">{paper.title}</span>
+                  <span className="block truncate text-xs text-muted-foreground">{paper.stage}</span>
+                </span>
+                <Badge
+                  variant="outline"
+                  className={cn(
+                    "shrink-0 tabular-nums",
+                    paper.days >= STALLED_WARNING_DAYS &&
+                      "border-rose-300 bg-rose-50 text-rose-700 dark:border-rose-800 dark:bg-rose-950/30 dark:text-rose-300",
+                  )}
                 >
-                  <span className="truncate text-sm font-medium" title={stage.label}>{stage.label}</span>
-                  <div className="h-2.5 overflow-hidden rounded-full bg-muted">
-                    <div
-                      className={cn("h-full rounded-full transition-[width] duration-500", PIPELINE_TONES[index % PIPELINE_TONES.length])}
-                      style={{ width: `${stage.count === 0 ? 0 : Math.max(8, (stage.count / largestStage) * 100)}%` }}
-                    />
-                  </div>
-                  <span className="w-16 text-right text-xs tabular-nums text-muted-foreground">
-                    <strong className="text-sm text-foreground">{stage.count}</strong> · {share}%
-                  </span>
-                </Link>
-              );
-            })}
+                  {paper.days} {paper.days === 1 ? "day" : "days"}
+                </Badge>
+              </Link>
+            ))}
           </div>
         )}
       </CardContent>
@@ -188,7 +182,10 @@ export function TaskHealthCard() {
       />
       <CardHeader className="relative z-10 border-b border-border/70 bg-muted/50 sm:flex-row sm:items-start sm:justify-between">
         <div className="space-y-1.5">
-          <CardTitle>Task health</CardTitle>
+          <CardTitle className="flex items-center gap-2">
+            <CheckCircle2 className="h-4 w-4 text-emerald-600" />
+            Task health
+          </CardTitle>
           <CardDescription>A quick view of delivery progress and deadline risk.</CardDescription>
         </div>
         <Button asChild variant="ghost" size="sm" className="mt-3 sm:mt-0">

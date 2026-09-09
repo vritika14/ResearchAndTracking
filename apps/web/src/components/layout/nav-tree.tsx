@@ -1,8 +1,7 @@
 import { useEffect, useState } from "react";
 import { NavLink, useLocation } from "react-router-dom";
-import { CircleAlert, ChevronRight } from "lucide-react";
+import { ChevronRight } from "lucide-react";
 
-import { useMe } from "@/api/hooks";
 import { navGroups, type NavEntry } from "@/config/nav-items";
 import { cn } from "@/lib/utils";
 
@@ -34,7 +33,6 @@ interface NavTreeProps {
  */
 export function NavTree({ onNavigate }: NavTreeProps) {
   const location = useLocation();
-  const me = useMe();
   const [expanded, setExpanded] = useState<Set<string>>(() =>
     computeAutoExpanded(location.pathname),
   );
@@ -85,12 +83,6 @@ export function NavTree({ onNavigate }: NavTreeProps) {
                     >
                       {item.icon ? <item.icon className="h-[1.05rem] w-[1.05rem] shrink-0 transition-transform group-hover:scale-105" /> : null}
                       <span className="flex-1">{item.label}</span>
-                      {item.to === "/settings" && me.data?.profileComplete === false ? (
-                        <CircleAlert
-                          className="h-4 w-4 shrink-0 text-amber-500"
-                          aria-label="Profile incomplete"
-                        />
-                      ) : null}
                     </NavLink>
                     {hasChildren ? (
                       <button

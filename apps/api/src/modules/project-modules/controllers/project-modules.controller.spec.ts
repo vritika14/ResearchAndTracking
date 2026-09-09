@@ -98,7 +98,7 @@ describe('ProjectModulesController', () => {
   describe('create', () => {
     it('resolves the caller and delegates to the service', async () => {
       modulesService.create.mockResolvedValue({ id: 'm1' });
-      const dto = { title: 'New Module' };
+      const dto = { shortTitle: 'New Module', title: 'New Module' };
 
       const result = await controller.create('tenant-1', req, dto);
 

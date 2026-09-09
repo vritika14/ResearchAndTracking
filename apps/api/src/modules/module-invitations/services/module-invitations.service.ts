@@ -74,7 +74,7 @@ export class ModuleInvitationsService {
       await this.invitationEmailService.sendInvitation({
         email: normalisedEmail,
         targetType: 'module',
-        targetTitle: module.title,
+        targetTitle: module.shortTitle ?? module.title ?? 'Untitled paper',
         acceptanceToken: rawToken,
         expiresAt,
       });

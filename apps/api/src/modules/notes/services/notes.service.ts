@@ -137,6 +137,7 @@ export class NotesService {
       projectId?: string;
       moduleId?: string;
       visibility?: string;
+      followUpDate?: string;
     },
   ) {
     const visibilityValue = input.visibility ?? 'Private';
@@ -157,6 +158,7 @@ export class NotesService {
       content: input.content,
       visibilityId,
       displayId,
+      followUpDate: input.followUpDate,
     });
 
     if (!note) {
@@ -185,6 +187,7 @@ export class NotesService {
       visibility: string;
       projectId: string;
       moduleId: string;
+      followUpDate: string;
     }>,
   ) {
     const existing = await this.findOne(tenantId, noteId, callerUserId);
@@ -207,6 +210,7 @@ export class NotesService {
       visibilityId,
       projectId: linkage ? linkage.projectId : undefined,
       moduleId: linkage ? linkage.moduleId : undefined,
+      followUpDate: input.followUpDate,
     });
 
     if (!note) {

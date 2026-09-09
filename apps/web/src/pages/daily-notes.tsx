@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { NotebookPen, Pencil, Plus, Save, Search, Trash2, Unlink, X } from "lucide-react";
+import { CalendarClock, NotebookPen, Pencil, Plus, Save, Search, Trash2, Unlink, X } from "lucide-react";
 import { Link, useNavigate, useParams, useSearchParams } from "react-router-dom";
 
 import { apiClient } from "@/api/client";
@@ -23,6 +23,7 @@ import { LoadingState } from "@/components/shared/loading-state";
 import { Badge } from "@/components/ui/badge";
 import { Heading, PageHeading } from "@/components/typography/heading";
 import { Button } from "@/components/ui/button";
+import { DatePickerInput } from "@/components/ui/date-picker-input";
 import { Input } from "@/components/ui/input";
 import {
   Select,
@@ -33,6 +34,7 @@ import {
 } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { resolveLinkTargetType, type LinkTargetType } from "@/lib/link-target";
+import { paperDisplayTitle } from "@/lib/paper-title";
 import { cn } from "@/lib/utils";
 
 const ALL_NOTES = "All notes";
@@ -58,10 +60,21 @@ interface NoteDraft {
   visibility: string;
   content: string;
   collaboratorUserIds: string[];
+  followUpDate: string;
 }
 
 function formatDate(iso: string) {
   return new Date(iso).toLocaleDateString("en-US", {
+    month: "short",
+    day: "numeric",
+    year: "numeric",
+  });
+}
+
+/** Plain `date` (no time component) — split by hand so the reader's timezone can't shift it to the adjacent day. */
+function formatPlainDate(iso: string) {
+  const [year, month, day] = iso.split("-");
+  return new Date(Number(year), Number(month) - 1, Number(day)).toLocaleDateString("en-US", {
     month: "short",
     day: "numeric",
     year: "numeric",
@@ -83,6 +96,7 @@ const EMPTY_DRAFT: NoteDraft = {
   visibility: "Private",
   content: "",
   collaboratorUserIds: [],
+  followUpDate: "",
 };
 
 function draftFromNote(note: ApiNote): NoteDraft {
@@ -94,6 +108,7 @@ function draftFromNote(note: ApiNote): NoteDraft {
     visibility: note.visibility ?? "Private",
     content: note.content ?? "",
     collaboratorUserIds: [],
+    followUpDate: note.followUpDate ?? "",
   };
 }
 
@@ -182,7 +197,7 @@ export default function DailyNotesPage() {
 
   const moduleById = useMemo(() => {
     const map = new Map<string, string>();
-    for (const module of modules) map.set(module.id, module.title);
+    for (const module of modules) map.set(module.id, paperDisplayTitle(module));
     return map;
   }, [modules]);
 
@@ -271,6 +286,7 @@ export default function DailyNotesPage() {
         projectId: link.projectId,
         moduleId: link.moduleId,
         visibility: draft.visibility,
+        followUpDate: draft.followUpDate || undefined,
       });
 
       if (draft.visibility === "Shared") {
@@ -297,6 +313,7 @@ export default function DailyNotesPage() {
           visibility: draft.visibility,
           projectId: draft.linkTarget === "project" ? link.projectId : null,
           moduleId: draft.linkTarget === "module" ? link.moduleId : null,
+          followUpDate: draft.followUpDate || undefined,
         },
       });
     }
@@ -554,7 +571,7 @@ export default function DailyNotesPage() {
                     <SelectContent>
                       {(modules).map((module) => (
                         <SelectItem key={module.id} value={module.id}>
-                          {module.title}
+                          {paperDisplayTitle(module)}
                         </SelectItem>
                       ))}
                     </SelectContent>
@@ -581,6 +598,23 @@ export default function DailyNotesPage() {
                       ))}
                     </SelectContent>
                   </Select>
+                </div>
+
+                <div className="grid gap-2">
+                  <label htmlFor="note-follow-up-date" className="text-xs font-semibold text-muted-foreground">
+                    Follow-up date
+                  </label>
+                  <DatePickerInput
+                    id="note-follow-up-date"
+                    label="Follow-up date"
+                    value={draft.followUpDate}
+                    onChange={(value) =>
+                      setDraft((current) => ({ ...current, followUpDate: value }))
+                    }
+                  />
+                  <p className="text-xs text-muted-foreground">
+                    Optional — shows this note as a reminder on the Calendar page.
+                  </p>
                 </div>
               </div>
 
@@ -723,6 +757,15 @@ export default function DailyNotesPage() {
                 <span className="text-muted-foreground">{formatTime(selectedNote.createdAt)}</span>
                 <span className="text-muted-foreground">·</span>
                 <Badge variant="outline">{selectedNote.visibility ?? "Private"}</Badge>
+                {selectedNote.followUpDate ? (
+                  <Link
+                    to="/calendar"
+                    className="inline-flex items-center gap-1.5 rounded-full border border-cyan-300 bg-cyan-50 px-2.5 py-1 text-xs font-medium text-cyan-800 transition-colors hover:bg-cyan-100 dark:border-cyan-800 dark:bg-cyan-950/40 dark:text-cyan-300"
+                  >
+                    <CalendarClock className="h-3.5 w-3.5" />
+                    Follow up {formatPlainDate(selectedNote.followUpDate)}
+                  </Link>
+                ) : null}
               </div>
 
               <section className="mt-8" aria-labelledby="note-linked-work">
