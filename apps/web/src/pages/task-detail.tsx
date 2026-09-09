@@ -35,7 +35,7 @@ const TASK_PRIORITIES = ["Low", "Medium", "High", "Critical"];
 const VISIBILITY_OPTIONS = ["Private", "Shared"];
 const LINK_TARGETS: Array<{ value: LinkTargetType; label: string }> = [
   { value: "project", label: "Project" },
-  { value: "module", label: "Module" },
+  { value: "module", label: "Paper" },
   { value: "none", label: "General" },
 ];
 
@@ -154,7 +154,7 @@ function LinkedWorkCard({
   }
 
   async function handleUnlink() {
-    if (!window.confirm("Unlink this task from its project or module? It will become a general task.")) {
+    if (!window.confirm("Unlink this task from its project or paper? It will become a general task.")) {
       return;
     }
     await onChangeLink("none", "", "");
@@ -209,7 +209,7 @@ function LinkedWorkCard({
             ) : null}
             {linkTarget === "module" ? (
               <Select value={moduleId} onValueChange={setModuleId}>
-                <SelectTrigger aria-label="Module"><SelectValue placeholder="Select a module" /></SelectTrigger>
+                <SelectTrigger aria-label="Paper"><SelectValue placeholder="Select a paper" /></SelectTrigger>
                 <SelectContent>
                   {modules.map((module) => (
                     <SelectItem key={module.id} value={module.id}>{module.title}</SelectItem>
@@ -240,11 +240,11 @@ function LinkedWorkCard({
           </Link>
         ) : task.moduleId ? (
           <Link to={`/modules/${task.moduleId}`} className="block rounded-md border border-border p-4 transition-colors hover:border-primary/40 hover:bg-muted/40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring">
-            <span className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Module</span>
+            <span className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Paper</span>
             <span className="mt-1 block font-semibold text-primary">{linkedModuleTitle ?? "Loading…"}</span>
           </Link>
         ) : (
-          <p className="text-sm text-muted-foreground">This is a general task with no linked project or module.</p>
+          <p className="text-sm text-muted-foreground">This is a general task with no linked project or paper.</p>
         )}
       </CardContent>
     </Card>
@@ -397,7 +397,7 @@ export default function TaskDetailPage() {
                     className={form.linkTarget === option.value ? "rounded-full border border-primary bg-primary px-3 py-1 text-xs font-medium text-primary-foreground" : "rounded-full border px-3 py-1 text-xs font-medium text-muted-foreground"}>{option.label}</button>)}</div>
                 </FormField>
                 {form.linkTarget === "project" ? <FormField label="Project" htmlFor="edit-task-project"><Select value={form.projectId} onValueChange={(value) => setForm({ ...form, projectId: value })}><SelectTrigger id="edit-task-project"><SelectValue placeholder="Select a project" /></SelectTrigger><SelectContent>{projects.map((project) => <SelectItem key={project.id} value={project.id}>{project.title}</SelectItem>)}</SelectContent></Select></FormField> : null}
-                {form.linkTarget === "module" ? <FormField label="Module" htmlFor="edit-task-module"><Select value={form.moduleId} onValueChange={(value) => setForm({ ...form, moduleId: value })}><SelectTrigger id="edit-task-module"><SelectValue placeholder="Select a module" /></SelectTrigger><SelectContent>{(modules).map((module) => <SelectItem key={module.id} value={module.id}>{module.title}</SelectItem>)}</SelectContent></Select></FormField> : null}
+                {form.linkTarget === "module" ? <FormField label="Paper" htmlFor="edit-task-module"><Select value={form.moduleId} onValueChange={(value) => setForm({ ...form, moduleId: value })}><SelectTrigger id="edit-task-module"><SelectValue placeholder="Select a paper" /></SelectTrigger><SelectContent>{(modules).map((module) => <SelectItem key={module.id} value={module.id}>{module.title}</SelectItem>)}</SelectContent></Select></FormField> : null}
                 <FormField label="Status" htmlFor="edit-task-status"><Select value={form.status} onValueChange={(value) => setForm({ ...form, status: value })}><SelectTrigger id="edit-task-status"><SelectValue /></SelectTrigger><SelectContent>{TASK_STATUSES.map((value) => <SelectItem key={value} value={value}>{value}</SelectItem>)}</SelectContent></Select></FormField>
                 <FormField label="Priority" htmlFor="edit-task-priority"><Select value={form.priority} onValueChange={(value) => setForm({ ...form, priority: value })}><SelectTrigger id="edit-task-priority"><SelectValue /></SelectTrigger><SelectContent>{TASK_PRIORITIES.map((value) => <SelectItem key={value} value={value}>{value}</SelectItem>)}</SelectContent></Select></FormField>
                 <FormField label="Due date" htmlFor="edit-task-due"><DatePickerInput id="edit-task-due" label="Due date" value={form.dueDate} onChange={(value) => setForm({ ...form, dueDate: value })} /></FormField>

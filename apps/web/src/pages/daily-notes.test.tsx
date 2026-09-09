@@ -402,7 +402,7 @@ describe("DailyNotesPage", () => {
 
     await waitFor(() =>
       expect(
-        screen.getByText("This is a general note with no linked project or module."),
+        screen.getByText("This is a general note with no linked project or paper."),
       ).toBeInTheDocument(),
     );
   });

@@ -1,7 +1,5 @@
-import { useEffect, useState, type FormEvent, type ReactNode } from "react";
+import { useState, type FormEvent, type ReactNode } from "react";
 
-import { type ApiPipelineStage } from "@/api/hooks";
-import { StageListBuilder } from "@/components/pipeline/stage-list-builder";
 import { Button } from "@/components/ui/button";
 import { DatePickerInput } from "@/components/ui/date-picker-input";
 import {
@@ -32,8 +30,6 @@ export interface NewProjectInput {
   researchArea: string;
   status: string;
   priority: string;
-  pipelineStage: string;
-  pipelineStages: string[];
   scheduledFor: string;
   dueDate: string;
   totalBudget: string;
@@ -44,7 +40,6 @@ interface NewProjectDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   onCreate: (project: NewProjectInput) => Promise<void> | void;
-  pipelineStages: ApiPipelineStage[];
 }
 
 const INITIAL_FORM: NewProjectInput = {
@@ -53,8 +48,6 @@ const INITIAL_FORM: NewProjectInput = {
   researchArea: "",
   status: "Active",
   priority: "Medium",
-  pipelineStage: "",
-  pipelineStages: [],
   scheduledFor: "",
   dueDate: "",
   totalBudget: "",
@@ -82,29 +75,13 @@ export function NewProjectDialog({
   open,
   onOpenChange,
   onCreate,
-  pipelineStages,
 }: NewProjectDialogProps) {
   const [form, setForm] = useState<NewProjectInput>(INITIAL_FORM);
-  const [stagesInitialized, setStagesInitialized] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [saveError, setSaveError] = useState<string | null>(null);
 
-  useEffect(() => {
-    if (!open || stagesInitialized || !pipelineStages.length) return;
-    const stages = [...pipelineStages]
-      .sort((left, right) => left.sortOrder - right.sortOrder)
-      .map((stage) => stage.value);
-    setForm((current) => ({
-      ...current,
-      pipelineStages: stages,
-      pipelineStage: current.pipelineStage || stages[0] || "",
-    }));
-    setStagesInitialized(true);
-  }, [open, pipelineStages, stagesInitialized]);
-
   function resetForm() {
     setForm(INITIAL_FORM);
-    setStagesInitialized(false);
     setSaveError(null);
   }
 
@@ -124,7 +101,6 @@ export function NewProjectDialog({
         description: form.description.trim(),
         researchArea: form.researchArea.trim(),
         targetJournals: form.targetJournals.trim(),
-        pipelineStage: form.pipelineStage || form.pipelineStages[0] || "",
       });
       resetForm();
       onOpenChange(false);
@@ -213,39 +189,6 @@ export function NewProjectDialog({
               </Select>
             </FormField>
 
-            <div className="sm:col-span-2">
-              <StageListBuilder
-                availableStages={pipelineStages}
-                selectedStages={form.pipelineStages}
-                entityLabel="project"
-                onChange={(stages) =>
-                  setForm((current) => ({
-                    ...current,
-                    pipelineStages: stages,
-                    pipelineStage: stages.includes(current.pipelineStage)
-                      ? current.pipelineStage
-                      : stages[0] ?? "",
-                  }))
-                }
-              />
-            </div>
-
-            <FormField label="Starting stage" htmlFor="project-stage" required>
-              <Select
-                value={form.pipelineStage || form.pipelineStages[0] || ""}
-                onValueChange={(value) =>
-                  setForm((prev) => ({ ...prev, pipelineStage: value }))
-                }
-              >
-                <SelectTrigger id="project-stage"><SelectValue placeholder="Select a stage" /></SelectTrigger>
-                <SelectContent>
-                  {form.pipelineStages.map((stage) => (
-                    <SelectItem key={stage} value={stage}>{stage}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </FormField>
-
             <FormField label="Scheduled for" htmlFor="project-scheduled-for">
               <DatePickerInput
                 id="project-scheduled-for"
@@ -305,7 +248,7 @@ export function NewProjectDialog({
 
           <DialogFooter className="border-t pt-4">
             <DialogClose asChild><Button type="button" variant="outline" disabled={isSaving}>Cancel</Button></DialogClose>
-            <Button type="submit" disabled={isSaving || !form.pipelineStages.length}>
+            <Button type="submit" disabled={isSaving}>
               {isSaving ? "Creating…" : "Create Project"}
             </Button>
           </DialogFooter>

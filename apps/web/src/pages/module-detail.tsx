@@ -8,8 +8,8 @@ import {
   useCurrentWorkspace,
   useMembers,
   useEnumValues,
+  useModulePipelineStagePool,
   useMyModule,
-  useMyModulePipelineStages,
   useNotes,
   useProject,
   useProjects,
@@ -356,7 +356,7 @@ export default function ModuleDetailPage() {
   // collaborators section below).
   const projectsQuery = useProjects(tenantId, sameTenant);
   const availableProjects = projectsQuery.data?.data ?? [];
-  const stagesQuery = useMyModulePipelineStages(moduleId);
+  const stagesQuery = useModulePipelineStagePool(module?.tenantId ?? tenantId, Boolean(module));
   const [form, setForm] = useState<EditableModule | null>(null);
   const [openedRequestedEdit, setOpenedRequestedEdit] = useState(false);
   const [isCollaboratorsVisible, setIsCollaboratorsVisible] = useState(false);
@@ -531,7 +531,7 @@ export default function ModuleDetailPage() {
               <FormField label="Description" htmlFor="edit-module-description" className="sm:col-span-2"><Textarea id="edit-module-description" value={form.description} onChange={(event) => setForm({ ...form, description: event.target.value })} rows={3} /></FormField>
               <FormField label="Status" htmlFor="edit-module-status"><Select value={form.status} onValueChange={(value) => setForm({ ...form, status: value })}><SelectTrigger id="edit-module-status"><SelectValue /></SelectTrigger><SelectContent>{MODULE_STATUSES.map((value) => <SelectItem key={value} value={value}>{value}</SelectItem>)}</SelectContent></Select></FormField>
               <FormField label="Type" htmlFor="edit-module-type"><Select value={form.tag} onValueChange={(value) => setForm({ ...form, tag: value })}><SelectTrigger id="edit-module-type"><SelectValue placeholder="Select a type" /></SelectTrigger><SelectContent>{(tagValuesQuery.data ?? []).map((value) => <SelectItem key={value.id} value={value.value}>{value.value}</SelectItem>)}</SelectContent></Select></FormField>
-              <FormField label="Pipeline stage" htmlFor="edit-module-stage"><Select value={form.pipelineStage} onValueChange={(value) => setForm({ ...form, pipelineStage: value })}><SelectTrigger id="edit-module-stage"><SelectValue placeholder="Select a stage" /></SelectTrigger><SelectContent>{(stagesQuery.data ?? []).map((value) => <SelectItem key={value.id} value={value.value}>{value.value}</SelectItem>)}</SelectContent></Select></FormField>
+              <FormField label="Pipeline stage" htmlFor="edit-module-stage"><Select value={form.pipelineStage} onValueChange={(value) => setForm({ ...form, pipelineStage: value })}><SelectTrigger id="edit-module-stage"><SelectValue placeholder="Select a stage" /></SelectTrigger><SelectContent>{(stagesQuery.data ?? []).filter((stage) => !stage.hidden).map((stage: { id: string; value: string }) => <SelectItem key={stage.id} value={stage.value}>{stage.value}</SelectItem>)}</SelectContent></Select></FormField>
               <FormField label="Due date" htmlFor="edit-module-due"><DatePickerInput id="edit-module-due" label="Due date" value={form.dueDate} onChange={(value) => setForm({ ...form, dueDate: value })} /></FormField>
               <FormField label="Assigned to" htmlFor="edit-module-assignee"><Select value={form.assignedToUserId || "__unassigned__"} onValueChange={(value) => setForm({ ...form, assignedToUserId: value === "__unassigned__" ? "" : value })}><SelectTrigger id="edit-module-assignee"><SelectValue /></SelectTrigger><SelectContent><SelectItem value="__unassigned__">Unassigned</SelectItem>{(members).map((member) => <SelectItem key={member.userId} value={member.userId}>{member.displayName}</SelectItem>)}</SelectContent></Select></FormField>
             </div>
@@ -619,7 +619,7 @@ export default function ModuleDetailPage() {
         <EntityDetailPipeline
           entityLabel="module"
           entity={{ ...module, secondaryStatus: module.tag }}
-          stages={stagesQuery.data ?? []}
+          stages={(stagesQuery.data ?? []).filter((stage) => !stage.hidden)}
           isPending={stagesQuery.isPending}
           isError={stagesQuery.isError}
           isUpdating={updateModule.isPending}

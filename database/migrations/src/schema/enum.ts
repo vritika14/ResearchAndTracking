@@ -1,4 +1,4 @@
-import { pgTable, uuid, text, integer, timestamp, uniqueIndex, AnyPgColumn } from 'drizzle-orm/pg-core';
+import { pgTable, uuid, text, integer, boolean, timestamp, uniqueIndex, AnyPgColumn } from 'drizzle-orm/pg-core';
 import { tenants } from './tenants';
 import { projects } from './projects';
 import { modules } from './modules';
@@ -13,6 +13,7 @@ export const enumTable = pgTable(
     category: text('category').notNull(),
     value: text('value').notNull(),
     sortOrder: integer('sort_order').default(0).notNull(),
+    hidden: boolean('hidden').default(false).notNull(),
     createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
     updatedAt: timestamp('updated_at', { withTimezone: true }).defaultNow().notNull(),
   },

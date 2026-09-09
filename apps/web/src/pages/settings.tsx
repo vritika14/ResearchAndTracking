@@ -32,6 +32,7 @@ import {
   useUpdateMe,
   useWorkspaces,
 } from "@/api/hooks";
+import { PaperStageSettings } from "@/components/settings/paper-stage-settings";
 import { WorkspaceMembers } from "@/components/settings/workspace-members";
 import { ErrorState } from "@/components/shared/error-state";
 import { LoadingState } from "@/components/shared/loading-state";
@@ -668,6 +669,12 @@ export default function SettingsPage() {
           </CardContent>
         </Card>
       </div>
+
+      {workspace.data?.id ? (
+        <div className="mx-auto mt-7 w-full max-w-5xl">
+          <PaperStageSettings tenantId={workspace.data.id} />
+        </div>
+      ) : null}
 
       <WorkspaceMembers />
 

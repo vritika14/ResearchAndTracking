@@ -99,7 +99,7 @@ function bubbleLabel(title: string) {
 
 const bubbleStyles = {
   project: { circle: "fill-blue-100 stroke-blue-600 dark:fill-blue-950", text: "fill-blue-800 dark:fill-blue-200", label: "Project" },
-  module: { circle: "fill-violet-100 stroke-violet-600 dark:fill-violet-950", text: "fill-violet-800 dark:fill-violet-200", label: "Module" },
+  module: { circle: "fill-violet-100 stroke-violet-600 dark:fill-violet-950", text: "fill-violet-800 dark:fill-violet-200", label: "Paper" },
   task: { circle: "fill-amber-100 stroke-amber-500 dark:fill-amber-950", text: "fill-amber-800 dark:fill-amber-200", label: "Task" },
   note: { circle: "fill-emerald-100 stroke-emerald-600 dark:fill-emerald-950", text: "fill-emerald-800 dark:fill-emerald-200", label: "Note" },
 } as const;
@@ -353,7 +353,7 @@ function ModuleBranch({
             <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-violet-600 text-white"><Boxes className="h-4 w-4" /></span>
             <span className="min-w-0">
               <span className="block truncate text-sm font-semibold hover:text-primary">{module.title}</span>
-              <span className="block text-xs text-muted-foreground">Module · {tasks.length} tasks · {notes.length} notes</span>
+              <span className="block text-xs text-muted-foreground">Paper · {tasks.length} tasks · {notes.length} notes</span>
             </span>
           </Link>
         </div>
@@ -405,7 +405,7 @@ function ProjectTree({
           <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-blue-600 text-white shadow-sm"><FolderKanban className="h-5 w-5" /></span>
           <span className="min-w-0">
             <span className="block truncate font-semibold hover:text-primary">{project.title}</span>
-            <span className="block text-xs text-muted-foreground">Project · {visibleModules.length} modules</span>
+            <span className="block text-xs text-muted-foreground">Project · {visibleModules.length} papers</span>
           </span>
           {project.status ? <Badge variant="outline" className="ml-auto hidden sm:inline-flex">{project.status}</Badge> : null}
         </Link>
@@ -489,7 +489,7 @@ export default function MindMapPage() {
         tone="violet"
         eyebrow="Relationships"
         title="Mind map"
-        description="Explore how projects, modules, tasks, and notes connect. Select any node to open its details."
+        description="Explore how projects, papers, tasks, and notes connect. Select any node to open its details."
       />
 
       <div className="flex flex-col gap-3 rounded-2xl border bg-card p-4 shadow-sm lg:flex-row lg:items-center lg:justify-between">
@@ -520,7 +520,7 @@ export default function MindMapPage() {
 
       <div className="flex flex-wrap gap-4 rounded-xl border border-dashed bg-muted/20 px-4 py-3 text-xs text-muted-foreground" aria-label="Mind map legend">
         <span className="inline-flex items-center gap-1.5"><FolderKanban className="h-4 w-4 text-blue-600" /> Project</span>
-        <span className="inline-flex items-center gap-1.5"><Boxes className="h-4 w-4 text-violet-600" /> Module</span>
+        <span className="inline-flex items-center gap-1.5"><Boxes className="h-4 w-4 text-violet-600" /> Paper</span>
         <span className="inline-flex items-center gap-1.5"><CheckSquare2 className="h-4 w-4 text-amber-600" /> Task</span>
         <span className="inline-flex items-center gap-1.5"><NotebookPen className="h-4 w-4 text-emerald-600" /> Note</span>
       </div>

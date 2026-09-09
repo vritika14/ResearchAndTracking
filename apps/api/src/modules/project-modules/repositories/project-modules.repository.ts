@@ -1,6 +1,5 @@
 import { Injectable } from '@nestjs/common';
 import {
-  enumTable,
   moduleCollaborators,
   modules,
   projectCollaborators,
@@ -193,44 +192,6 @@ export class ProjectModulesRepository {
       sql`SELECT check_module_access(${tenantId}::uuid, ${moduleId}::uuid, ${userId}::uuid) AS allowed`,
     );
     return result.rows[0]?.allowed === true;
-  }
-
-  async configurePipelineStages(
-    moduleId: string,
-    pipelineStages: string[],
-    initialPipelineStage?: string,
-  ) {
-    if (pipelineStages.length === 0) {
-      return this.findByIdGlobal(moduleId);
-    }
-
-    const stageRows = await this.drizzle.db
-      .insert(enumTable)
-      .values(
-        pipelineStages.map((value, index) => ({
-          moduleId,
-          category: 'module_pipeline_stage',
-          value,
-          sortOrder: index + 1,
-        })),
-      )
-      .returning();
-
-    const initialStage =
-      stageRows.find((stage) => stage.value === initialPipelineStage) ??
-      stageRows[0];
-
-    if (!initialStage) {
-      return this.findByIdGlobal(moduleId);
-    }
-
-    const [module] = await this.drizzle.db
-      .update(modules)
-      .set({ pipelineStageId: initialStage.id, updatedAt: new Date() })
-      .where(eq(modules.id, moduleId))
-      .returning();
-
-    return module;
   }
 
   async update(

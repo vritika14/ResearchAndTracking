@@ -19,7 +19,6 @@ import {
   useCurrentWorkspace,
   useMe,
   useModules,
-  usePipelineStages,
   useProjects,
   useTasks,
   useTrackEvent,
@@ -54,8 +53,6 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-
-const REVIEW_STAGE = "Consolidation & Review";
 
 function buildSummary(counts: {
   activeProjects: number;
@@ -92,8 +89,8 @@ function buildSummary(counts: {
       to: "/pipeline",
     },
     {
-      label: "Active Modules",
-      description: "Active of all visible modules",
+      label: "Active Papers",
+      description: "Active of all visible papers",
       value: `${counts.activeModules} of ${counts.totalModules}`,
       icon: Boxes,
       tone: "emerald",
@@ -236,7 +233,6 @@ export default function DashboardPage() {
   const modulesQuery = useModules(tenantId);
   const tasks = tasksQuery.data?.data ?? [];
   const modules = modulesQuery.data?.data ?? [];
-  const stagesQuery = usePipelineStages(tenantId);
   const me = useMe();
   const createProject = useCreateProject(tenantId);
   const createTask = useCreateTask(tenantId);
@@ -277,7 +273,7 @@ export default function DashboardPage() {
         ).length,
         totalTasks: tasks.length,
         reviewStage: projects.filter(
-          (project) => project.pipelineStage === REVIEW_STAGE,
+          (project) => project.status === "Review",
         ).length,
         activeModules: modules.filter(
           (module) => module.status === "Active",
@@ -377,16 +373,12 @@ export default function DashboardPage() {
   }
 
   async function handleCreateProject(input: NewProjectInput) {
-    const firstPipelineStage = [...(stagesQuery.data ?? [])]
-      .sort((a, b) => a.sortOrder - b.sortOrder)[0]?.value;
     await createProject.mutateAsync({
       title: input.title,
       description: input.description || undefined,
       researchArea: input.researchArea || undefined,
       status: input.status,
       importance: input.priority,
-      pipelineStage: input.pipelineStage || firstPipelineStage || undefined,
-      pipelineStages: input.pipelineStages,
       scheduledFor: input.scheduledFor || undefined,
       dueDate: input.dueDate || undefined,
       totalBudget: input.totalBudget || undefined,
@@ -429,14 +421,13 @@ export default function DashboardPage() {
     workspace.isPending ||
     projectsQuery.isPending ||
     tasksQuery.isPending ||
-    modulesQuery.isPending ||
-    stagesQuery.isPending
+    modulesQuery.isPending
   ) {
     return <LoadingState title="Loading dashboard" className="min-h-[50vh]" />;
   }
 
-  if (projectsQuery.isError || tasksQuery.isError || modulesQuery.isError || stagesQuery.isError) {
-    const error = projectsQuery.error ?? tasksQuery.error ?? modulesQuery.error ?? stagesQuery.error;
+  if (projectsQuery.isError || tasksQuery.isError || modulesQuery.isError) {
+    const error = projectsQuery.error ?? tasksQuery.error ?? modulesQuery.error;
     return (
       <ErrorState
         title="Dashboard could not be loaded"
@@ -446,7 +437,6 @@ export default function DashboardPage() {
             projectsQuery.refetch(),
             tasksQuery.refetch(),
             modulesQuery.refetch(),
-            stagesQuery.refetch(),
           ])
         }
       />
@@ -487,7 +477,6 @@ export default function DashboardPage() {
         open={isNewProjectOpen}
         onOpenChange={setIsNewProjectOpen}
         onCreate={handleCreateProject}
-        pipelineStages={stagesQuery.data ?? []}
       />
       <TaskDialog
         open={isNewTaskOpen}

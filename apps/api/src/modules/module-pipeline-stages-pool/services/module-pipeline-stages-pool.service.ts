@@ -1,64 +1,50 @@
 // apps/api/src/modules/module-pipeline-stages-pool/services/module-pipeline-stages-pool.service.ts
-import {
-  ConflictException,
-  Injectable,
-  NotFoundException,
-} from '@nestjs/common';
+import { BadRequestException, Injectable } from '@nestjs/common';
 import { EnumRepository } from '../../enum/repositories/enum.repository';
-
-const CATEGORY = 'module_pipeline_stage';
+import { PAPER_PIPELINE_STAGE_VALUES } from '../../enum/constants/paper-pipeline-stages';
 
 @Injectable()
 export class ModulePipelineStagesPoolService {
   constructor(private readonly repository: EnumRepository) {}
 
   async list(tenantId: string) {
-    return this.repository.findByCategory(CATEGORY, tenantId);
+    return this.repository.findEffectiveModuleStages(tenantId);
   }
 
-  async create(tenantId: string, value: string, sortOrder: number) {
-    const row = await this.repository.createTenantPipelineStage(
-      tenantId,
-      CATEGORY,
-      value,
-      sortOrder,
-    );
-    if (!row) {
-      throw new ConflictException('Failed to create pipeline stage');
+  async updateVisibility(tenantId: string, value: string, hidden: boolean) {
+    this.assertKnownStage(value);
+    await this.repository.materializeTenantModuleStages(tenantId);
+    return this.repository.setTenantModuleStageHidden(tenantId, value, hidden);
+  }
+
+  async reorder(tenantId: string, order: string[]) {
+    this.assertValidOrder(order);
+    await this.repository.materializeTenantModuleStages(tenantId);
+    return this.repository.reorderTenantModuleStages(tenantId, order);
+  }
+
+  async reset(tenantId: string) {
+    await this.repository.resetTenantModuleStages(tenantId);
+    return this.repository.findEffectiveModuleStages(tenantId);
+  }
+
+  private assertKnownStage(value: string) {
+    if (!(PAPER_PIPELINE_STAGE_VALUES as readonly string[]).includes(value)) {
+      throw new BadRequestException(`Unknown pipeline stage "${value}"`);
     }
-    return row;
   }
 
-  async update(
-    tenantId: string,
-    id: string,
-    values: Partial<{ value: string; sortOrder: number }>,
-  ) {
-    const row = await this.repository.updateTenantPipelineStage(
-      tenantId,
-      CATEGORY,
-      id,
-      values,
-    );
-    if (!row) {
-      throw new NotFoundException(
-        'Pipeline stage not found, or a shared default stage that cannot be edited',
+  private assertValidOrder(order: string[]) {
+    const expected = new Set<string>(PAPER_PIPELINE_STAGE_VALUES);
+    const given = new Set(order);
+    const isPermutation =
+      order.length === PAPER_PIPELINE_STAGE_VALUES.length &&
+      given.size === expected.size &&
+      [...given].every((value) => expected.has(value));
+    if (!isPermutation) {
+      throw new BadRequestException(
+        'order must contain each pipeline stage exactly once',
       );
     }
-    return row;
-  }
-
-  async remove(tenantId: string, id: string) {
-    const row = await this.repository.deleteTenantPipelineStage(
-      tenantId,
-      CATEGORY,
-      id,
-    );
-    if (!row) {
-      throw new NotFoundException(
-        'Pipeline stage not found, or a shared default stage that cannot be deleted',
-      );
-    }
-    return row;
   }
 }

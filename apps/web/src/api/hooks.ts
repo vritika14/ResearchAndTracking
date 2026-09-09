@@ -107,7 +107,6 @@ export interface ApiProject {
   description: string | null;
   researchArea: string | null;
   status: string | null;
-  pipelineStage: string | null;
   importance: string | null;
   scheduledFor: string | null;
   dueDate: string | null;
@@ -303,6 +302,8 @@ export const apiKeys = {
     ["api", "tenant", tenantId, "modules", moduleId, "collaborators"] as const,
   moduleInvitations: (tenantId: string, moduleId: string) =>
     ["api", "tenant", tenantId, "modules", moduleId, "invitations"] as const,
+  modulePipelineStages: (tenantId: string) =>
+    ["api", "tenant", tenantId, "module-pipeline-stages"] as const,
   invitation: (token: string) => ["api", "invitations", token] as const,
   tasks: (
     tenantId: string,
@@ -646,8 +647,6 @@ export interface CreateProjectInput {
   description?: string;
   researchArea?: string;
   status?: string;
-  pipelineStage?: string;
-  pipelineStages?: string[];
   importance?: string;
   scheduledFor?: string;
   dueDate?: string;
@@ -829,17 +828,6 @@ export function useMyProject(projectId: string, enabled = true) {
   });
 }
 
-export function useMyProjectPipelineStages(projectId: string, enabled = true) {
-  return useQuery({
-    queryKey: [...myProjectKey(projectId), "pipeline-stages"] as const,
-    enabled: Boolean(projectId) && enabled,
-    queryFn: () =>
-      authenticatedJson<ApiPipelineStage[]>(
-        `/api/v1/me/projects/${encodeURIComponent(projectId)}/pipeline-stages`,
-      ),
-  });
-}
-
 export function useUpdateMyProject() {
   const queryClient = useQueryClient();
   return useMutation({
@@ -952,7 +940,6 @@ export interface CreateModuleInput {
   tag?: string;
   status?: string;
   pipelineStage?: string;
-  pipelineStages?: string[];
   dueDate?: string;
   assignedToUserId?: string;
 }
@@ -1014,20 +1001,17 @@ export function useCreateModule(tenantId: string) {
         }),
       ),
     async onSuccess(module) {
-      const addModule = (current: ApiModule[] | undefined) => {
+      // The tenant-scoped list is paginated (`{ data, meta }`), so a new
+      // module's page/position depends on server-side sort order — just
+      // invalidate and let it refetch instead of guessing where to splice it
+      // in. The "my modules" list is a plain array, so it can be patched
+      // directly.
+      queryClient.setQueryData<ApiModule[]>(["api", "me", "modules"], (current) => {
         if (!current) return [module];
         return current.some((item) => item.id === module.id)
           ? current
           : [module, ...current];
-      };
-      queryClient.setQueryData<ApiModule[]>(
-        apiKeys.modules(tenantId),
-        addModule,
-      );
-      queryClient.setQueryData<ApiModule[]>(
-        ["api", "me", "modules"],
-        addModule,
-      );
+      });
       await Promise.all([
         queryClient.invalidateQueries({
           queryKey: ["api", "tenant", tenantId, "modules"],
@@ -1076,10 +1060,9 @@ export function useArchiveModule(tenantId: string) {
         }),
       ),
     async onSuccess(_result, moduleId) {
-      queryClient.setQueriesData<ApiModule[]>(
-        { queryKey: ["api", "tenant", tenantId, "modules"] },
-        (current) => current?.filter((module) => module.id !== moduleId),
-      );
+      // The tenant-scoped list is paginated (`{ data, meta }`), so just
+      // invalidate and let it refetch. The "my modules" list is a plain
+      // array, so it can be patched directly.
       queryClient.setQueryData<ApiModule[]>(myModulesKey, (current) =>
         current?.filter((module) => module.id !== moduleId),
       );
@@ -1179,17 +1162,6 @@ export function useMyModule(moduleId: string, enabled = true) {
         await apiClient.GET("/api/v1/me/modules/{moduleId}", {
           params: { path: { moduleId } },
         }),
-      ),
-  });
-}
-
-export function useMyModulePipelineStages(moduleId: string, enabled = true) {
-  return useQuery({
-    queryKey: [...myModuleKey(moduleId), "pipeline-stages"] as const,
-    enabled: Boolean(moduleId) && enabled,
-    queryFn: () =>
-      authenticatedJson<ApiPipelineStage[]>(
-        `/api/v1/me/modules/${encodeURIComponent(moduleId)}/pipeline-stages`,
       ),
   });
 }
@@ -1906,44 +1878,27 @@ export function useUserSearch(query: string, enabled = true) {
 export interface ApiPipelineStage {
   id: string;
   tenantId: string | null;
-  projectId?: string | null;
-  moduleId?: string | null;
-  category: string;
   value: string;
   sortOrder: number;
+  hidden: boolean;
   createdAt: string;
   updatedAt: string;
 }
 
-const pipelineStagesKey = ["api", "enum", "project_pipeline_stage"] as const;
-const modulePipelineStagePoolKey = [
-  "api",
-  "enum",
-  "module_pipeline_stage",
-] as const;
-
-export function usePipelineStages(tenantId: string, enabled = true) {
-  return useQuery({
-    queryKey: pipelineStagesKey,
-    enabled: Boolean(tenantId) && enabled,
-    queryFn: async () =>
-      responseData<ApiPipelineStage[]>(
-        await apiClient.GET("/api/v1/enum", {
-          params: { query: { category: "project_pipeline_stage", tenantId } },
-        }),
-      ),
-  });
-}
-
-/** Tenant-wide pool of module pipeline stages — mirrors usePipelineStages for projects. */
+/**
+ * The workspace's one shared, ordered paper pipeline stage list — reorder
+ * and hide/show only, the 15 stage names themselves are fixed. Returns the
+ * tenant's own customized order/visibility if it has one, else the global
+ * default list.
+ */
 export function useModulePipelineStagePool(tenantId: string, enabled = true) {
   return useQuery({
-    queryKey: modulePipelineStagePoolKey,
+    queryKey: apiKeys.modulePipelineStages(tenantId),
     enabled: Boolean(tenantId) && enabled,
     queryFn: async () =>
       responseData<ApiPipelineStage[]>(
-        await apiClient.GET("/api/v1/enum", {
-          params: { query: { category: "module_pipeline_stage", tenantId } },
+        await apiClient.GET("/api/v1/tenant/{tenantId}/module-pipeline-stages", {
+          params: { path: { tenantId } },
         }),
       ),
   });
@@ -2062,263 +2017,13 @@ export function useAcceptInvitation(token: string) {
   });
 }
 
-export function useProjectPipelineStages(
-  tenantId: string,
-  projectId: string,
-  enabled = true,
-) {
-  return useQuery({
-    queryKey: [
-      "api",
-      "tenant",
-      tenantId,
-      "projects",
-      projectId,
-      "pipeline-stages",
-    ] as const,
-    enabled: Boolean(tenantId) && Boolean(projectId) && enabled,
-    queryFn: () =>
-      authenticatedJson<ApiPipelineStage[]>(
-        `/api/v1/tenant/${encodeURIComponent(tenantId)}/projects/${encodeURIComponent(projectId)}/pipeline-stages`,
-      ),
-  });
-}
-
-export function useModulePipelineStages(
-  tenantId: string,
-  moduleId: string,
-  enabled = true,
-) {
-  return useQuery({
-    queryKey: [
-      "api",
-      "tenant",
-      tenantId,
-      "modules",
-      moduleId,
-      "pipeline-stages",
-    ] as const,
-    enabled: Boolean(tenantId) && Boolean(moduleId) && enabled,
-    queryFn: () =>
-      authenticatedJson<ApiPipelineStage[]>(
-        `/api/v1/tenant/${encodeURIComponent(tenantId)}/modules/${encodeURIComponent(moduleId)}/pipeline-stages`,
-      ),
-  });
-}
-
-function projectPipelineStagesKey(tenantId: string, projectId: string) {
-  return [
-    "api",
-    "tenant",
-    tenantId,
-    "projects",
-    projectId,
-    "pipeline-stages",
-  ] as const;
-}
-function modulePipelineStagesKey(tenantId: string, moduleId: string) {
-  return [
-    "api",
-    "tenant",
-    tenantId,
-    "modules",
-    moduleId,
-    "pipeline-stages",
-  ] as const;
-}
-
-export function useCreateProjectPipelineStage(
-  tenantId: string,
-  projectId: string,
-) {
+export function useUpdateModulePipelineStage(tenantId: string) {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: (input: { value: string; sortOrder?: number }) =>
-      apiJson<ApiPipelineStage>(
-        `/api/v1/tenant/${encodeURIComponent(tenantId)}/projects/${encodeURIComponent(projectId)}/pipeline-stages`,
-        { method: "POST", body: JSON.stringify(input) },
-      ),
-    async onSuccess() {
-      await queryClient.invalidateQueries({
-        queryKey: projectPipelineStagesKey(tenantId, projectId),
-      });
-    },
-  });
-}
-
-export function useUpdateProjectPipelineStage(
-  tenantId: string,
-  projectId: string,
-) {
-  const queryClient = useQueryClient();
-  return useMutation({
-    mutationFn: ({
-      id,
-      input,
-    }: {
-      id: string;
-      input: { value?: string; sortOrder?: number };
-    }) =>
-      apiJson<ApiPipelineStage>(
-        `/api/v1/tenant/${encodeURIComponent(tenantId)}/projects/${encodeURIComponent(projectId)}/pipeline-stages/${encodeURIComponent(id)}`,
-        { method: "PATCH", body: JSON.stringify(input) },
-      ),
-    async onSuccess() {
-      await queryClient.invalidateQueries({
-        queryKey: projectPipelineStagesKey(tenantId, projectId),
-      });
-    },
-  });
-}
-
-export function useDeleteProjectPipelineStage(
-  tenantId: string,
-  projectId: string,
-) {
-  const queryClient = useQueryClient();
-  return useMutation({
-    mutationFn: (id: string) =>
-      apiJson<ApiPipelineStage>(
-        `/api/v1/tenant/${encodeURIComponent(tenantId)}/projects/${encodeURIComponent(projectId)}/pipeline-stages/${encodeURIComponent(id)}`,
-        { method: "DELETE" },
-      ),
-    async onSuccess() {
-      await queryClient.invalidateQueries({
-        queryKey: projectPipelineStagesKey(tenantId, projectId),
-      });
-    },
-  });
-}
-
-export function useCreateModuleOwnPipelineStage(
-  tenantId: string,
-  moduleId: string,
-) {
-  const queryClient = useQueryClient();
-  return useMutation({
-    mutationFn: (input: { value: string; sortOrder?: number }) =>
-      apiJson<ApiPipelineStage>(
-        `/api/v1/tenant/${encodeURIComponent(tenantId)}/modules/${encodeURIComponent(moduleId)}/pipeline-stages`,
-        { method: "POST", body: JSON.stringify(input) },
-      ),
-    async onSuccess() {
-      await queryClient.invalidateQueries({
-        queryKey: modulePipelineStagesKey(tenantId, moduleId),
-      });
-    },
-  });
-}
-
-export function useUpdateModuleOwnPipelineStage(
-  tenantId: string,
-  moduleId: string,
-) {
-  const queryClient = useQueryClient();
-  return useMutation({
-    mutationFn: ({
-      id,
-      input,
-    }: {
-      id: string;
-      input: { value?: string; sortOrder?: number };
-    }) =>
-      apiJson<ApiPipelineStage>(
-        `/api/v1/tenant/${encodeURIComponent(tenantId)}/modules/${encodeURIComponent(moduleId)}/pipeline-stages/${encodeURIComponent(id)}`,
-        { method: "PATCH", body: JSON.stringify(input) },
-      ),
-    async onSuccess() {
-      await queryClient.invalidateQueries({
-        queryKey: modulePipelineStagesKey(tenantId, moduleId),
-      });
-    },
-  });
-}
-
-export function useDeleteModuleOwnPipelineStage(
-  tenantId: string,
-  moduleId: string,
-) {
-  const queryClient = useQueryClient();
-  return useMutation({
-    mutationFn: (id: string) =>
-      apiJson<ApiPipelineStage>(
-        `/api/v1/tenant/${encodeURIComponent(tenantId)}/modules/${encodeURIComponent(moduleId)}/pipeline-stages/${encodeURIComponent(id)}`,
-        { method: "DELETE" },
-      ),
-    async onSuccess() {
-      await queryClient.invalidateQueries({
-        queryKey: modulePipelineStagesKey(tenantId, moduleId),
-      });
-    },
-  });
-}
-
-export function useCreatePipelineStage(tenantId: string) {
-  const queryClient = useQueryClient();
-  return useMutation({
-    mutationFn: async (input: { value: string; sortOrder?: number }) =>
-      responseData<ApiPipelineStage>(
-        await apiClient.POST("/api/v1/tenant/{tenantId}/pipeline-stages", {
-          params: { path: { tenantId } },
-          body: input,
-        }),
-      ),
-    async onSuccess() {
-      await queryClient.invalidateQueries({ queryKey: pipelineStagesKey });
-    },
-  });
-}
-
-export function useUpdatePipelineStage(tenantId: string) {
-  const queryClient = useQueryClient();
-  return useMutation({
-    mutationFn: async ({
-      id,
-      input,
-    }: {
-      id: string;
-      input: { value?: string; sortOrder?: number };
-    }) =>
+    mutationFn: async (input: { value: string; hidden: boolean }) =>
       responseData<ApiPipelineStage>(
         await apiClient.PATCH(
-          "/api/v1/tenant/{tenantId}/pipeline-stages/{id}",
-          {
-            params: { path: { tenantId, id } },
-            body: input,
-          },
-        ),
-      ),
-    async onSuccess() {
-      await queryClient.invalidateQueries({ queryKey: pipelineStagesKey });
-    },
-  });
-}
-
-export function useDeletePipelineStage(tenantId: string) {
-  const queryClient = useQueryClient();
-  return useMutation({
-    mutationFn: async (id: string) =>
-      responseData<ApiPipelineStage>(
-        await apiClient.DELETE(
-          "/api/v1/tenant/{tenantId}/pipeline-stages/{id}",
-          {
-            params: { path: { tenantId, id } },
-          },
-        ),
-      ),
-    async onSuccess() {
-      await queryClient.invalidateQueries({ queryKey: pipelineStagesKey });
-    },
-  });
-}
-
-export function useCreateModulePipelineStage(tenantId: string) {
-  const queryClient = useQueryClient();
-  return useMutation({
-    mutationFn: async (input: { value: string; sortOrder?: number }) =>
-      responseData<ApiPipelineStage>(
-        await apiClient.POST(
-          "/api/v1/tenant/{tenantId}/module-pipeline-stages",
+          "/api/v1/tenant/{tenantId}/module-pipeline-stages/visibility",
           {
             params: { path: { tenantId } },
             body: input,
@@ -2327,34 +2032,48 @@ export function useCreateModulePipelineStage(tenantId: string) {
       ),
     async onSuccess() {
       await queryClient.invalidateQueries({
-        queryKey: modulePipelineStagePoolKey,
+        queryKey: apiKeys.modulePipelineStages(tenantId),
       });
     },
   });
 }
 
-export function useUpdateModulePipelineStage(tenantId: string) {
+export function useReorderModulePipelineStages(tenantId: string) {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: async ({
-      id,
-      input,
-    }: {
-      id: string;
-      input: { value?: string; sortOrder?: number };
-    }) =>
-      responseData<ApiPipelineStage>(
-        await apiClient.PATCH(
-          "/api/v1/tenant/{tenantId}/module-pipeline-stages/{id}",
+    mutationFn: async (order: string[]) =>
+      responseData<ApiPipelineStage[]>(
+        await apiClient.PUT(
+          "/api/v1/tenant/{tenantId}/module-pipeline-stages/order",
           {
-            params: { path: { tenantId, id } },
-            body: input,
+            params: { path: { tenantId } },
+            body: { order },
           },
         ),
       ),
     async onSuccess() {
       await queryClient.invalidateQueries({
-        queryKey: modulePipelineStagePoolKey,
+        queryKey: apiKeys.modulePipelineStages(tenantId),
+      });
+    },
+  });
+}
+
+export function useResetModulePipelineStages(tenantId: string) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async () =>
+      responseData<ApiPipelineStage[]>(
+        await apiClient.POST(
+          "/api/v1/tenant/{tenantId}/module-pipeline-stages/reset",
+          {
+            params: { path: { tenantId } },
+          },
+        ),
+      ),
+    async onSuccess() {
+      await queryClient.invalidateQueries({
+        queryKey: apiKeys.modulePipelineStages(tenantId),
       });
     },
   });
@@ -2403,25 +2122,5 @@ export function useAnalyticsSummary(tenantId: string, days?: number, enabled = t
           params: { path: { tenantId }, query: days ? { days } : {} },
         }),
       ),
-  });
-}
-
-export function useDeleteModulePipelineStage(tenantId: string) {
-  const queryClient = useQueryClient();
-  return useMutation({
-    mutationFn: async (id: string) =>
-      responseData<ApiPipelineStage>(
-        await apiClient.DELETE(
-          "/api/v1/tenant/{tenantId}/module-pipeline-stages/{id}",
-          {
-            params: { path: { tenantId, id } },
-          },
-        ),
-      ),
-    async onSuccess() {
-      await queryClient.invalidateQueries({
-        queryKey: modulePipelineStagePoolKey,
-      });
-    },
   });
 }

@@ -5,17 +5,17 @@ describe('ModulePipelineStagesPoolController', () => {
   let controller: ModulePipelineStagesPoolController;
   let service: {
     list: jest.Mock;
-    create: jest.Mock;
-    update: jest.Mock;
-    remove: jest.Mock;
+    updateVisibility: jest.Mock;
+    reorder: jest.Mock;
+    reset: jest.Mock;
   };
 
   beforeEach(() => {
     service = {
       list: jest.fn(),
-      create: jest.fn(),
-      update: jest.fn(),
-      remove: jest.fn(),
+      updateVisibility: jest.fn(),
+      reorder: jest.fn(),
+      reset: jest.fn(),
     };
     controller = new ModulePipelineStagesPoolController(
       service as unknown as ModulePipelineStagesPoolService,
@@ -32,33 +32,42 @@ describe('ModulePipelineStagesPoolController', () => {
     expect(result).toBe(stages);
   });
 
-  it('creates a stage with a default sortOrder of 0 when omitted', async () => {
-    service.create.mockResolvedValue({ id: 's2' });
-
-    await controller.create('tenant-1', { value: 'Testing' });
-
-    expect(service.create).toHaveBeenCalledWith('tenant-1', 'Testing', 0);
-  });
-
-  it('updates a stage', async () => {
-    service.update.mockResolvedValue({ id: 's1', value: 'Renamed' });
-
-    const result = await controller.update('tenant-1', 's1', {
-      value: 'Renamed',
+  it("updates a stage's visibility", async () => {
+    service.updateVisibility.mockResolvedValue({
+      value: 'Lit Review',
+      hidden: true,
     });
 
-    expect(service.update).toHaveBeenCalledWith('tenant-1', 's1', {
-      value: 'Renamed',
+    const result = await controller.updateVisibility('tenant-1', {
+      value: 'Lit Review',
+      hidden: true,
     });
-    expect(result).toEqual({ id: 's1', value: 'Renamed' });
+
+    expect(service.updateVisibility).toHaveBeenCalledWith(
+      'tenant-1',
+      'Lit Review',
+      true,
+    );
+    expect(result).toEqual({ value: 'Lit Review', hidden: true });
   });
 
-  it('removes a stage', async () => {
-    service.remove.mockResolvedValue({ id: 's1' });
+  it('reorders stages', async () => {
+    service.reorder.mockResolvedValue([{ value: 'Complete', sortOrder: 1 }]);
 
-    const result = await controller.remove('tenant-1', 's1');
+    const result = await controller.reorder('tenant-1', {
+      order: ['Complete'],
+    });
 
-    expect(service.remove).toHaveBeenCalledWith('tenant-1', 's1');
-    expect(result).toEqual({ id: 's1' });
+    expect(service.reorder).toHaveBeenCalledWith('tenant-1', ['Complete']);
+    expect(result).toEqual([{ value: 'Complete', sortOrder: 1 }]);
+  });
+
+  it('resets to defaults', async () => {
+    service.reset.mockResolvedValue([{ value: 'Concept, Ideation' }]);
+
+    const result = await controller.reset('tenant-1');
+
+    expect(service.reset).toHaveBeenCalledWith('tenant-1');
+    expect(result).toEqual([{ value: 'Concept, Ideation' }]);
   });
 });

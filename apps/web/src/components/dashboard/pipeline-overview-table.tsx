@@ -1,13 +1,12 @@
 import { useMemo, useState } from "react";
 import { Link } from "react-router-dom";
 
-import { useCurrentWorkspace, usePipelineStages, useProjects, useTasks } from "@/api/hooks";
+import { useCurrentWorkspace, useModulePipelineStagePool, useModules, useTasks } from "@/api/hooks";
 import {
   PipelineBar,
   PipelineStageRuler,
 } from "@/components/dashboard/pipeline-bar";
 import { ColumnVisibilityMenu } from "@/components/dashboard/column-visibility-menu";
-import { priorityBadgeClass } from "@/components/dashboard/priority-badge-styles";
 import { Badge } from "@/components/ui/badge";
 import {
   Card,
@@ -35,27 +34,22 @@ import {
 import { cn } from "@/lib/utils";
 import { useColumnVisibility } from "@/hooks/use-column-visibility";
 
-const PRIORITY_FILTERS = ["All", "Critical", "High", "Medium", "Low"] as const;
 const PIPELINE_COLUMNS = [
-  { id: "project", label: "Project" },
+  { id: "paper", label: "Paper" },
   { id: "pipeline", label: "Stage Bar" },
   { id: "completion", label: "Progress" },
-  { id: "priority", label: "Priority" },
 ] as const;
-
-type PriorityFilter = (typeof PRIORITY_FILTERS)[number];
 
 export function PipelineOverviewTable() {
   const workspace = useCurrentWorkspace();
   const tenantId = workspace.data?.id ?? "";
-  const projectsQuery = useProjects(tenantId);
-  const projects = projectsQuery.data?.data ?? [];
+  const modulesQuery = useModules(tenantId);
+  const papers = modulesQuery.data?.data ?? [];
   const tasksQuery = useTasks(tenantId);
   const tasks = tasksQuery.data?.data ?? [];
-  const pipelineStagesQuery = usePipelineStages(tenantId);
+  const pipelineStagesQuery = useModulePipelineStagePool(tenantId);
 
   const [search, setSearch] = useState("");
-  const [priority, setPriority] = useState<PriorityFilter>("All");
   const [stage, setStage] = useState("All");
   const columns = useColumnVisibility(
     PIPELINE_COLUMNS.map((column) => column.id),
@@ -63,7 +57,10 @@ export function PipelineOverviewTable() {
   );
 
   const stages = useMemo(
-    () => [...(pipelineStagesQuery.data ?? [])].sort((a, b) => a.sortOrder - b.sortOrder),
+    () =>
+      [...(pipelineStagesQuery.data ?? [])]
+        .filter((s) => !s.hidden)
+        .sort((a, b) => a.sortOrder - b.sortOrder),
     [pipelineStagesQuery.data],
   );
   const stageNames = stages.map((s) => s.value);
@@ -75,52 +72,49 @@ export function PipelineOverviewTable() {
   }, [stages]);
   const pipelineWidth = `${Math.max(1280, stageNames.length * 128)}px`;
 
-  const taskCountByProject = useMemo(() => {
+  const taskCountByPaper = useMemo(() => {
     const counts = new Map<string, { completed: number; total: number }>();
     for (const task of tasks) {
-      if (!task.projectId) continue;
-      const entry = counts.get(task.projectId) ?? { completed: 0, total: 0 };
+      if (!task.moduleId) continue;
+      const entry = counts.get(task.moduleId) ?? { completed: 0, total: 0 };
       entry.total += 1;
       if (task.status === "Complete") entry.completed += 1;
-      counts.set(task.projectId, entry);
+      counts.set(task.moduleId, entry);
     }
     return counts;
   }, [tasks]);
 
-  const projectRows = useMemo(
+  const paperRows = useMemo(
     () =>
-      projects.map((project) => {
-          const counts = taskCountByProject.get(project.id) ?? { completed: 0, total: 0 };
-          const stageIndex = project.pipelineStage
-            ? stageIndexByValue.get(project.pipelineStage)
+      papers.map((paper) => {
+          const counts = taskCountByPaper.get(paper.id) ?? { completed: 0, total: 0 };
+          const stageIndex = paper.pipelineStage
+            ? stageIndexByValue.get(paper.pipelineStage)
             : undefined;
           return {
-            id: project.id,
-            name: project.title,
-            priority: project.importance,
+            id: paper.id,
+            name: paper.title,
             stageIndex,
             completion: counts.total > 0 ? Math.round((counts.completed / counts.total) * 100) : 0,
           };
         }),
-    [projects, taskCountByProject, stageIndexByValue],
+    [papers, taskCountByPaper, stageIndexByValue],
   );
 
   const filtered = useMemo(() => {
     const query = search.trim().toLowerCase();
-    return projectRows.filter((row) => {
-      if (priority !== "All" && row.priority !== priority) return false;
+    return paperRows.filter((row) => {
       const rowStage = row.stageIndex === undefined ? "Unassigned" : stageNames[row.stageIndex];
       if (stage !== "All" && rowStage !== stage) return false;
       if (query && !row.name.toLowerCase().includes(query)) return false;
       return true;
     });
-  }, [projectRows, search, priority, stage, stageNames]);
+  }, [paperRows, search, stage, stageNames]);
 
-  const hasActiveFilters = search !== "" || priority !== "All" || stage !== "All";
+  const hasActiveFilters = search !== "" || stage !== "All";
 
   function clearFilters() {
     setSearch("");
-    setPriority("All");
     setStage("All");
   }
 
@@ -128,33 +122,18 @@ export function PipelineOverviewTable() {
     <Card>
       <CardHeader className="gap-4">
         <div>
-          <CardTitle>Pipeline Project Overview</CardTitle>
+          <CardTitle>Pipeline Paper Overview</CardTitle>
           <CardDescription>
-            Where every project stands, from Concept through Published.
+            Where every paper stands, from Concept through Complete.
           </CardDescription>
         </div>
         <div className="flex flex-wrap items-center gap-3">
           <Input
             value={search}
             onChange={(event) => setSearch(event.target.value)}
-            placeholder="Search project…"
+            placeholder="Search paper…"
             className="sm:max-w-xs"
           />
-          <Select
-            value={priority}
-            onValueChange={(value) => setPriority(value as PriorityFilter)}
-          >
-            <SelectTrigger className="sm:w-36">
-              <SelectValue placeholder="Priority" />
-            </SelectTrigger>
-            <SelectContent>
-              {PRIORITY_FILTERS.map((option) => (
-                <SelectItem key={option} value={option}>
-                  {option === "All" ? "All priorities" : option}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
           <Select
             value={stage}
             onValueChange={setStage}
@@ -190,7 +169,7 @@ export function PipelineOverviewTable() {
         <Table>
           <TableHeader>
             <TableRow>
-              {columns.isColumnVisible("project") ? <TableHead>Project</TableHead> : null}
+              {columns.isColumnVisible("paper") ? <TableHead>Paper</TableHead> : null}
               {columns.isColumnVisible("pipeline") ? (
                 <TableHead style={{ minWidth: pipelineWidth }}>
                   <PipelineStageRuler stages={stageNames} />
@@ -199,7 +178,6 @@ export function PipelineOverviewTable() {
               {columns.isColumnVisible("completion") ? (
                 <TableHead>Progress</TableHead>
               ) : null}
-              {columns.isColumnVisible("priority") ? <TableHead>Priority</TableHead> : null}
             </TableRow>
           </TableHeader>
 
@@ -210,19 +188,19 @@ export function PipelineOverviewTable() {
                   colSpan={columns.visibleColumns.size}
                   className="h-24 text-center text-muted-foreground"
                 >
-                  No projects match the current filters.
+                  No papers match the current filters.
                 </TableCell>
               </TableRow>
             ) : (
               filtered.map((row) => (
                 <TableRow key={row.id}>
-                  {columns.isColumnVisible("project") ? (
+                  {columns.isColumnVisible("paper") ? (
                     <TableCell
                       className={cn("max-w-[220px] truncate font-medium")}
                       title={row.name}
                     >
                       <Link
-                        to={`/projects/${row.id}`}
+                        to={`/modules/${row.id}`}
                         className="text-primary hover:underline"
                       >
                         {row.name}
@@ -234,7 +212,7 @@ export function PipelineOverviewTable() {
                     <TableCell style={{ minWidth: pipelineWidth }}>
                       {row.stageIndex === undefined ? (
                         <Badge variant="outline" className="border-amber-300 bg-amber-50 text-amber-800 dark:border-amber-800 dark:bg-amber-950/30 dark:text-amber-300">
-                          Unassigned — choose a stage in Projects
+                          Unassigned — choose a stage in Papers
                         </Badge>
                       ) : (
                         <PipelineBar
@@ -250,18 +228,6 @@ export function PipelineOverviewTable() {
                       {row.completion}%
                     </TableCell>
                   ) : null}
-
-                  {columns.isColumnVisible("priority") ? (
-                    <TableCell>
-                      <Badge
-                        variant="outline"
-                        className={priorityBadgeClass(row.priority)}
-                      >
-                        {row.priority ?? "—"}
-                      </Badge>
-                    </TableCell>
-                  ) : null}
-
                 </TableRow>
               ))
             )}

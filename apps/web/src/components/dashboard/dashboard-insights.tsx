@@ -11,7 +11,8 @@ import { Link } from "react-router-dom";
 
 import {
   useCurrentWorkspace,
-  usePipelineStages,
+  useModulePipelineStagePool,
+  useModules,
   useProjects,
   useTasks,
 } from "@/api/hooks";
@@ -66,17 +67,19 @@ function addDays(date: Date, days: number) {
 export function PipelineDistributionCard() {
   const workspace = useCurrentWorkspace();
   const tenantId = workspace.data?.id ?? "";
-  const projectsQuery = useProjects(tenantId);
-  const projects = projectsQuery.data?.data ?? [];
-  const stagesQuery = usePipelineStages(tenantId);
-  const orderedStages = [...(stagesQuery.data ?? [])].sort((a, b) => a.sortOrder - b.sortOrder);
+  const modulesQuery = useModules(tenantId);
+  const papers = modulesQuery.data?.data ?? [];
+  const stagesQuery = useModulePipelineStagePool(tenantId);
+  const orderedStages = [...(stagesQuery.data ?? [])]
+    .filter((stage) => !stage.hidden)
+    .sort((a, b) => a.sortOrder - b.sortOrder);
   const knownStages = new Set(orderedStages.map((stage) => stage.value));
   const stageCounts = orderedStages.map((stage) => ({
     label: stage.value,
-    count: projects.filter((project) => project.pipelineStage === stage.value).length,
+    count: papers.filter((paper) => paper.pipelineStage === stage.value).length,
   }));
-  const unassigned = projects.filter(
-    (project) => !project.pipelineStage || !knownStages.has(project.pipelineStage),
+  const unassigned = papers.filter(
+    (paper) => !paper.pipelineStage || !knownStages.has(paper.pipelineStage),
   ).length;
   if (unassigned > 0) stageCounts.push({ label: "Unassigned", count: unassigned });
   const largestStage = Math.max(1, ...stageCounts.map((stage) => stage.count));
@@ -93,11 +96,11 @@ export function PipelineDistributionCard() {
             <GitBranch className="h-4 w-4 text-blue-600" />
             Pipeline distribution
           </CardTitle>
-          <CardDescription>Project volume across each research stage.</CardDescription>
+          <CardDescription>Paper volume across each research stage.</CardDescription>
         </div>
         <div className="mt-3 flex items-center gap-2 sm:mt-0">
           <Badge variant="outline" className="w-fit bg-background">
-            {projects.length} {projects.length === 1 ? "project" : "projects"}
+            {papers.length} {papers.length === 1 ? "paper" : "papers"}
           </Badge>
           <Button asChild variant="ghost" size="sm">
             <Link to="/pipeline">View pipeline</Link>
@@ -105,23 +108,23 @@ export function PipelineDistributionCard() {
         </div>
       </CardHeader>
       <CardContent className="relative z-10 pt-6">
-        {projects.length === 0 ? (
+        {papers.length === 0 ? (
           <div className="flex min-h-48 flex-col items-center justify-center rounded-xl border border-dashed bg-muted/40 px-6 text-center">
             <GitBranch className="mb-3 h-7 w-7 text-muted-foreground/60" />
             <p className="font-medium">No pipeline data yet</p>
             <p className="mt-1 text-sm text-muted-foreground">
-              Projects will appear here after they are assigned to stages.
+              Papers will appear here after they are assigned to stages.
             </p>
           </div>
         ) : (
-          <div className="space-y-4" aria-label="Project count by pipeline stage">
+          <div className="space-y-4" aria-label="Paper count by pipeline stage">
             {stageCounts.map((stage, index) => {
-              const share = Math.round((stage.count / projects.length) * 100);
+              const share = Math.round((stage.count / papers.length) * 100);
               return (
                 <Link
                   key={stage.label}
                   to="/pipeline"
-                  aria-label={`View pipeline — ${stage.label}: ${stage.count} ${stage.count === 1 ? "project" : "projects"}`}
+                  aria-label={`View pipeline — ${stage.label}: ${stage.count} ${stage.count === 1 ? "paper" : "papers"}`}
                   className="grid grid-cols-[minmax(7rem,10rem)_1fr_auto] items-center gap-3 rounded-lg p-1.5 -m-1.5 transition-colors hover:bg-muted/60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
                 >
                   <span className="truncate text-sm font-medium" title={stage.label}>{stage.label}</span>
@@ -332,7 +335,7 @@ export function ProjectProgressCard() {
           <TableHeader>
             <TableRow>
               <TableHead>Project</TableHead>
-              <TableHead className="hidden sm:table-cell">Stage</TableHead>
+              <TableHead className="hidden sm:table-cell">Status</TableHead>
               <TableHead className="w-28 text-right">Tasks</TableHead>
               <TableHead className="w-44">Progress</TableHead>
             </TableRow>
@@ -353,7 +356,7 @@ export function ProjectProgressCard() {
                 </TableCell>
                 <TableCell className="hidden sm:table-cell">
                   <Badge variant="outline" className="max-w-44 truncate bg-muted/40 font-normal">
-                    {project.pipelineStage ?? "Unassigned"}
+                    {project.status ?? "Unassigned"}
                   </Badge>
                 </TableCell>
                 <TableCell className="text-right text-sm tabular-nums text-muted-foreground">

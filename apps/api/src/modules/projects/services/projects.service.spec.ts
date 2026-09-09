@@ -18,9 +18,7 @@ describe('ProjectsService', () => {
   };
   let enumRepository: {
     findByCategoryAndValue: jest.Mock;
-    findPipelineStageForProjectByValue: jest.Mock;
     findValuesByIds: jest.Mock;
-    ensureTenantPipelineStages: jest.Mock;
   };
   let collaboratorsRepository: {
     findByProjectAndUser: jest.Mock;
@@ -40,13 +38,11 @@ describe('ProjectsService', () => {
     };
     enumRepository = {
       findByCategoryAndValue: jest.fn(),
-      findPipelineStageForProjectByValue: jest.fn(),
       findValuesByIds: jest
         .fn()
         .mockImplementation((ids: string[]) =>
           Promise.resolve(new Map(ids.map((id) => [id, id]))),
         ),
-      ensureTenantPipelineStages: jest.fn().mockResolvedValue(undefined),
     };
     collaboratorsRepository = {
       findByProjectAndUser: jest.fn().mockResolvedValue(undefined),
@@ -78,7 +74,6 @@ describe('ProjectsService', () => {
         title: 'Test',
         userId: 'owner-1',
         statusId: null,
-        pipelineStageId: null,
         importanceId: null,
       });
       collaboratorsRepository.findByProjectIdsAndUser.mockResolvedValue(
@@ -96,7 +91,6 @@ describe('ProjectsService', () => {
         title: 'Test',
         userId: 'user-1',
         statusId: null,
-        pipelineStageId: null,
         importanceId: null,
       });
       const result = await service.findOne('tenant-1', 'project-1', 'user-1');
@@ -111,7 +105,6 @@ describe('ProjectsService', () => {
         title: 'Test',
         userId: 'owner-1',
         statusId: null,
-        pipelineStageId: null,
         importanceId: null,
       });
       await expect(
@@ -130,7 +123,6 @@ describe('ProjectsService', () => {
             title: 'Owned here',
             userId: 'user-1',
             statusId: null,
-            pipelineStageId: null,
             importanceId: null,
             archivedAt: null,
           },
@@ -140,7 +132,6 @@ describe('ProjectsService', () => {
             title: 'Collaborating elsewhere',
             userId: 'owner-2',
             statusId: null,
-            pipelineStageId: null,
             importanceId: null,
             archivedAt: null,
           },
@@ -182,7 +173,6 @@ describe('ProjectsService', () => {
         title: 'Test',
         userId: 'owner-1',
         statusId: null,
-        pipelineStageId: null,
         importanceId: null,
       });
       collaboratorsRepository.findByProjectIdsAndUser.mockResolvedValue(
@@ -214,7 +204,6 @@ describe('ProjectsService', () => {
         id: 'project-1',
         userId: 'user-1',
         statusId: null,
-        pipelineStageId: null,
         importanceId: null,
       });
       enumRepository.findByCategoryAndValue.mockResolvedValue({
@@ -223,7 +212,6 @@ describe('ProjectsService', () => {
       repository.archive.mockResolvedValue({
         id: 'project-1',
         statusId: 'archived-status-id',
-        pipelineStageId: null,
         importanceId: null,
       });
 
@@ -253,7 +241,6 @@ describe('ProjectsService', () => {
             title: 'Project One',
             userId: 'user-1',
             statusId: null,
-            pipelineStageId: null,
             importanceId: null,
           },
         ],
@@ -281,7 +268,7 @@ describe('ProjectsService', () => {
   });
 
   describe('create', () => {
-    it('resolves status/pipelineStage/importance to enum ids', async () => {
+    it('resolves status/importance to enum ids', async () => {
       enumRepository.findByCategoryAndValue.mockImplementation(
         (category: string, value: string) =>
           Promise.resolve({ id: `${category}-${value}-id` }),
@@ -289,59 +276,21 @@ describe('ProjectsService', () => {
       repository.create.mockResolvedValue({
         id: 'project-1',
         statusId: 'project_status-Active-id',
-        pipelineStageId: 'project_pipeline_stage-Concept & Ideation-id',
         importanceId: 'importance-High-id',
       });
 
       await service.create('user-1', 'tenant-1', {
         title: 'New Project',
         status: 'Active',
-        pipelineStage: 'Concept & Ideation',
         importance: 'High',
       });
 
       expect(repository.create).toHaveBeenCalledWith(
         expect.objectContaining({
           statusId: 'project_status-Active-id',
-          pipelineStageId: 'project_pipeline_stage-Concept & Ideation-id',
           importanceId: 'importance-High-id',
         }),
         expect.any(String),
-      );
-    });
-
-    it('passes an ordered project-specific stage list to the creation transaction', async () => {
-      enumRepository.findByCategoryAndValue.mockImplementation(
-        (category: string, value: string) =>
-          Promise.resolve({ id: `${category}-${value}-id` }),
-      );
-      repository.create.mockResolvedValue({
-        id: 'project-1',
-        statusId: null,
-        pipelineStageId: 'scoped-stage-2',
-        importanceId: null,
-      });
-
-      await service.create('user-1', 'tenant-1', {
-        title: 'Custom workflow project',
-        pipelineStage: 'Analysis',
-        pipelineStages: ['Concept', 'Analysis', 'Publication'],
-      });
-
-      expect(repository.create).toHaveBeenCalledWith(
-        expect.objectContaining({ pipelineStageId: undefined }),
-        expect.any(String),
-        ['Concept', 'Analysis', 'Publication'],
-        'Analysis',
-      );
-      expect(enumRepository.findByCategoryAndValue).not.toHaveBeenCalledWith(
-        'project_pipeline_stage',
-        expect.any(String),
-      );
-      expect(enumRepository.ensureTenantPipelineStages).toHaveBeenCalledWith(
-        'tenant-1',
-        'project_pipeline_stage',
-        ['Concept', 'Analysis', 'Publication'],
       );
     });
 
@@ -366,7 +315,6 @@ describe('ProjectsService', () => {
       repository.create.mockResolvedValue({
         id: 'project-1',
         statusId: null,
-        pipelineStageId: null,
         importanceId: null,
       });
 
@@ -375,7 +323,6 @@ describe('ProjectsService', () => {
       expect(repository.create).toHaveBeenCalledWith(
         expect.objectContaining({
           statusId: undefined,
-          pipelineStageId: undefined,
           importanceId: undefined,
         }),
         'owner-role-id',
@@ -389,14 +336,12 @@ describe('ProjectsService', () => {
         id: 'project-1',
         userId: 'user-1',
         statusId: null,
-        pipelineStageId: null,
         importanceId: null,
       });
       repository.update.mockResolvedValue({
         id: 'project-1',
         title: 'Updated',
         statusId: null,
-        pipelineStageId: null,
         importanceId: null,
       });
 
@@ -421,7 +366,6 @@ describe('ProjectsService', () => {
         id: 'project-1',
         userId: 'user-1',
         statusId: null,
-        pipelineStageId: null,
         importanceId: null,
       });
       enumRepository.findByCategoryAndValue.mockResolvedValue({
@@ -430,7 +374,6 @@ describe('ProjectsService', () => {
       repository.archive.mockResolvedValue({
         id: 'project-1',
         statusId: 'archived-status-id',
-        pipelineStageId: null,
         importanceId: null,
       });
 

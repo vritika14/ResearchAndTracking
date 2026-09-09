@@ -61,8 +61,8 @@ const fixtures = vi.hoisted(() => ({
     { id: "tag-1", tenantId: null, category: "module_type", value: "Research Paper", sortOrder: 1, createdAt: "", updatedAt: "" },
   ],
   stageValues: [
-    { id: "stage-1", tenantId: null, category: "module_pipeline_stage", value: "Concept & Ideation", sortOrder: 1, createdAt: "", updatedAt: "" },
-    { id: "stage-2", tenantId: null, category: "module_pipeline_stage", value: "Literature Review", sortOrder: 2, createdAt: "", updatedAt: "" },
+    { id: "stage-1", tenantId: null, category: "module_pipeline_stage", value: "Concept & Ideation", sortOrder: 1, hidden: false, createdAt: "", updatedAt: "" },
+    { id: "stage-2", tenantId: null, category: "module_pipeline_stage", value: "Literature Review", sortOrder: 2, hidden: false, createdAt: "", updatedAt: "" },
   ],
 }));
 
@@ -123,7 +123,7 @@ vi.mock("@/api/hooks", async () => {
           ? [{ id: "role-owner", value: "Owner" }]
           : fixtures.tagValues,
     }),
-    useModulePipelineStages: () => ({ data: fixtures.stageValues }),
+    useModulePipelineStagePool: () => ({ data: fixtures.stageValues, isPending: false, isError: false }),
     useCreateModule: () => ({
       mutateAsync: vi.fn(async (input: Record<string, unknown>) => {
         const modules = store.getModules();
@@ -215,22 +215,22 @@ describe("ModulesPage", () => {
       </MemoryRouter>,
     );
 
-    fireEvent.click(screen.getByRole("button", { name: "New Module" }));
+    fireEvent.click(screen.getByRole("button", { name: "New Paper" }));
     expect(screen.getByRole("textbox", { name: /Description/ })).not.toBeRequired();
     await waitFor(() =>
-      expect(screen.getByRole("combobox", { name: /Starting stage/ })).toHaveTextContent(
+      expect(screen.getByRole("combobox", { name: /Pipeline stage/ })).toHaveTextContent(
         "Concept & Ideation",
       ),
     );
-    fireEvent.change(screen.getByRole("textbox", { name: /Module title/ }), {
+    fireEvent.change(screen.getByRole("textbox", { name: /Paper title/ }), {
       target: { value: "Independent literature synthesis" },
     });
-    fireEvent.click(screen.getByRole("button", { name: "Create Module" }));
+    fireEvent.click(screen.getByRole("button", { name: "Create Paper" }));
 
     await waitFor(() =>
       expect(screen.getByText("Independent literature synthesis")).toBeInTheDocument(),
     );
-    expect(screen.getAllByText("Independent module").length).toBeGreaterThan(0);
+    expect(screen.getAllByText("Independent paper").length).toBeGreaterThan(0);
     expect(screen.getAllByText("Concept & Ideation").length).toBeGreaterThan(0);
   });
 
@@ -241,7 +241,7 @@ describe("ModulesPage", () => {
       </MemoryRouter>,
     );
 
-    fireEvent.click(screen.getByRole("button", { name: "New Module" }));
+    fireEvent.click(screen.getByRole("button", { name: "New Paper" }));
     const dueDate = screen.getByLabelText(/Due date/);
     expect(dueDate).toHaveAttribute("placeholder", "DD/MM/YYYY");
     expect(dueDate).not.toBeRequired();
@@ -282,8 +282,8 @@ describe("ModulesPage", () => {
       </MemoryRouter>,
     );
 
-    fireEvent.click(screen.getByRole("button", { name: "New Module" }));
-    fireEvent.click(screen.getByRole("checkbox", { name: /Independent module/ }));
+    fireEvent.click(screen.getByRole("button", { name: "New Paper" }));
+    fireEvent.click(screen.getByRole("checkbox", { name: /Independent paper/ }));
 
     expect(screen.getByRole("combobox", { name: /Project/ })).toBeInTheDocument();
   });
@@ -299,7 +299,7 @@ describe("ModulesPage", () => {
       screen.getByRole("button", { name: "Manage collaborators for Literature synthesis" }),
     );
 
-    expect(screen.getByRole("heading", { name: "Module collaborators" })).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "Paper collaborators" })).toBeInTheDocument();
     expect(screen.getByRole("combobox", { name: "Collaborator email" })).toBeInTheDocument();
   });
 
@@ -370,7 +370,7 @@ describe("ModulesPage", () => {
 
     expect(titleOrder()).toEqual(["Alpha module", "Bravo module", "Charlie module"]);
 
-    fireEvent.click(screen.getByRole("button", { name: "Sort by Module" }));
+    fireEvent.click(screen.getByRole("button", { name: "Sort by Paper" }));
     expect(titleOrder()).toEqual(["Charlie module", "Bravo module", "Alpha module"]);
   });
 
@@ -381,8 +381,8 @@ describe("ModulesPage", () => {
       </MemoryRouter>,
     );
 
-    fireEvent.click(screen.getByRole("button", { name: "New Module" }));
+    fireEvent.click(screen.getByRole("button", { name: "New Paper" }));
     expect(screen.queryByRole("combobox", { name: "Collaborators" })).not.toBeInTheDocument();
-    expect(screen.getByText(/After creating the module, open it to invite collaborators by email/i)).toBeInTheDocument();
+    expect(screen.getByText(/After creating the paper, open it to invite collaborators by email/i)).toBeInTheDocument();
   });
 });

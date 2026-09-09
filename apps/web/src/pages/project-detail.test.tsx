@@ -27,7 +27,6 @@ const fixtures = vi.hoisted(() => ({
     description: null,
     researchArea: "Biochemistry",
     status: "Active",
-    pipelineStage: "Data Collection",
     importance: "Medium",
     scheduledFor: "2026-08-06",
     dueDate: "2026-08-15",
@@ -38,26 +37,6 @@ const fixtures = vi.hoisted(() => ({
     updatedAt: "2026-01-01T00:00:00.000Z",
     role: null as string | null,
   },
-  pipelineStages: [
-    {
-      id: "stage-1",
-      tenantId: null,
-      category: "pipeline_stage",
-      value: "Data Collection",
-      sortOrder: 1,
-      createdAt: "2026-01-01T00:00:00.000Z",
-      updatedAt: "2026-01-01T00:00:00.000Z",
-    },
-    {
-      id: "stage-2",
-      tenantId: null,
-      category: "pipeline_stage",
-      value: "Publication",
-      sortOrder: 2,
-      createdAt: "2026-01-01T00:00:00.000Z",
-      updatedAt: "2026-01-01T00:00:00.000Z",
-    },
-  ],
 }));
 
 vi.mock("@/api/hooks", () => ({
@@ -111,7 +90,7 @@ vi.mock("@/api/hooks", () => ({
   useUpdateNote: () => ({ mutateAsync: fixtures.updateNote, isPending: false }),
   useTrackEvent: () => vi.fn(),
   useEnumValues: () => ({ data: [], isPending: false }),
-  useModulePipelineStages: () => ({ data: [], isPending: false }),
+  useModulePipelineStagePool: () => ({ data: [], isPending: false, isError: false }),
   useModules: () => ({
     data: {
       data: fixtures.modules,
@@ -145,11 +124,6 @@ vi.mock("@/api/hooks", () => ({
       },
     },
   }),
-  useMyProjectPipelineStages: () => ({
-    data: fixtures.pipelineStages,
-    isPending: false,
-    isError: false,
-  }),
   useProjectCollaborators: () => ({ data: [], isPending: false }),
   useRemoveProjectCollaborator: () => ({ mutate: vi.fn() }),
   useCollaboratorInvitations: () => ({ data: [], isPending: false }),
@@ -171,7 +145,6 @@ describe("ProjectDetailPage", () => {
     fixtures.project.researchArea = "Biochemistry";
     fixtures.project.scheduledFor = "2026-08-06";
     fixtures.project.dueDate = "2026-08-15";
-    fixtures.project.pipelineStage = "Data Collection";
     fixtures.updateProject.mockReset();
     fixtures.updateProject.mockImplementation(
       async ({ input }: { input: Record<string, unknown> }) => {
@@ -291,7 +264,7 @@ describe("ProjectDetailPage", () => {
       screen.queryByRole("heading", { name: "Project collaborators" }),
     ).not.toBeInTheDocument();
     expect(
-      screen.getByRole("heading", { name: "Modules (1)" }),
+      screen.getByRole("heading", { name: "Papers (1)" }),
     ).toBeInTheDocument();
     expect(
       screen.getByRole("button", { name: "Show collaborators" }),
@@ -303,62 +276,11 @@ describe("ProjectDetailPage", () => {
       screen.getByRole("heading", { name: "Project collaborators" }),
     ).toBeInTheDocument();
     expect(
-      screen.getByRole("heading", { name: "Modules (1)" }),
+      screen.getByRole("heading", { name: "Papers (1)" }),
     ).toBeInTheDocument();
     expect(
       screen.getByRole("button", { name: "Hide collaborators" }),
     ).toHaveAttribute("aria-expanded", "true");
-  });
-
-  it("shows the project's selected stages in its pipeline at the bottom", () => {
-    render(
-      <MemoryRouter initialEntries={["/projects/PRJ-101"]}>
-        <Routes>
-          <Route path="projects/:projectId" element={<ProjectDetailPage />} />
-        </Routes>
-      </MemoryRouter>,
-    );
-
-    const pipeline = screen.getByRole("region", { name: "Project pipeline" });
-    expect(pipeline).toHaveTextContent("Data Collection");
-    expect(pipeline).toHaveTextContent("Publication");
-    expect(
-      screen.getByRole("group", {
-        name: "Data Collection stage, current stage",
-      }),
-    ).toContainElement(screen.getByLabelText(`Drag ${fixtures.project.title}`));
-  });
-
-  it("moves the project card when it is dropped onto another stage", async () => {
-    render(
-      <MemoryRouter initialEntries={["/projects/PRJ-101"]}>
-        <Routes>
-          <Route path="projects/:projectId" element={<ProjectDetailPage />} />
-        </Routes>
-      </MemoryRouter>,
-    );
-
-    const dataTransfer = {
-      effectAllowed: "none",
-      dropEffect: "none",
-      setData: vi.fn(),
-      getData: vi.fn(() => fixtures.project.id),
-    } as unknown as DataTransfer;
-    const projectCard = screen.getByLabelText(`Drag ${fixtures.project.title}`);
-    const targetStage = screen.getByRole("group", {
-      name: "Publication stage",
-    });
-
-    fireEvent.dragStart(projectCard, { dataTransfer });
-    fireEvent.dragOver(targetStage, { dataTransfer });
-    fireEvent.drop(targetStage, { dataTransfer });
-
-    await waitFor(() =>
-      expect(fixtures.updateProject).toHaveBeenCalledWith({
-        projectId: "PRJ-101",
-        input: { pipelineStage: "Publication" },
-      }),
-    );
   });
 
   it("unlinks a module from this project", async () => {

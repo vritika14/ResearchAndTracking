@@ -1,31 +1,18 @@
-import { useEffect, useMemo, useRef, useState, type DragEvent } from "react";
-import { GripVertical, Pencil, Settings2, Workflow } from "lucide-react";
+import { useMemo, useState, type DragEvent } from "react";
+import { GripVertical, Pencil, Workflow } from "lucide-react";
 import { Link } from "react-router-dom";
 
 import {
-  useCreateModuleOwnPipelineStage,
-  useCreateModulePipelineStage,
-  useCreatePipelineStage,
-  useCreateProjectPipelineStage,
   useCurrentWorkspace,
-  useDeleteModuleOwnPipelineStage,
-  useDeleteModulePipelineStage,
-  useDeletePipelineStage,
-  useDeleteProjectPipelineStage,
   useMe,
   useMembers,
   useModulePipelineStagePool,
-  useModulePipelineStages,
   useModules,
-  usePipelineStages,
-  useProjectPipelineStages,
   useProjects,
   useTasks,
   useUpdateModule,
-  useUpdateProject,
   type ApiPipelineStage,
 } from "@/api/hooks";
-import { ManageStagesDialog } from "@/components/pipeline/manage-stages-dialog";
 import { ErrorState } from "@/components/shared/error-state";
 import { LoadingState } from "@/components/shared/loading-state";
 import { PageHeading } from "@/components/typography/heading";
@@ -39,16 +26,9 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { cn } from "@/lib/utils";
-import { usePreferences } from "@/preferences/preferences-context";
 
 const VIEW_OPTIONS = ["Flow", "Columns"] as const;
 type ViewOption = (typeof VIEW_OPTIONS)[number];
-
-const ENTITY_TYPES = ["Project", "Module"] as const;
-type EntityType = (typeof ENTITY_TYPES)[number];
-
-const PRIORITY_FILTERS = ["All", "Critical", "High", "Medium", "Low"] as const;
-type PriorityFilter = (typeof PRIORITY_FILTERS)[number];
 
 const STATUS_FILTERS = ["All", "Active", "Review", "Stalled", "Complete"] as const;
 type StatusFilter = (typeof STATUS_FILTERS)[number];
@@ -63,30 +43,14 @@ const OUTSTANDING_CLASS = "text-xs font-medium";
 
 interface PipelineRow {
   id: string;
-  kind: EntityType;
   displayId: string | null;
   title: string;
-  priority: string | null;
   status: string | null;
-  role: string | null;
   assignee: string | null;
   projectId: string | null;
   completion: number;
   outstanding: number;
   stageIndex: number | undefined;
-}
-
-function priorityPillClass(priority: string | null) {
-  switch (priority) {
-    case "Critical":
-      return "border-red-200 bg-red-50 text-red-700 dark:border-red-800 dark:bg-red-950/40 dark:text-red-400";
-    case "High":
-      return "border-orange-200 bg-orange-50 text-orange-700 dark:border-orange-800 dark:bg-orange-950/40 dark:text-orange-400";
-    case "Medium":
-      return "border-blue-200 bg-blue-50 text-blue-700 dark:border-blue-800 dark:bg-blue-950/40 dark:text-blue-400";
-    default:
-      return "border-border bg-muted/50 text-muted-foreground";
-  }
 }
 
 function statusPillClass(status: string | null) {
@@ -133,15 +97,11 @@ interface PipelineItemRowProps {
 }
 
 function ItemEditLink({ row }: { row: PipelineRow }) {
-  const to =
-    row.kind === "Project"
-      ? `/projects/${row.id}?edit=true&from=pipeline`
-      : `/modules/${row.id}?edit=true&from=pipeline`;
   return (
     <Link
-      to={to}
+      to={`/modules/${row.id}?edit=true&from=pipeline`}
       aria-label={`Edit ${row.title}`}
-      title={`Edit ${row.kind.toLowerCase()}`}
+      title="Edit paper"
       className="inline-flex h-6 w-6 shrink-0 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-accent hover:text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
     >
       <Pencil className="h-3.5 w-3.5" />
@@ -184,15 +144,8 @@ function PipelineItemRow({
     row.outstanding === 0
       ? "text-muted-foreground"
       : "text-orange-600 dark:text-orange-400";
-  const isModule = row.kind === "Module";
-  const cardTone = isModule
-    ? "border-violet-200/70 bg-gradient-to-br from-violet-50/70 to-card dark:border-violet-900/50 dark:from-violet-950/20"
-    : "border-emerald-200/70 bg-gradient-to-br from-emerald-50/70 to-card dark:border-emerald-900/50 dark:from-emerald-950/20";
-  const cardToneRow = isModule
-    ? "border-violet-200/70 bg-gradient-to-r from-violet-50/70 to-card dark:border-violet-900/50 dark:from-violet-950/20"
-    : "border-emerald-200/70 bg-gradient-to-r from-emerald-50/70 to-card dark:border-emerald-900/50 dark:from-emerald-950/20";
-
-  const secondaryBadge = isModule ? row.assignee : row.priority;
+  const cardTone = "border-violet-200/70 bg-gradient-to-br from-violet-50/70 to-card dark:border-violet-900/50 dark:from-violet-950/20";
+  const cardToneRow = "border-violet-200/70 bg-gradient-to-r from-violet-50/70 to-card dark:border-violet-900/50 dark:from-violet-950/20";
 
   if (compact) {
     return (
@@ -217,10 +170,8 @@ function PipelineItemRow({
         </div>
         <span className={cn(ITEM_TITLE_CLASS, "leading-snug")}>{row.title}</span>
         <div className="flex flex-wrap items-center gap-1.5">
-          {secondaryBadge ? (
-            <Badge variant="outline" className={isModule ? undefined : priorityPillClass(row.priority)}>
-              {secondaryBadge}
-            </Badge>
+          {row.assignee ? (
+            <Badge variant="outline">{row.assignee}</Badge>
           ) : null}
           <Badge variant="outline" className={statusPillClass(row.status)}>
             {row.status ?? "—"}
@@ -255,10 +206,8 @@ function PipelineItemRow({
       <span className={ITEM_TITLE_CLASS}>{row.title}</span>
       <ItemEditLink row={row} />
       <div className="ml-auto flex flex-wrap items-center gap-3">
-        {secondaryBadge ? (
-          <Badge variant="outline" className={isModule ? undefined : priorityPillClass(row.priority)}>
-            {secondaryBadge}
-          </Badge>
+        {row.assignee ? (
+          <Badge variant="outline">{row.assignee}</Badge>
         ) : null}
         <Badge variant="outline" className={statusPillClass(row.status)}>
           {row.status ?? "—"}
@@ -286,140 +235,29 @@ export default function PipelinePage() {
   const membersQuery = useMembers(tenantId);
   const members = membersQuery.data?.data ?? [];
   const me = useMe();
-  const preferences = usePreferences();
 
-  const [entityType, setEntityType] = useState<EntityType>("Project");
-  const [entityFilter, setEntityFilter] = useState<string>(ALL_ENTITIES);
-  const isAllEntities = entityFilter === ALL_ENTITIES;
-
-  // Stage sources — exactly one of these four is active at a time, based on
-  // entityType × whether a single entity is filtered in.
-  const tenantProjectPoolQuery = usePipelineStages(
-    tenantId,
-    entityType === "Project" && isAllEntities,
-  );
-  const tenantModulePoolQuery = useModulePipelineStagePool(
-    tenantId,
-    entityType === "Module" && isAllEntities,
-  );
-  const oneProjectStagesQuery = useProjectPipelineStages(
-    tenantId,
-    entityFilter,
-    entityType === "Project" && !isAllEntities,
-  );
-  const oneModuleStagesQuery = useModulePipelineStages(
-    tenantId,
-    entityFilter,
-    entityType === "Module" && !isAllEntities,
-  );
-
-  const activeStagesQuery =
-    entityType === "Project"
-      ? isAllEntities
-        ? tenantProjectPoolQuery
-        : oneProjectStagesQuery
-      : isAllEntities
-        ? tenantModulePoolQuery
-        : oneModuleStagesQuery;
-
-  const updateProject = useUpdateProject(tenantId);
+  const stagesQuery = useModulePipelineStagePool(tenantId);
   const updateModule = useUpdateModule(tenantId);
-  const createProjectPoolStage = useCreatePipelineStage(tenantId);
-  const deleteProjectPoolStage = useDeletePipelineStage(tenantId);
-  const createModulePoolStage = useCreateModulePipelineStage(tenantId);
-  const deleteModulePoolStage = useDeleteModulePipelineStage(tenantId);
-  const createOwnProjectStage = useCreateProjectPipelineStage(
-    tenantId,
-    isAllEntities ? "" : entityFilter,
-  );
-  const deleteOwnProjectStage = useDeleteProjectPipelineStage(
-    tenantId,
-    isAllEntities ? "" : entityFilter,
-  );
-  const createOwnModuleStage = useCreateModuleOwnPipelineStage(
-    tenantId,
-    isAllEntities ? "" : entityFilter,
-  );
-  const deleteOwnModuleStage = useDeleteModuleOwnPipelineStage(
-    tenantId,
-    isAllEntities ? "" : entityFilter,
-  );
 
-  const [hiddenStageValues, setHiddenStageValues] = useState<Set<string>>(new Set());
-  const hydratedPipelinePreference = useRef("");
-  const [isManageStagesOpen, setIsManageStagesOpen] = useState(false);
   const [view, setView] = useState<ViewOption>("Flow");
-  const [priority, setPriority] = useState<PriorityFilter>("All");
-  const [status, setStatus] = useState<StatusFilter>("All");
-  const [role, setRole] = useState<string>("All");
   const [moduleStatus, setModuleStatus] = useState<StatusFilter>("All");
   const [assignee, setAssignee] = useState<string>("All");
   const [moduleProjectFilter, setModuleProjectFilter] = useState<string>(ALL_ENTITIES);
   const [draggedId, setDraggedId] = useState<string | null>(null);
   const [dragOverStageIndex, setDragOverStageIndex] = useState<number | null>(null);
 
-  function selectEntityType(next: EntityType) {
-    setEntityType(next);
-    setEntityFilter(ALL_ENTITIES);
-    setModuleProjectFilter(ALL_ENTITIES);
-    setHiddenStageValues(new Set());
-  }
-
-  function selectEntityFilter(next: string) {
-    setEntityFilter(next);
-    setHiddenStageValues(new Set());
-  }
-
   const stages = useMemo(
-    () => [...(activeStagesQuery.data ?? [])].sort((a, b) => a.sortOrder - b.sortOrder),
-    [activeStagesQuery.data],
+    () =>
+      [...(stagesQuery.data ?? [])]
+        .filter((stage) => !stage.hidden)
+        .sort((a, b) => a.sortOrder - b.sortOrder),
+    [stagesQuery.data],
   );
-  const pipelinePreferenceKey = `${entityType.toLowerCase()}:${isAllEntities ? "all" : entityFilter}`;
-
-  useEffect(() => {
-    if (
-      !preferences?.workspaceId ||
-      preferences.workspacePreferences === undefined
-    ) return;
-    const hydrationKey = `${preferences.workspaceId}:${pipelinePreferenceKey}`;
-    if (hydratedPipelinePreference.current === hydrationKey) return;
-    hydratedPipelinePreference.current = hydrationKey;
-
-    const remote = preferences.workspacePreferences?.pipelineHiddenStages?.[pipelinePreferenceKey];
-    let hidden = remote;
-    if (hidden === undefined) {
-      try {
-        const stored = window.localStorage.getItem(
-          `flow-pipeline-hidden:${hydrationKey}`,
-        );
-        const parsed = JSON.parse(stored ?? "[]") as unknown;
-        hidden = Array.isArray(parsed)
-          ? parsed.filter((item): item is string => typeof item === "string")
-          : [];
-      } catch {
-        hidden = [];
-      }
-      preferences.updatePipelineHiddenStages(pipelinePreferenceKey, hidden);
-    }
-    setHiddenStageValues(new Set(hidden));
-  }, [pipelinePreferenceKey, preferences]);
   const stageIndexByValue = useMemo(() => {
     const map = new Map<string, number>();
     stages.forEach((stage, index) => map.set(stage.value, index));
     return map;
   }, [stages]);
-
-  const taskCountByProject = useMemo(() => {
-    const counts = new Map<string, { completed: number; total: number }>();
-    for (const task of tasks) {
-      if (!task.projectId) continue;
-      const entry = counts.get(task.projectId) ?? { completed: 0, total: 0 };
-      entry.total += 1;
-      if (task.status === "Complete") entry.completed += 1;
-      counts.set(task.projectId, entry);
-    }
-    return counts;
-  }, [tasks]);
 
   const taskCountByModule = useMemo(() => {
     const counts = new Map<string, { completed: number; total: number }>();
@@ -440,15 +278,6 @@ export default function PipelinePage() {
     }
     return map;
   }, [members]);
-
-  const roleOptions = useMemo(() => {
-    const roles = new Set<string>();
-    for (const project of projects) {
-      if (project.role) roles.add(project.role);
-      else if (project.userId === me.data?.id) roles.add("Owner");
-    }
-    return ["All", ...Array.from(roles).sort()];
-  }, [projects, me.data?.id]);
 
   const assigneeOptions = useMemo(() => {
     const ids = new Set<string>();
@@ -476,31 +305,9 @@ export default function PipelinePage() {
     ];
   }, [projects]);
 
-  const projectRows: PipelineRow[] = useMemo(
-    () =>
-      projects.map((project) => {
-        const counts = taskCountByProject.get(project.id) ?? { completed: 0, total: 0 };
-        return {
-          id: project.id,
-          kind: "Project" as const,
-          displayId: project.displayId,
-          title: project.title,
-          priority: project.importance,
-          status: project.status,
-          role: project.role ?? (project.userId === me.data?.id ? "Owner" : null),
-          assignee: null,
-          projectId: project.id,
-          completion: counts.total > 0 ? Math.round((counts.completed / counts.total) * 100) : 0,
-          outstanding: counts.total - counts.completed,
-          stageIndex: project.pipelineStage ? stageIndexByValue.get(project.pipelineStage) : undefined,
-        };
-      }),
-    [projects, taskCountByProject, stageIndexByValue, me.data?.id],
-  );
-
   const moduleRows: PipelineRow[] = useMemo(
     () =>
-      (modules).map((module) => {
+      modules.map((module) => {
         const counts = taskCountByModule.get(module.id) ?? { completed: 0, total: 0 };
         const assigneeLabel = module.assignedToUserId
           ? module.assignedToUserId === me.data?.id
@@ -509,12 +316,9 @@ export default function PipelinePage() {
           : null;
         return {
           id: module.id,
-          kind: "Module" as const,
           displayId: module.displayId,
           title: module.title,
-          priority: null,
           status: module.status,
-          role: null,
           assignee: assigneeLabel,
           projectId: module.projectId,
           completion: counts.total > 0 ? Math.round((counts.completed / counts.total) * 100) : 0,
@@ -525,131 +329,35 @@ export default function PipelinePage() {
     [modules, taskCountByModule, stageIndexByValue, memberNameById, me.data?.id],
   );
 
-  const entityRows = entityType === "Project" ? projectRows : moduleRows;
-  const entityOptions = useMemo(
-    () =>
-      entityType === "Project"
-        ? projects.map((project) => ({ id: project.id, label: project.title }))
-        : (modules).map((module) => ({ id: module.id, label: module.title })),
-    [entityType, projects, modules],
-  );
-
-  const unassignedCount = entityRows.filter((row) => row.stageIndex === undefined).length;
+  const unassignedCount = moduleRows.filter((row) => row.stageIndex === undefined).length;
 
   const filteredRows = useMemo(() => {
-    return entityRows.filter((row) => {
-      if (!isAllEntities && row.id !== entityFilter) return false;
-      if (entityType === "Project") {
-        if (priority !== "All" && row.priority !== priority) return false;
-        if (status !== "All" && row.status !== status) return false;
-        if (role !== "All" && row.role !== role) return false;
-      } else {
-        if (moduleStatus !== "All" && row.status !== moduleStatus) return false;
-        if (assignee === "Unassigned" && row.assignee !== null) return false;
-        if (assignee !== "All" && assignee !== "Unassigned" && row.assignee !== assignee) return false;
-        if (moduleProjectFilter === "None" && row.projectId !== null) return false;
-        if (
-          moduleProjectFilter !== ALL_ENTITIES &&
-          moduleProjectFilter !== "None" &&
-          row.projectId !== moduleProjectFilter
-        ) {
-          return false;
-        }
+    return moduleRows.filter((row) => {
+      if (moduleStatus !== "All" && row.status !== moduleStatus) return false;
+      if (assignee === "Unassigned" && row.assignee !== null) return false;
+      if (assignee !== "All" && assignee !== "Unassigned" && row.assignee !== assignee) return false;
+      if (moduleProjectFilter === "None" && row.projectId !== null) return false;
+      if (
+        moduleProjectFilter !== ALL_ENTITIES &&
+        moduleProjectFilter !== "None" &&
+        row.projectId !== moduleProjectFilter
+      ) {
+        return false;
       }
       return true;
     });
-  }, [
-    entityRows,
-    isAllEntities,
-    entityFilter,
-    entityType,
-    priority,
-    status,
-    role,
-    moduleStatus,
-    assignee,
-    moduleProjectFilter,
-  ]);
+  }, [moduleRows, moduleStatus, assignee, moduleProjectFilter]);
 
   const grouped = useMemo(
     () => groupByStage(filteredRows, stages.length),
     [filteredRows, stages.length],
   );
   const unassignedRows = filteredRows.filter((row) => row.stageIndex === undefined);
-  const visibleStages = stages
-    .map((stage, index) => ({ stage, index }))
-    .filter(({ stage }) => !hiddenStageValues.has(stage.value));
-
-  function persistHiddenStages(next: Set<string>) {
-    setHiddenStageValues(next);
-    if (!preferences?.workspaceId) return;
-    const values = [...next];
-    try {
-      window.localStorage.setItem(
-        `flow-pipeline-hidden:${preferences.workspaceId}:${pipelinePreferenceKey}`,
-        JSON.stringify(values),
-      );
-    } catch {
-      // The visibility selection still applies for this session.
-    }
-    preferences.updatePipelineHiddenStages(pipelinePreferenceKey, values);
-  }
-
-  function toggleStageVisibility(stageValue: string) {
-    const next = new Set(hiddenStageValues);
-    if (next.has(stageValue)) {
-      next.delete(stageValue);
-    } else {
-      if (stages.length - next.size <= 1) return;
-      next.add(stageValue);
-    }
-    persistHiddenStages(next);
-  }
-
-  async function addStage(value: string) {
-    const maxSortOrder = stages.reduce((max, stage) => Math.max(max, stage.sortOrder), 0);
-    const sortOrder = maxSortOrder + 1;
-    if (!isAllEntities) {
-      if (entityType === "Project") await createOwnProjectStage.mutateAsync({ value, sortOrder });
-      else await createOwnModuleStage.mutateAsync({ value, sortOrder });
-      return;
-    }
-    if (entityType === "Project") await createProjectPoolStage.mutateAsync({ value, sortOrder });
-    else await createModulePoolStage.mutateAsync({ value, sortOrder });
-  }
-
-  async function deleteStage(stage: ApiPipelineStage) {
-    if (stages.length === 1) return;
-    if (
-      !window.confirm(
-        `Delete "${stage.value}"? Items in this stage will no longer show a pipeline stage.`,
-      )
-    ) {
-      return;
-    }
-    if (!isAllEntities) {
-      if (entityType === "Project") await deleteOwnProjectStage.mutateAsync(stage.id);
-      else await deleteOwnModuleStage.mutateAsync(stage.id);
-    } else if (entityType === "Project") {
-      await deleteProjectPoolStage.mutateAsync(stage.id);
-    } else {
-      await deleteModulePoolStage.mutateAsync(stage.id);
-    }
-    if (hiddenStageValues.has(stage.value)) {
-      const next = new Set(hiddenStageValues);
-      next.delete(stage.value);
-      persistHiddenStages(next);
-    }
-  }
 
   function moveItem(id: string, stageIndex: number) {
     const stageValue = stages[stageIndex]?.value;
     if (!stageValue) return;
-    if (entityType === "Project") {
-      void updateProject.mutateAsync({ projectId: id, input: { pipelineStage: stageValue } });
-    } else {
-      void updateModule.mutateAsync({ moduleId: id, input: { pipelineStage: stageValue } });
-    }
+    void updateModule.mutateAsync({ moduleId: id, input: { pipelineStage: stageValue } });
   }
 
   function handleDragStart(event: DragEvent<HTMLDivElement>, row: PipelineRow) {
@@ -677,22 +385,8 @@ export default function PipelinePage() {
     setDragOverStageIndex(null);
   }
 
-  if (
-    workspace.isPending ||
-    projectsQuery.isPending ||
-    modulesQuery.isPending ||
-    activeStagesQuery.isPending
-  ) {
+  if (workspace.isPending || projectsQuery.isPending || modulesQuery.isPending || stagesQuery.isPending) {
     return <LoadingState title="Loading pipeline" className="min-h-[50vh]" />;
-  }
-  if (projectsQuery.isError) {
-    return (
-      <ErrorState
-        title="Pipeline could not be loaded"
-        description={projectsQuery.error.message}
-        onRetry={() => void projectsQuery.refetch()}
-      />
-    );
   }
   if (modulesQuery.isError) {
     return (
@@ -710,44 +404,11 @@ export default function PipelinePage() {
         icon={Workflow}
         tone="emerald"
         eyebrow="Workflows"
-        title="Pipeline"
-        description="Projects or modules grouped by their current stage in the research workflow — view every workspace item, or drill into one to see its own custom pipeline."
+        title="Paper pipeline"
+        description="Papers grouped by their current stage in the shared workspace pipeline."
       />
 
       <div className="surface-toolbar flex flex-col gap-4 border-emerald-200/70 bg-emerald-50/40 dark:border-emerald-900/50 dark:bg-emerald-950/10">
-        <div className="flex flex-wrap items-center gap-2">
-          <span className="mr-1 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-            Pipeline
-          </span>
-          {ENTITY_TYPES.map((option) => (
-            <button
-              key={option}
-              type="button"
-              onClick={() => selectEntityType(option)}
-              aria-pressed={option === entityType}
-              className={controlPillClass(option === entityType)}
-            >
-              {option === "Project" ? "Project pipeline" : "Module pipeline"}
-            </button>
-          ))}
-          <span className="mx-2 h-4 w-px bg-border" aria-hidden="true" />
-          <Select value={entityFilter} onValueChange={selectEntityFilter}>
-            <SelectTrigger className="sm:w-56" aria-label={`Filter by ${entityType.toLowerCase()}`}>
-              <SelectValue placeholder={`All ${entityType.toLowerCase()}s`} />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value={ALL_ENTITIES}>
-                All {entityType === "Project" ? "projects" : "modules"}
-              </SelectItem>
-              {entityOptions.map((option) => (
-                <SelectItem key={option.id} value={option.id}>
-                  {option.label}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </div>
-
         <div className="flex flex-wrap items-center gap-2">
           <span className="mr-1 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
             View
@@ -766,99 +427,49 @@ export default function PipelinePage() {
         </div>
 
         <div className="flex flex-wrap items-center gap-3">
-          {entityType === "Project" ? (
-            <>
-              <Select value={priority} onValueChange={(value) => setPriority(value as PriorityFilter)}>
-                <SelectTrigger className="sm:w-40">
-                  <SelectValue placeholder="Priority" />
-                </SelectTrigger>
-                <SelectContent>
-                  {PRIORITY_FILTERS.map((option) => (
-                    <SelectItem key={option} value={option}>
-                      {option === "All" ? "All priorities" : option}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-              <Select value={status} onValueChange={(value) => setStatus(value as StatusFilter)}>
-                <SelectTrigger className="sm:w-40">
-                  <SelectValue placeholder="Status" />
-                </SelectTrigger>
-                <SelectContent>
-                  {STATUS_FILTERS.map((option) => (
-                    <SelectItem key={option} value={option}>
-                      {option === "All" ? "All statuses" : option}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-              <Select value={role} onValueChange={setRole}>
-                <SelectTrigger className="sm:w-40">
-                  <SelectValue placeholder="Role" />
-                </SelectTrigger>
-                <SelectContent>
-                  {roleOptions.map((option) => (
-                    <SelectItem key={option} value={option}>
-                      {option === "All" ? "All roles" : option}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </>
-          ) : (
-            <>
-              <Select value={moduleProjectFilter} onValueChange={setModuleProjectFilter}>
-                <SelectTrigger className="sm:w-48" aria-label="Filter by project">
-                  <SelectValue placeholder="Project" />
-                </SelectTrigger>
-                <SelectContent>
-                  {moduleProjectFilterOptions.map((option) => (
-                    <SelectItem key={option.id} value={option.id}>
-                      {option.label}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-              <Select value={moduleStatus} onValueChange={(value) => setModuleStatus(value as StatusFilter)}>
-                <SelectTrigger className="sm:w-40">
-                  <SelectValue placeholder="Status" />
-                </SelectTrigger>
-                <SelectContent>
-                  {STATUS_FILTERS.map((option) => (
-                    <SelectItem key={option} value={option}>
-                      {option === "All" ? "All statuses" : option}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-              <Select value={assignee} onValueChange={setAssignee}>
-                <SelectTrigger className="sm:w-44">
-                  <SelectValue placeholder="Assignee" />
-                </SelectTrigger>
-                <SelectContent>
-                  {assigneeOptions.map((option) => (
-                    <SelectItem key={option.id} value={option.id}>
-                      {option.label}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </>
-          )}
-          <Button variant="outline" onClick={() => setIsManageStagesOpen(true)}>
-            <Settings2 />
-            Manage stages
+          <Select value={moduleProjectFilter} onValueChange={setModuleProjectFilter}>
+            <SelectTrigger className="sm:w-48" aria-label="Filter by project">
+              <SelectValue placeholder="Project" />
+            </SelectTrigger>
+            <SelectContent>
+              {moduleProjectFilterOptions.map((option) => (
+                <SelectItem key={option.id} value={option.id}>
+                  {option.label}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+          <Select value={moduleStatus} onValueChange={(value) => setModuleStatus(value as StatusFilter)}>
+            <SelectTrigger className="sm:w-40">
+              <SelectValue placeholder="Status" />
+            </SelectTrigger>
+            <SelectContent>
+              {STATUS_FILTERS.map((option) => (
+                <SelectItem key={option} value={option}>
+                  {option === "All" ? "All statuses" : option}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+          <Select value={assignee} onValueChange={setAssignee}>
+            <SelectTrigger className="sm:w-44">
+              <SelectValue placeholder="Assignee" />
+            </SelectTrigger>
+            <SelectContent>
+              {assigneeOptions.map((option) => (
+                <SelectItem key={option.id} value={option.id}>
+                  {option.label}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+          <Button asChild variant="outline">
+            <Link to="/settings#paper-pipeline-stages">Manage stages</Link>
           </Button>
         </div>
-        {!isAllEntities ? (
+        {unassignedCount > 0 ? (
           <p className="text-xs text-muted-foreground">
-            Showing only this {entityType.toLowerCase()}'s own pipeline — the stages picked or
-            created for it when it was made. Switch back to "All {entityType === "Project" ? "projects" : "modules"}"
-            to see the shared workspace pipeline.
-          </p>
-        ) : unassignedCount > 0 ? (
-          <p className="text-xs text-muted-foreground">
-            {unassignedCount} {entityType.toLowerCase()}{unassignedCount === 1 ? "" : "s"} without a
+            {unassignedCount} paper{unassignedCount === 1 ? "" : "s"} without a
             pipeline stage {unassignedCount === 1 ? "is" : "are"} shown in Unassigned.
           </p>
         ) : null}
@@ -895,10 +506,10 @@ export default function PipelinePage() {
               </div>
             </div>
           ) : null}
-          {visibleStages.map(({ stage, index }, visibleIndex) => {
+          {stages.map((stage, index) => {
             const rows = grouped[index] ?? [];
             const hasItems = rows.length > 0;
-            const isLast = visibleIndex === visibleStages.length - 1;
+            const isLast = index === stages.length - 1;
 
             return (
               <div key={stage.id} className="flex gap-4">
@@ -961,7 +572,7 @@ export default function PipelinePage() {
         <div className="overflow-x-auto">
           <div
             className="flex gap-4"
-            style={{ minWidth: `${(visibleStages.length + (unassignedRows.length ? 1 : 0)) * 260}px` }}
+            style={{ minWidth: `${(stages.length + (unassignedRows.length ? 1 : 0)) * 260}px` }}
           >
             {unassignedRows.length > 0 ? (
               <div className="flex min-h-48 w-64 shrink-0 flex-col gap-3 rounded-xl border border-amber-200 bg-amber-50/45 p-3 shadow-sm dark:border-amber-900/50 dark:bg-amber-950/15">
@@ -987,7 +598,7 @@ export default function PipelinePage() {
                 </div>
               </div>
             ) : null}
-            {visibleStages.map(({ stage, index }) => {
+            {stages.map((stage, index) => {
               const rows = grouped[index] ?? [];
               const hasItems = rows.length > 0;
 
@@ -1034,7 +645,7 @@ export default function PipelinePage() {
                         />
                       ))
                     ) : (
-                      <p className="text-sm text-muted-foreground">No {entityType.toLowerCase()}s</p>
+                      <p className="text-sm text-muted-foreground">No papers</p>
                     )}
                   </div>
                 </div>
@@ -1043,15 +654,6 @@ export default function PipelinePage() {
           </div>
         </div>
       )}
-      <ManageStagesDialog
-        open={isManageStagesOpen}
-        onOpenChange={setIsManageStagesOpen}
-        stages={stages}
-        visibleStages={new Set(stages.filter((stage) => !hiddenStageValues.has(stage.value)).map((stage) => stage.value))}
-        onToggleVisibility={toggleStageVisibility}
-        onAdd={addStage}
-        onDelete={deleteStage}
-      />
     </div>
   );
 }

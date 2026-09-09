@@ -16,7 +16,6 @@ const genomeProject: ApiProject = {
   description: null,
   researchArea: null,
   status: null,
-  pipelineStage: null,
   importance: null,
   scheduledFor: null,
   dueDate: null,

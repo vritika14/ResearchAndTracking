@@ -10,7 +10,6 @@ import {
   useModules,
   useProjects,
   useNotes,
-  usePipelineStages,
   useCreateProject,
   useTasks,
   useTrackEvent,
@@ -56,7 +55,6 @@ const PROJECT_COLUMNS = [
   { id: "role", label: "My Role", width: "110px" },
   { id: "importance", label: "Importance", width: "110px" },
   { id: "status", label: "Status", width: "110px" },
-  { id: "stage", label: "Stage", width: "120px" },
   { id: "progress", label: "Progress", width: "130px" },
   { id: "notes", label: "Notes", width: "70px" },
   { id: "scheduled", label: "Scheduled For", width: "110px" },
@@ -151,7 +149,7 @@ function ProjectOverviewDetails({
 }) {
   const fields = [
     { label: "Research area", value: project.researchArea ?? "—" },
-    { label: "Modules", value: String(moduleCount) },
+    { label: "Papers", value: String(moduleCount) },
     { label: "Tasks", value: String(taskCount) },
     { label: "Notes", value: String(noteCount) },
     { label: "Budget", value: formatCurrency(project.totalBudget) },
@@ -221,15 +219,7 @@ export default function ProjectsPage() {
   const tasks = tasksQuery.data?.data ?? [];
   const notesQuery = useNotes(tenantId);
   const notes = notesQuery.data?.data ?? [];
-  const pipelineStagesQuery = usePipelineStages(tenantId);
   const me = useMe();
-  const stageOrder = useMemo(() => {
-    const map = new Map<string, number>();
-    for (const stage of pipelineStagesQuery.data ?? []) {
-      map.set(stage.value, stage.sortOrder);
-    }
-    return map;
-  }, [pipelineStagesQuery.data]);
 
   const createProject = useCreateProject(tenantId);
   const archiveProject = useArchiveProject(tenantId);
@@ -315,11 +305,6 @@ export default function ProjectsPage() {
         );
       case "status":
         return (PROJECT_STATUS_ORDER[a.status ?? ""] ?? 99) - (PROJECT_STATUS_ORDER[b.status ?? ""] ?? 99);
-      case "stage":
-        return (
-          (stageOrder.get(a.pipelineStage ?? "") ?? Number.MAX_SAFE_INTEGER) -
-          (stageOrder.get(b.pipelineStage ?? "") ?? Number.MAX_SAFE_INTEGER)
-        );
       case "progress": {
         const aCounts = taskCountByProject.get(a.id) ?? { completed: 0, total: 0 };
         const bCounts = taskCountByProject.get(b.id) ?? { completed: 0, total: 0 };
@@ -362,7 +347,6 @@ export default function ProjectsPage() {
     role,
     sortColumn,
     sortDirection,
-    stageOrder,
     taskCountByProject,
     noteCountByProject,
   ]);
@@ -376,16 +360,12 @@ export default function ProjectsPage() {
   }
 
   async function handleCreateProject(input: NewProjectInput) {
-    const firstPipelineStage = [...(pipelineStagesQuery.data ?? [])]
-      .sort((a, b) => a.sortOrder - b.sortOrder)[0]?.value;
     await createProject.mutateAsync({
       title: input.title,
       description: input.description || undefined,
       researchArea: input.researchArea || undefined,
       status: input.status,
       importance: input.priority,
-      pipelineStage: input.pipelineStage || firstPipelineStage || undefined,
-      pipelineStages: input.pipelineStages,
       scheduledFor: input.scheduledFor || undefined,
       dueDate: input.dueDate || undefined,
       totalBudget: input.totalBudget || undefined,
@@ -434,7 +414,6 @@ export default function ProjectsPage() {
         open={isNewProjectOpen}
         onOpenChange={setIsNewProjectOpen}
         onCreate={handleCreateProject}
-        pipelineStages={pipelineStagesQuery.data ?? []}
       />
       <Dialog
         open={sharingProject !== null}
@@ -646,12 +625,6 @@ export default function ProjectsPage() {
                       <Badge variant="outline" className={statusPillClass(project.status)}>
                         {project.status ?? "—"}
                       </Badge>
-                      ) : null}
-
-                      {columns.isColumnVisible("stage") ? (
-                      <span className="text-sm text-muted-foreground">
-                        {project.pipelineStage ?? "Unknown stage"}
-                      </span>
                       ) : null}
 
                       {columns.isColumnVisible("progress") ? (

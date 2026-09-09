@@ -49,265 +49,125 @@ export class EnumRepository {
   }
 
   // ============================================================
-  // Project-scoped pipeline stages
+  // Paper (module) pipeline stages — one fixed, 15-value catalog per
+  // workspace. The global rows (tenantId IS NULL) are the immutable
+  // catalog; a tenant gets its own copy (tenantId set) the first time it
+  // reorders or hides a stage, and only that copy is ever mutated.
   // ============================================================
 
-  async findPipelineStagesForProject(projectId: string) {
-    const baseStages = await this.drizzle.db
+  /** The fixed global catalog, in order. Never mutated directly. */
+  async findGlobalModuleStages() {
+    return this.findByCategory('module_pipeline_stage');
+  }
+
+  /** This tenant's own copy, if it has materialized one yet. */
+  async findTenantModuleStages(tenantId: string) {
+    return this.drizzle.db
       .select()
       .from(enumTable)
       .where(
         and(
-          eq(enumTable.category, 'project_pipeline_stage'),
-          isNull(enumTable.projectId),
-          isNull(enumTable.tenantId),
+          eq(enumTable.category, 'module_pipeline_stage'),
+          eq(enumTable.tenantId, tenantId),
         ),
       )
       .orderBy(asc(enumTable.sortOrder));
-
-    const customStages = await this.drizzle.db
-      .select()
-      .from(enumTable)
-      .where(
-        and(
-          eq(enumTable.category, 'project_pipeline_stage'),
-          eq(enumTable.projectId, projectId),
-        ),
-      )
-      .orderBy(asc(enumTable.sortOrder));
-
-    return { baseStages, customStages };
   }
 
-  async findPipelineStageForProjectByValue(projectId: string, value: string) {
-    const { baseStages, customStages } =
-      await this.findPipelineStagesForProject(projectId);
-    return [...baseStages, ...customStages].find(
-      (stage) => stage.value === value,
-    );
+  /** Tenant's own order/visibility if customized, else the global catalog. */
+  async findEffectiveModuleStages(tenantId: string) {
+    const tenantStages = await this.findTenantModuleStages(tenantId);
+    return tenantStages.length > 0
+      ? tenantStages
+      : this.findGlobalModuleStages();
   }
 
-  async createProjectPipelineStage(
-    projectId: string,
-    value: string,
-    sortOrder: number,
-  ) {
-    const [row] = await this.drizzle.db
+  async findModuleStageByValueForTenant(tenantId: string, value: string) {
+    const stages = await this.findEffectiveModuleStages(tenantId);
+    return stages.find((stage) => stage.value === value);
+  }
+
+  /** Clones the global catalog into this tenant's own scope, if it hasn't already. */
+  async materializeTenantModuleStages(tenantId: string) {
+    const existing = await this.findTenantModuleStages(tenantId);
+    if (existing.length > 0) return existing;
+
+    const globalStages = await this.findGlobalModuleStages();
+    if (globalStages.length === 0) return [];
+
+    return this.drizzle.db
       .insert(enumTable)
-      .values({
-        projectId,
-        category: 'project_pipeline_stage',
-        value,
-        sortOrder,
-      })
-      .returning();
-    return row;
-  }
-
-  async updateProjectPipelineStage(
-    projectId: string,
-    id: string,
-    values: Partial<{ value: string; sortOrder: number }>,
-  ) {
-    const [row] = await this.drizzle.db
-      .update(enumTable)
-      .set({ ...values, updatedAt: new Date() })
-      .where(
-        and(
-          eq(enumTable.id, id),
-          eq(enumTable.projectId, projectId),
-          eq(enumTable.category, 'project_pipeline_stage'),
-        ),
+      .values(
+        globalStages.map((stage) => ({
+          tenantId,
+          category: 'module_pipeline_stage',
+          value: stage.value,
+          sortOrder: stage.sortOrder,
+          hidden: stage.hidden,
+        })),
       )
       .returning();
-    return row;
-  }
-
-  async deleteProjectPipelineStage(projectId: string, id: string) {
-    const [row] = await this.drizzle.db
-      .delete(enumTable)
-      .where(
-        and(
-          eq(enumTable.id, id),
-          eq(enumTable.projectId, projectId),
-          eq(enumTable.category, 'project_pipeline_stage'),
-        ),
-      )
-      .returning();
-    return row;
-  }
-
-  // ============================================================
-  // Module-scoped pipeline stages
-  // ============================================================
-
-  async findPipelineStagesForModule(moduleId: string) {
-    const baseStages = await this.drizzle.db
-      .select()
-      .from(enumTable)
-      .where(
-        and(
-          eq(enumTable.category, 'module_pipeline_stage'),
-          isNull(enumTable.moduleId),
-          isNull(enumTable.tenantId),
-          isNull(enumTable.projectId),
-        ),
-      )
-      .orderBy(asc(enumTable.sortOrder));
-
-    const customStages = await this.drizzle.db
-      .select()
-      .from(enumTable)
-      .where(
-        and(
-          eq(enumTable.category, 'module_pipeline_stage'),
-          eq(enumTable.moduleId, moduleId),
-        ),
-      )
-      .orderBy(asc(enumTable.sortOrder));
-
-    return { baseStages, customStages };
-  }
-
-  async findPipelineStageForModuleByValue(moduleId: string, value: string) {
-    const { baseStages, customStages } =
-      await this.findPipelineStagesForModule(moduleId);
-    return [...baseStages, ...customStages].find(
-      (stage) => stage.value === value,
-    );
-  }
-
-  async createModulePipelineStage(
-    moduleId: string,
-    value: string,
-    sortOrder: number,
-  ) {
-    const [row] = await this.drizzle.db
-      .insert(enumTable)
-      .values({ moduleId, category: 'module_pipeline_stage', value, sortOrder })
-      .returning();
-    return row;
-  }
-
-  async updateModulePipelineStage(
-    moduleId: string,
-    id: string,
-    values: Partial<{ value: string; sortOrder: number }>,
-  ) {
-    const [row] = await this.drizzle.db
-      .update(enumTable)
-      .set({ ...values, updatedAt: new Date() })
-      .where(
-        and(
-          eq(enumTable.id, id),
-          eq(enumTable.moduleId, moduleId),
-          eq(enumTable.category, 'module_pipeline_stage'),
-        ),
-      )
-      .returning();
-    return row;
-  }
-
-  async deleteModulePipelineStage(moduleId: string, id: string) {
-    const [row] = await this.drizzle.db
-      .delete(enumTable)
-      .where(
-        and(
-          eq(enumTable.id, id),
-          eq(enumTable.moduleId, moduleId),
-          eq(enumTable.category, 'module_pipeline_stage'),
-        ),
-      )
-      .returning();
-    return row;
-  }
-
-  // ============================================================
-  // Tenant-wide pipeline stage pools (used for both
-  // 'project_pipeline_stage' and 'module_pipeline_stage')
-  // ============================================================
-
-  async createTenantPipelineStage(
-    tenantId: string,
-    category: string,
-    value: string,
-    sortOrder: number,
-  ) {
-    const [row] = await this.drizzle.db
-      .insert(enumTable)
-      .values({ tenantId, category, value, sortOrder })
-      .returning();
-    return row;
   }
 
   /**
-   * Makes sure every one of `values` exists in this tenant's shared stage
-   * pool, appending any that are missing after the current highest
-   * sortOrder. Called when a project/module is created with a custom stage
-   * list, so a brand-new stage name typed at creation time immediately
-   * shows up in the tenant-wide Pipeline view too — not just on that one
-   * project/module's own pipeline.
+   * Every request already runs inside its own outer transaction (see
+   * RequestContextInterceptor), so this deliberately does NOT open a nested
+   * `.transaction()` — Postgres doesn't support that on the same connection.
+   * The sequential updates below share the request's existing transaction.
    */
-  async ensureTenantPipelineStages(
-    tenantId: string,
-    category: string,
-    values: string[],
-  ) {
-    if (values.length === 0) return;
-    const existing = await this.findByCategory(category, tenantId);
-    const existingValues = new Set(existing.map((stage) => stage.value));
-    const missing = values.filter((value) => !existingValues.has(value));
-    if (missing.length === 0) return;
-
-    let nextSortOrder =
-      existing.reduce((max, stage) => Math.max(max, stage.sortOrder), 0) + 1;
-    for (const value of missing) {
-      await this.createTenantPipelineStage(
-        tenantId,
-        category,
-        value,
-        nextSortOrder,
-      );
-      nextSortOrder += 1;
+  async reorderTenantModuleStages(tenantId: string, orderedValues: string[]) {
+    for (const [index, value] of orderedValues.entries()) {
+      await this.drizzle.db
+        .update(enumTable)
+        .set({ sortOrder: index + 1, updatedAt: new Date() })
+        .where(
+          and(
+            eq(enumTable.tenantId, tenantId),
+            eq(enumTable.category, 'module_pipeline_stage'),
+            eq(enumTable.value, value),
+          ),
+        );
     }
+    return this.drizzle.db
+      .select()
+      .from(enumTable)
+      .where(
+        and(
+          eq(enumTable.tenantId, tenantId),
+          eq(enumTable.category, 'module_pipeline_stage'),
+        ),
+      )
+      .orderBy(asc(enumTable.sortOrder));
   }
 
-  /** Only matches rows this tenant owns — the shared defaults (tenantId IS NULL) are never editable here. */
-  async updateTenantPipelineStage(
+  async setTenantModuleStageHidden(
     tenantId: string,
-    category: string,
-    id: string,
-    values: Partial<{ value: string; sortOrder: number }>,
+    value: string,
+    hidden: boolean,
   ) {
     const [row] = await this.drizzle.db
       .update(enumTable)
-      .set({ ...values, updatedAt: new Date() })
+      .set({ hidden, updatedAt: new Date() })
       .where(
         and(
-          eq(enumTable.id, id),
           eq(enumTable.tenantId, tenantId),
-          eq(enumTable.category, category),
+          eq(enumTable.category, 'module_pipeline_stage'),
+          eq(enumTable.value, value),
         ),
       )
       .returning();
     return row;
   }
 
-  async deleteTenantPipelineStage(
-    tenantId: string,
-    category: string,
-    id: string,
-  ) {
-    const [row] = await this.drizzle.db
+  /** Deletes this tenant's customization — reads fall back to the global catalog again. */
+  async resetTenantModuleStages(tenantId: string) {
+    await this.drizzle.db
       .delete(enumTable)
       .where(
         and(
-          eq(enumTable.id, id),
           eq(enumTable.tenantId, tenantId),
-          eq(enumTable.category, category),
+          eq(enumTable.category, 'module_pipeline_stage'),
         ),
-      )
-      .returning();
-    return row;
+      );
   }
 }

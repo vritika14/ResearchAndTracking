@@ -94,6 +94,14 @@ vi.mock("@/api/hooks", () => ({
     isError: false,
     isSuccess: false,
   }),
+  useModulePipelineStagePool: () => ({
+    data: [],
+    isPending: false,
+    isError: false,
+  }),
+  useUpdateModulePipelineStage: () => ({ mutate: vi.fn() }),
+  useReorderModulePipelineStages: () => ({ mutate: vi.fn() }),
+  useResetModulePipelineStages: () => ({ mutate: vi.fn() }),
 }));
 
 vi.mock("@/components/settings/workspace-members", () => ({

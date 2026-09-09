@@ -38,7 +38,7 @@ const TASK_PRIORITIES = ["Low", "Medium", "High", "Critical"] as const;
 const VISIBILITY_OPTIONS = ["Private", "Shared"] as const;
 const LINK_TARGET_OPTIONS: { value: LinkTargetType; label: string }[] = [
   { value: "project", label: "Project" },
-  { value: "module", label: "Module" },
+  { value: "module", label: "Paper" },
   { value: "none", label: "General" },
 ];
 
@@ -209,7 +209,7 @@ export function TaskDialog({
         <DialogHeader>
           <DialogTitle>{isEditing ? "Edit task" : "Create a new task"}</DialogTitle>
           <DialogDescription>
-            Link this task to a project or module, or keep it general, then set its priority and
+            Link this task to a project or paper, or keep it general, then set its priority and
             visibility.
           </DialogDescription>
         </DialogHeader>
@@ -272,13 +272,13 @@ export function TaskDialog({
           ) : null}
 
           {form.linkTarget === "module" ? (
-            <FormField label="Module" htmlFor="task-module" required>
+            <FormField label="Paper" htmlFor="task-module" required>
               <Select
                 value={form.moduleId}
                 onValueChange={(value) => setForm((prev) => ({ ...prev, moduleId: value }))}
                 required
               >
-                <SelectTrigger id="task-module"><SelectValue placeholder="Select a module" /></SelectTrigger>
+                <SelectTrigger id="task-module"><SelectValue placeholder="Select a paper" /></SelectTrigger>
                 <SelectContent>
                   {modules.map((module) => (
                     <SelectItem key={module.id} value={module.id}>{module.title}</SelectItem>

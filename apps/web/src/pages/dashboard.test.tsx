@@ -26,10 +26,10 @@ vi.mock("@/api/hooks", () => ({
     },
     isPending: false,
   }),
-  usePipelineStages: () => ({
+  useModulePipelineStagePool: () => ({
     data: [
-      { value: "Concept & Ideation", sortOrder: 1 },
-      { value: "Consolidation & Review", sortOrder: 2 },
+      { value: "Concept, Ideation", sortOrder: 1, hidden: false },
+      { value: "Lit Review, Study Design, Protocol", sortOrder: 2, hidden: false },
     ],
     isPending: queryState.stagesPending,
     isError: queryState.stagesError !== null,
