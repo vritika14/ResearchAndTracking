@@ -1,6 +1,12 @@
 // apps/api/src/modules/notes/dto/create-note.dto.ts
 import { ApiProperty } from '@nestjs/swagger';
-import { IsString, IsOptional, IsUUID, Length } from 'class-validator';
+import {
+  IsDateString,
+  IsString,
+  IsOptional,
+  IsUUID,
+  Length,
+} from 'class-validator';
 
 export class CreateNoteDto {
   @ApiProperty({ example: 'Meeting notes — kickoff' })
@@ -27,4 +33,13 @@ export class CreateNoteDto {
   @IsOptional()
   @IsString()
   visibility?: string;
+
+  @ApiProperty({
+    required: false,
+    description:
+      'A follow-up date shown on the Calendar page as a reminder for this note.',
+  })
+  @IsOptional()
+  @IsDateString()
+  followUpDate?: string;
 }

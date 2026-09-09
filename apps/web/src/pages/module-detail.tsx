@@ -1,5 +1,5 @@
 import { useEffect, useState, type FormEvent, type ReactNode } from "react";
-import { Boxes, ChevronDown, ChevronUp, Pencil, Plus, Save, Unlink, X } from "lucide-react";
+import { ChevronDown, ChevronUp, FileStack, Pencil, Plus, Save, Unlink, X } from "lucide-react";
 import { Link, useLocation, useNavigate, useParams, useSearchParams } from "react-router-dom";
 
 import { apiClient } from "@/api/client";
@@ -30,6 +30,7 @@ import { EmptyState } from "@/components/shared/empty-state";
 import { ErrorState } from "@/components/shared/error-state";
 import { LoadingState } from "@/components/shared/loading-state";
 import { StatusBadge } from "@/components/shared/status-badge";
+import { paperDisplayTitle } from "@/lib/paper-title";
 import { TaskDialog, type TaskFormInput } from "@/components/tasks/task-dialog";
 import { PageHeading } from "@/components/typography/heading";
 import { Button } from "@/components/ui/button";
@@ -42,8 +43,10 @@ import { Textarea } from "@/components/ui/textarea";
 const MODULE_STATUSES = ["Active", "Review", "Stalled", "Complete"];
 
 interface EditableModule {
+  shortTitle: string;
   title: string;
   description: string;
+  abstract: string;
   status: string;
   pipelineStage: string;
   tag: string;
@@ -53,8 +56,10 @@ interface EditableModule {
 
 function editableValues(module: ApiModule): EditableModule {
   return {
-    title: module.title,
+    shortTitle: module.shortTitle ?? "",
+    title: module.title ?? "",
     description: module.description ?? "",
+    abstract: module.abstract ?? "",
     status: module.status ?? "Active",
     pipelineStage: module.pipelineStage ?? "",
     tag: module.tag ?? "",
@@ -403,8 +408,10 @@ export default function ModuleDetailPage() {
     await updateModule.mutateAsync({
       moduleId,
       input: {
-        title: form.title.trim(),
+        shortTitle: form.shortTitle.trim(),
+        title: form.title.trim() || undefined,
         description: form.description.trim() || undefined,
+        abstract: form.abstract.trim() || undefined,
         status: form.status,
         pipelineStage: form.pipelineStage,
         tag: form.tag || undefined,
@@ -499,9 +506,9 @@ export default function ModuleDetailPage() {
 
       <PageHeading
         tone="violet"
-        icon={Boxes}
+        icon={FileStack}
         eyebrow={module.displayId ?? module.id}
-        title={module.title}
+        title={paperDisplayTitle(module)}
         description={module.description || "Review and update the module's status, type and planning details."}
         actions={
           <div className="flex flex-wrap items-center gap-3">
@@ -513,6 +520,7 @@ export default function ModuleDetailPage() {
       >
         {!form ? (
           <div className="flex flex-wrap gap-2">
+            {module.title ? <HeaderStat label="Formal title" value={module.title} /> : null}
             <HeaderStat label="Type" value={module.tag ?? "—"} />
             <HeaderStat label="Status" value={module.status ?? "—"} />
             <HeaderStat label="Pipeline stage" value={module.pipelineStage ?? "Unassigned"} />
@@ -527,8 +535,10 @@ export default function ModuleDetailPage() {
         <CardContent>
           <form onSubmit={(event) => void handleSave(event)} className="grid gap-6">
             <div className="grid gap-5 sm:grid-cols-2">
-              <FormField label="Module title" htmlFor="edit-module-title" className="sm:col-span-2"><Input id="edit-module-title" value={form.title} onChange={(event) => setForm({ ...form, title: event.target.value })} required autoFocus /></FormField>
+              <FormField label="Short title" htmlFor="edit-module-short-title"><Input id="edit-module-short-title" value={form.shortTitle} onChange={(event) => setForm({ ...form, shortTitle: event.target.value })} placeholder="The working name you'll refer to this paper by" required autoFocus /></FormField>
+              <FormField label="Formal title" htmlFor="edit-module-title"><Input id="edit-module-title" value={form.title} onChange={(event) => setForm({ ...form, title: event.target.value })} placeholder="Add once the paper has a formal title" /></FormField>
               <FormField label="Description" htmlFor="edit-module-description" className="sm:col-span-2"><Textarea id="edit-module-description" value={form.description} onChange={(event) => setForm({ ...form, description: event.target.value })} rows={3} /></FormField>
+              <FormField label="Abstract" htmlFor="edit-module-abstract" className="sm:col-span-2"><Textarea id="edit-module-abstract" value={form.abstract} onChange={(event) => setForm({ ...form, abstract: event.target.value })} placeholder="Add the paper's academic abstract" rows={6} /></FormField>
               <FormField label="Status" htmlFor="edit-module-status"><Select value={form.status} onValueChange={(value) => setForm({ ...form, status: value })}><SelectTrigger id="edit-module-status"><SelectValue /></SelectTrigger><SelectContent>{MODULE_STATUSES.map((value) => <SelectItem key={value} value={value}>{value}</SelectItem>)}</SelectContent></Select></FormField>
               <FormField label="Type" htmlFor="edit-module-type"><Select value={form.tag} onValueChange={(value) => setForm({ ...form, tag: value })}><SelectTrigger id="edit-module-type"><SelectValue placeholder="Select a type" /></SelectTrigger><SelectContent>{(tagValuesQuery.data ?? []).map((value) => <SelectItem key={value.id} value={value.value}>{value.value}</SelectItem>)}</SelectContent></Select></FormField>
               <FormField label="Pipeline stage" htmlFor="edit-module-stage"><Select value={form.pipelineStage} onValueChange={(value) => setForm({ ...form, pipelineStage: value })}><SelectTrigger id="edit-module-stage"><SelectValue placeholder="Select a stage" /></SelectTrigger><SelectContent>{(stagesQuery.data ?? []).filter((stage) => !stage.hidden).map((stage: { id: string; value: string }) => <SelectItem key={stage.id} value={stage.value}>{stage.value}</SelectItem>)}</SelectContent></Select></FormField>
@@ -544,6 +554,17 @@ export default function ModuleDetailPage() {
           </form>
         </CardContent>
       </Card> : null}
+
+      {!form && module.abstract ? (
+        <Card>
+          <CardHeader><CardTitle>Abstract</CardTitle></CardHeader>
+          <CardContent>
+            <p className="whitespace-pre-wrap text-sm leading-relaxed text-foreground/90">
+              {module.abstract}
+            </p>
+          </CardContent>
+        </Card>
+      ) : null}
 
       <div className="flex flex-col gap-6">
         <section aria-labelledby="module-collaborators-heading">
@@ -570,7 +591,7 @@ export default function ModuleDetailPage() {
                     <ModuleCollaboratorsManager
                       tenantId={tenantId}
                       moduleId={module.id}
-                      moduleTitle={module.title}
+                      moduleTitle={paperDisplayTitle(module)}
                       members={members}
                     />
                   </div>
@@ -618,7 +639,7 @@ export default function ModuleDetailPage() {
 
         <EntityDetailPipeline
           entityLabel="module"
-          entity={{ ...module, secondaryStatus: module.tag }}
+          entity={{ ...module, title: paperDisplayTitle(module), secondaryStatus: module.tag }}
           stages={(stagesQuery.data ?? []).filter((stage) => !stage.hidden)}
           isPending={stagesQuery.isPending}
           isError={stagesQuery.isError}

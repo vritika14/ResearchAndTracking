@@ -197,6 +197,48 @@
       "when": 1788914165892,
       "tag": "0043_reset_pipeline_stage_data",
       "breakpoints": true
+    },
+    {
+      "idx": 44,
+      "version": "7",
+      "when": 1788929596045,
+      "tag": "0044_add_calendar_events_table",
+      "breakpoints": true
+    },
+    {
+      "idx": 45,
+      "version": "7",
+      "when": 1788930665419,
+      "tag": "0045_calendar_events_grants",
+      "breakpoints": true
+    },
+    {
+      "idx": 46,
+      "version": "7",
+      "when": 1788933431438,
+      "tag": "0046_add_module_pipeline_stage_changed_at",
+      "breakpoints": true
+    },
+    {
+      "idx": 47,
+      "version": "7",
+      "when": 1788935036936,
+      "tag": "0047_add_module_short_title",
+      "breakpoints": true
+    },
+    {
+      "idx": 48,
+      "version": "7",
+      "when": 1788937116106,
+      "tag": "0048_add_note_follow_up_date",
+      "breakpoints": true
+    },
+    {
+      "idx": 49,
+      "version": "7",
+      "when": 1788937708748,
+      "tag": "0049_add_module_abstract",
+      "breakpoints": true
     }
   ]
 }

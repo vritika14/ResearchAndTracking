@@ -29,6 +29,7 @@ import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { resolveLinkTargetType, type LinkTargetType } from "@/lib/link-target";
+import { paperDisplayTitle } from "@/lib/paper-title";
 
 const TASK_STATUSES = ["To do", "Underway", "Waiting", "Complete"];
 const TASK_PRIORITIES = ["Low", "Medium", "High", "Critical"];
@@ -212,7 +213,7 @@ function LinkedWorkCard({
                 <SelectTrigger aria-label="Paper"><SelectValue placeholder="Select a paper" /></SelectTrigger>
                 <SelectContent>
                   {modules.map((module) => (
-                    <SelectItem key={module.id} value={module.id}>{module.title}</SelectItem>
+                    <SelectItem key={module.id} value={module.id}>{paperDisplayTitle(module)}</SelectItem>
                   ))}
                 </SelectContent>
               </Select>
@@ -397,7 +398,7 @@ export default function TaskDetailPage() {
                     className={form.linkTarget === option.value ? "rounded-full border border-primary bg-primary px-3 py-1 text-xs font-medium text-primary-foreground" : "rounded-full border px-3 py-1 text-xs font-medium text-muted-foreground"}>{option.label}</button>)}</div>
                 </FormField>
                 {form.linkTarget === "project" ? <FormField label="Project" htmlFor="edit-task-project"><Select value={form.projectId} onValueChange={(value) => setForm({ ...form, projectId: value })}><SelectTrigger id="edit-task-project"><SelectValue placeholder="Select a project" /></SelectTrigger><SelectContent>{projects.map((project) => <SelectItem key={project.id} value={project.id}>{project.title}</SelectItem>)}</SelectContent></Select></FormField> : null}
-                {form.linkTarget === "module" ? <FormField label="Paper" htmlFor="edit-task-module"><Select value={form.moduleId} onValueChange={(value) => setForm({ ...form, moduleId: value })}><SelectTrigger id="edit-task-module"><SelectValue placeholder="Select a paper" /></SelectTrigger><SelectContent>{(modules).map((module) => <SelectItem key={module.id} value={module.id}>{module.title}</SelectItem>)}</SelectContent></Select></FormField> : null}
+                {form.linkTarget === "module" ? <FormField label="Paper" htmlFor="edit-task-module"><Select value={form.moduleId} onValueChange={(value) => setForm({ ...form, moduleId: value })}><SelectTrigger id="edit-task-module"><SelectValue placeholder="Select a paper" /></SelectTrigger><SelectContent>{(modules).map((module) => <SelectItem key={module.id} value={module.id}>{paperDisplayTitle(module)}</SelectItem>)}</SelectContent></Select></FormField> : null}
                 <FormField label="Status" htmlFor="edit-task-status"><Select value={form.status} onValueChange={(value) => setForm({ ...form, status: value })}><SelectTrigger id="edit-task-status"><SelectValue /></SelectTrigger><SelectContent>{TASK_STATUSES.map((value) => <SelectItem key={value} value={value}>{value}</SelectItem>)}</SelectContent></Select></FormField>
                 <FormField label="Priority" htmlFor="edit-task-priority"><Select value={form.priority} onValueChange={(value) => setForm({ ...form, priority: value })}><SelectTrigger id="edit-task-priority"><SelectValue /></SelectTrigger><SelectContent>{TASK_PRIORITIES.map((value) => <SelectItem key={value} value={value}>{value}</SelectItem>)}</SelectContent></Select></FormField>
                 <FormField label="Due date" htmlFor="edit-task-due"><DatePickerInput id="edit-task-due" label="Due date" value={form.dueDate} onChange={(value) => setForm({ ...form, dueDate: value })} /></FormField>
@@ -479,7 +480,7 @@ export default function TaskDetailPage() {
           modules={modules}
           linkedProjectTitle={linkedProjectQuery.data?.title}
           linkedProjectError={linkedProjectQuery.isError}
-          linkedModuleTitle={linkedModule?.title}
+          linkedModuleTitle={linkedModule ? paperDisplayTitle(linkedModule) : undefined}
           isSaving={updateTask.isPending}
           onChangeLink={handleChangeLink}
         />

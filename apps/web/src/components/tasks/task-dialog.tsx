@@ -31,6 +31,7 @@ import {
 } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { resolveLinkTargetType, type LinkTargetType } from "@/lib/link-target";
+import { paperDisplayTitle } from "@/lib/paper-title";
 import { cn } from "@/lib/utils";
 
 const TASK_STATUSES = ["To do", "Underway", "Waiting", "Complete"] as const;
@@ -281,7 +282,7 @@ export function TaskDialog({
                 <SelectTrigger id="task-module"><SelectValue placeholder="Select a paper" /></SelectTrigger>
                 <SelectContent>
                   {modules.map((module) => (
-                    <SelectItem key={module.id} value={module.id}>{module.title}</SelectItem>
+                    <SelectItem key={module.id} value={module.id}>{paperDisplayTitle(module)}</SelectItem>
                   ))}
                 </SelectContent>
               </Select>

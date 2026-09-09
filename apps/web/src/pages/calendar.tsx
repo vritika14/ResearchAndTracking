@@ -1,36 +1,47 @@
 import { useMemo, useState } from "react";
 import {
   Calendar as CalendarIcon,
+  CalendarDays,
   Boxes,
   CheckSquare2,
   ChevronLeft,
   ChevronRight,
   FolderKanban,
+  NotebookPen,
   Presentation,
 } from "lucide-react";
 import { Link } from "react-router-dom";
 
 import {
+  useCalendarEvents,
+  useCreateCalendarEvent,
   useCurrentWorkspace,
   useConferences,
+  useDeleteCalendarEvent,
+  useMe,
   useModules,
+  useNotes,
   useProjects,
   useTasks,
+  useUpdateCalendarEvent,
+  type ApiCalendarEvent,
   type ApiProject,
   type ApiTask,
 } from "@/api/hooks";
+import { CalendarEventDialog, type CalendarEventFormInput } from "@/components/calendar/calendar-event-dialog";
 import { ErrorState } from "@/components/shared/error-state";
 import { LoadingState } from "@/components/shared/loading-state";
 import { PageHeading } from "@/components/typography/heading";
 import { Button } from "@/components/ui/button";
+import { paperDisplayTitle } from "@/lib/paper-title";
 import { cn } from "@/lib/utils";
 
 type CalendarEvent = {
   id: string;
-  kind: "project" | "module" | "task" | "conference";
+  kind: "project" | "module" | "task" | "conference" | "event" | "note";
   title: string;
   dueDate: string;
-  href: string;
+  href: string | null;
   meta: string | null;
 };
 
@@ -67,6 +78,57 @@ function taskProjectName(task: ApiTask, projectById: Map<string, ApiProject>) {
   return projectById.get(task.projectId)?.title ?? null;
 }
 
+function kindLabel(kind: CalendarEvent["kind"]) {
+  switch (kind) {
+    case "project":
+      return "Project";
+    case "module":
+      return "Paper";
+    case "conference":
+      return "Conference";
+    case "event":
+      return "Event";
+    case "note":
+      return "Note";
+    default:
+      return "Task";
+  }
+}
+
+function kindPillClass(kind: CalendarEvent["kind"]) {
+  switch (kind) {
+    case "project":
+      return "border-l-blue-600 bg-blue-100 text-blue-900 dark:bg-blue-950/60 dark:text-blue-200";
+    case "module":
+      return "border-l-violet-600 bg-violet-100 text-violet-950 dark:bg-violet-950/60 dark:text-violet-200";
+    case "conference":
+      return "border-l-rose-600 bg-rose-100 text-rose-950 dark:bg-rose-950/60 dark:text-rose-200";
+    case "event":
+      return "border-l-cyan-600 bg-cyan-100 text-cyan-950 dark:bg-cyan-950/60 dark:text-cyan-200";
+    case "note":
+      return "border-l-emerald-600 bg-emerald-100 text-emerald-950 dark:bg-emerald-950/60 dark:text-emerald-200";
+    default:
+      return "border-l-amber-500 bg-amber-100 text-amber-950 dark:bg-amber-950/60 dark:text-amber-200";
+  }
+}
+
+function kindMobileBorderClass(kind: CalendarEvent["kind"]) {
+  switch (kind) {
+    case "project":
+      return "border-blue-200 dark:border-blue-900";
+    case "module":
+      return "border-violet-200 dark:border-violet-900";
+    case "conference":
+      return "border-rose-200 dark:border-rose-900";
+    case "event":
+      return "border-cyan-200 dark:border-cyan-900";
+    case "note":
+      return "border-emerald-200 dark:border-emerald-900";
+    default:
+      return "border-amber-200 dark:border-amber-900";
+  }
+}
+
 export default function CalendarPage() {
   const workspace = useCurrentWorkspace();
   const tenantId = workspace.data?.id ?? "";
@@ -78,14 +140,29 @@ export default function CalendarPage() {
   const tasks = tasksQuery.data?.data ?? [];
   const conferencesQuery = useConferences(tenantId);
   const conferences = conferencesQuery.data?.data ?? [];
+  const calendarEventsQuery = useCalendarEvents(tenantId);
+  const calendarEvents = calendarEventsQuery.data?.data ?? [];
+  const notesQuery = useNotes(tenantId);
+  const notes = notesQuery.data?.data ?? [];
+  const me = useMe();
+  const createCalendarEvent = useCreateCalendarEvent(tenantId);
+  const updateCalendarEvent = useUpdateCalendarEvent(tenantId);
+  const deleteCalendarEvent = useDeleteCalendarEvent(tenantId);
   const [visibleMonth, setVisibleMonth] = useState(
     () => new Date(new Date().getFullYear(), new Date().getMonth(), 1),
   );
   const [activeFilter, setActiveFilter] = useState<CalendarFilter | null>(null);
+  const [isNewEventOpen, setIsNewEventOpen] = useState(false);
+  const [editingEvent, setEditingEvent] = useState<ApiCalendarEvent | null>(null);
 
   const projectById = useMemo(
     () => new Map(projects.map((project) => [project.id, project])),
     [projects],
+  );
+
+  const calendarEventById = useMemo(
+    () => new Map(calendarEvents.map((event) => [event.id, event])),
+    [calendarEvents],
   );
 
   const events = useMemo(() => {
@@ -109,7 +186,7 @@ export default function CalendarPage() {
         rows.push({
           id: module.id,
           kind: "module",
-          title: module.title,
+          title: paperDisplayTitle(module),
           dueDate: module.dueDate,
           href: `/modules/${module.id}`,
           meta: module.projectId ? (projectById.get(module.projectId)?.title ?? null) : "Independent paper",
@@ -155,8 +232,33 @@ export default function CalendarPage() {
         }
       }
     }
+    if (activeFilter === null || activeFilter === "event") {
+      for (const calendarEvent of calendarEvents) {
+        rows.push({
+          id: calendarEvent.id,
+          kind: "event",
+          title: calendarEvent.title,
+          dueDate: calendarEvent.eventDate,
+          href: null,
+          meta: null,
+        });
+      }
+    }
+    if (activeFilter === null || activeFilter === "note") {
+      for (const note of notes) {
+        if (!note.followUpDate) continue;
+        rows.push({
+          id: note.id,
+          kind: "note",
+          title: note.title,
+          dueDate: note.followUpDate,
+          href: `/daily-notes/${note.id}`,
+          meta: "Follow up",
+        });
+      }
+    }
     return rows.sort((a, b) => a.title.localeCompare(b.title));
-  }, [activeFilter, conferences, modules, projectById, projects, tasks]);
+  }, [activeFilter, calendarEvents, conferences, modules, notes, projectById, projects, tasks]);
 
   const eventsByDate = useMemo(() => {
     const grouped = new Map<string, CalendarEvent[]>();
@@ -182,17 +284,31 @@ export default function CalendarPage() {
     setActiveFilter((current) => current === filter ? null : filter);
   }
 
-  if (workspace.isPending || projectsQuery.isPending || modulesQuery.isPending || tasksQuery.isPending || conferencesQuery.isPending) {
+  async function handleCreateEvent(input: CalendarEventFormInput) {
+    await createCalendarEvent.mutateAsync(input);
+  }
+
+  async function handleUpdateEvent(input: CalendarEventFormInput) {
+    if (!editingEvent) return;
+    await updateCalendarEvent.mutateAsync({ eventId: editingEvent.id, input });
+  }
+
+  async function handleDeleteEvent() {
+    if (!editingEvent) return;
+    await deleteCalendarEvent.mutateAsync(editingEvent.id);
+  }
+
+  if (workspace.isPending || projectsQuery.isPending || modulesQuery.isPending || tasksQuery.isPending || conferencesQuery.isPending || calendarEventsQuery.isPending || notesQuery.isPending) {
     return <LoadingState title="Loading calendar" className="min-h-[50vh]" />;
   }
 
-  if (projectsQuery.isError || modulesQuery.isError || tasksQuery.isError || conferencesQuery.isError) {
-    const error = projectsQuery.error ?? modulesQuery.error ?? tasksQuery.error ?? conferencesQuery.error;
+  if (projectsQuery.isError || modulesQuery.isError || tasksQuery.isError || conferencesQuery.isError || calendarEventsQuery.isError || notesQuery.isError) {
+    const error = projectsQuery.error ?? modulesQuery.error ?? tasksQuery.error ?? conferencesQuery.error ?? calendarEventsQuery.error ?? notesQuery.error;
     return (
       <ErrorState
         title="Calendar could not be loaded"
         description={error?.message ?? "Please try again."}
-        onRetry={() => void Promise.all([projectsQuery.refetch(), modulesQuery.refetch(), tasksQuery.refetch(), conferencesQuery.refetch()])}
+        onRetry={() => void Promise.all([projectsQuery.refetch(), modulesQuery.refetch(), tasksQuery.refetch(), conferencesQuery.refetch(), calendarEventsQuery.refetch(), notesQuery.refetch()])}
       />
     );
   }
@@ -204,7 +320,23 @@ export default function CalendarPage() {
         tone="cyan"
         eyebrow="Planning"
         title="Calendar"
-        description="See project, paper, task, and conference dates together, month by month."
+        description="See project, paper, task, conference, and note follow-up dates together, month by month."
+        actions={<Button onClick={() => setIsNewEventOpen(true)}>New Event</Button>}
+      />
+
+      <CalendarEventDialog
+        open={isNewEventOpen}
+        onOpenChange={setIsNewEventOpen}
+        onSave={handleCreateEvent}
+      />
+      <CalendarEventDialog
+        open={editingEvent !== null}
+        onOpenChange={(open) => {
+          if (!open) setEditingEvent(null);
+        }}
+        event={editingEvent}
+        onSave={handleUpdateEvent}
+        onDelete={handleDeleteEvent}
       />
 
       <section className="overflow-hidden rounded-2xl border border-cyan-200/70 bg-card shadow-sm dark:border-cyan-900/50">
@@ -276,6 +408,32 @@ export default function CalendarPage() {
             >
               <Presentation className="h-3.5 w-3.5" /> Conferences
             </button>
+            <button
+              type="button"
+              aria-pressed={activeFilter === "event"}
+              onClick={() => toggleFilter("event")}
+              className={cn(
+                "inline-flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-sm font-medium transition-colors",
+                activeFilter === "event"
+                  ? "border-cyan-600 bg-cyan-600 text-white"
+                  : "border-border bg-background text-muted-foreground hover:bg-accent",
+              )}
+            >
+              <CalendarDays className="h-3.5 w-3.5" /> Events
+            </button>
+            <button
+              type="button"
+              aria-pressed={activeFilter === "note"}
+              onClick={() => toggleFilter("note")}
+              className={cn(
+                "inline-flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-sm font-medium transition-colors",
+                activeFilter === "note"
+                  ? "border-emerald-600 bg-emerald-600 text-white"
+                  : "border-border bg-background text-muted-foreground hover:bg-accent",
+              )}
+            >
+              <NotebookPen className="h-3.5 w-3.5" /> Notes
+            </button>
           </div>
         </div>
 
@@ -311,25 +469,43 @@ export default function CalendarPage() {
                   </span>
                 </div>
                 <div className="space-y-1">
-                  {dayEvents.map((event) => (
-                    <Link
-                      key={`${event.kind}-${event.id}`}
-                      to={event.href}
-                      title={`${event.kind === "project" ? "Project" : event.kind === "module" ? "Paper" : event.kind === "conference" ? "Conference" : "Task"}: ${event.title}`}
-                      className={cn(
-                        "block truncate rounded-md border-l-4 px-2 py-1 text-xs font-medium transition-opacity hover:opacity-80 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
-                        event.kind === "project"
-                          ? "border-l-blue-600 bg-blue-100 text-blue-900 dark:bg-blue-950/60 dark:text-blue-200"
-                          : event.kind === "module"
-                            ? "border-l-violet-600 bg-violet-100 text-violet-950 dark:bg-violet-950/60 dark:text-violet-200"
-                            : event.kind === "conference"
-                              ? "border-l-rose-600 bg-rose-100 text-rose-950 dark:bg-rose-950/60 dark:text-rose-200"
-                            : "border-l-amber-500 bg-amber-100 text-amber-950 dark:bg-amber-950/60 dark:text-amber-200",
-                      )}
-                    >
-                      {event.title}
-                    </Link>
-                  ))}
+                  {dayEvents.map((event) => {
+                    const title = `${kindLabel(event.kind)}: ${event.title}`;
+                    const pillClassName = cn(
+                      "block w-full truncate rounded-md border-l-4 px-2 py-1 text-left text-xs font-medium transition-opacity hover:opacity-80 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
+                      kindPillClass(event.kind),
+                    );
+                    const key = `${event.kind}-${event.id}`;
+
+                    if (event.href) {
+                      return (
+                        <Link key={key} to={event.href} title={title} className={pillClassName}>
+                          {event.title}
+                        </Link>
+                      );
+                    }
+
+                    const canEdit = calendarEventById.get(event.id)?.createdBy === me.data?.id;
+                    if (!canEdit) {
+                      return (
+                        <span key={key} title={title} className={cn(pillClassName, "cursor-default")}>
+                          {event.title}
+                        </span>
+                      );
+                    }
+
+                    return (
+                      <button
+                        key={key}
+                        type="button"
+                        title={title}
+                        onClick={() => setEditingEvent(calendarEventById.get(event.id) ?? null)}
+                        className={pillClassName}
+                      >
+                        {event.title}
+                      </button>
+                    );
+                  })}
                 </div>
               </div>
             );
@@ -352,27 +528,49 @@ export default function CalendarPage() {
                     <div className="text-sm font-semibold">{shortDateFormatter.format(day)}</div>
                   </div>
                   <div className="space-y-2">
-                    {dayEvents.map((event) => (
-                      <Link
-                        key={`${event.kind}-${event.id}`}
-                        to={event.href}
-                        className={cn(
-                          "block rounded-lg border p-2.5 text-sm transition-colors hover:bg-accent",
-                          event.kind === "project"
-                            ? "border-blue-200 dark:border-blue-900"
-                            : event.kind === "module"
-                              ? "border-violet-200 dark:border-violet-900"
-                              : event.kind === "conference"
-                                ? "border-rose-200 dark:border-rose-900"
-                              : "border-amber-200 dark:border-amber-900",
-                        )}
-                      >
-                        <span className="font-medium">{event.title}</span>
-                        <span className="mt-0.5 block text-xs text-muted-foreground">
-                          {event.kind === "project" ? "Project" : event.kind === "module" ? "Paper" : event.kind === "conference" ? "Conference" : "Task"}{event.meta ? ` · ${event.meta}` : ""}
-                        </span>
-                      </Link>
-                    ))}
+                    {dayEvents.map((event) => {
+                      const rowClassName = cn(
+                        "block w-full rounded-lg border p-2.5 text-left text-sm transition-colors hover:bg-accent",
+                        kindMobileBorderClass(event.kind),
+                      );
+                      const key = `${event.kind}-${event.id}`;
+                      const body = (
+                        <>
+                          <span className="font-medium">{event.title}</span>
+                          <span className="mt-0.5 block text-xs text-muted-foreground">
+                            {kindLabel(event.kind)}{event.meta ? ` · ${event.meta}` : ""}
+                          </span>
+                        </>
+                      );
+
+                      if (event.href) {
+                        return (
+                          <Link key={key} to={event.href} className={rowClassName}>
+                            {body}
+                          </Link>
+                        );
+                      }
+
+                      const canEdit = calendarEventById.get(event.id)?.createdBy === me.data?.id;
+                      if (!canEdit) {
+                        return (
+                          <div key={key} className={cn(rowClassName, "cursor-default hover:bg-transparent")}>
+                            {body}
+                          </div>
+                        );
+                      }
+
+                      return (
+                        <button
+                          key={key}
+                          type="button"
+                          onClick={() => setEditingEvent(calendarEventById.get(event.id) ?? null)}
+                          className={rowClassName}
+                        >
+                          {body}
+                        </button>
+                      );
+                    })}
                   </div>
                 </div>
               );

@@ -23,6 +23,7 @@ import { NoteMembersModule } from './modules/note-members/note-members.module';
 import { ModulePipelineStagesPoolModule } from './modules/module-pipeline-stages-pool/module-pipeline-stages-pool.module';
 import { ProjectInvitationsModule } from './modules/project-invitations/project-invitations.module';
 import { ConferencesModule } from './modules/conferences/conferences.module';
+import { CalendarEventsModule } from './modules/calendar-events/calendar-events.module';
 import { FeedbackModule } from './modules/feedback/feedback.module';
 import { PreferencesModule } from './modules/preferences/preferences.module';
 import { AnalyticsModule } from './modules/analytics/analytics.module';
@@ -88,6 +89,7 @@ import { ArchiveCleanupModule } from './modules/archive-cleanup/archive-cleanup.
     ModulePipelineStagesPoolModule,
     ProjectInvitationsModule,
     ConferencesModule,
+    CalendarEventsModule,
     FeedbackModule,
     PreferencesModule,
     ArchiveCleanupModule,

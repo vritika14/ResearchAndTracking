@@ -1,4 +1,4 @@
-import { pgTable, uuid, text, timestamp, uniqueIndex } from 'drizzle-orm/pg-core';
+import { pgTable, uuid, text, timestamp, date, uniqueIndex } from 'drizzle-orm/pg-core';
 import { projects } from './projects';
 import { modules } from './modules';
 import { tenants } from './tenants';
@@ -23,6 +23,7 @@ export const notes = pgTable(
     content: text('content'),
     visibilityId: uuid('visibility_id').references(() => enumTable.id),
     noteDate: timestamp('note_date', { withTimezone: true }).defaultNow().notNull(),
+    followUpDate: date('follow_up_date'),
     updatedAt: timestamp('updated_at', { withTimezone: true }).defaultNow().notNull(),
   },
   (table) => ({

@@ -162,11 +162,14 @@ export class ProjectModulesRepository {
   async create(values: {
     projectId?: string;
     tenantId: string;
-    title: string;
+    shortTitle: string;
+    title?: string;
     description?: string;
+    abstract?: string;
     tagId?: string;
     statusId?: string;
     pipelineStageId?: string;
+    pipelineStageChangedAt?: Date;
     assignedToUserId?: string;
     dueDate?: string;
     displayId?: string;
@@ -198,12 +201,15 @@ export class ProjectModulesRepository {
     tenantId: string,
     moduleId: string,
     values: Partial<{
+      shortTitle: string;
       title: string;
       description: string;
+      abstract: string;
       projectId: string | null;
       tagId: string;
       statusId: string;
       pipelineStageId: string;
+      pipelineStageChangedAt: Date;
       assignedToUserId: string;
       dueDate: string;
     }>,

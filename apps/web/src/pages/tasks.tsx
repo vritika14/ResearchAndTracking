@@ -29,6 +29,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { useColumnVisibility } from "@/hooks/use-column-visibility";
+import { paperDisplayTitle } from "@/lib/paper-title";
 import { cn } from "@/lib/utils";
 
 const STATUS_FILTERS = ["All", "To do", "Underway", "Waiting", "Complete"] as const;
@@ -154,7 +155,7 @@ export default function TasksPage() {
 
   const moduleById = useMemo(() => {
     const map = new Map<string, string>();
-    for (const module of modules) map.set(module.id, module.title);
+    for (const module of modules) map.set(module.id, paperDisplayTitle(module));
     return map;
   }, [modules]);
 

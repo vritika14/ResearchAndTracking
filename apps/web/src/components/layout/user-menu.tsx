@@ -1,4 +1,4 @@
-import { Building2, Check, ChevronsUpDown, LogOut, Moon, Sun, Users } from "lucide-react";
+import { Building2, Check, ChevronsUpDown, CircleAlert, LogOut, Moon, Settings, Sun } from "lucide-react";
 import { useAuth } from "react-oidc-context";
 import { Link } from "react-router-dom";
 
@@ -91,8 +91,14 @@ export function UserMenu({ compact = false }: UserMenuProps) {
         })}
         <DropdownMenuItem asChild>
           <Link to="/settings">
-            <Users className="h-4 w-4 shrink-0 text-muted-foreground" />
-            Manage workspaces
+            <Settings className="h-4 w-4 shrink-0 text-muted-foreground" />
+            <span className="flex-1">Settings</span>
+            {me.data?.profileComplete === false ? (
+              <CircleAlert
+                className="h-4 w-4 shrink-0 text-amber-500"
+                aria-label="Profile incomplete"
+              />
+            ) : null}
           </Link>
         </DropdownMenuItem>
         <DropdownMenuSeparator />

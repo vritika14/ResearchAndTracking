@@ -176,7 +176,7 @@ describe("SettingsPage", () => {
     expect(screen.getByLabelText(/Job title/)).toBeRequired();
     expect(screen.getByLabelText(/Institution/)).toBeRequired();
     expect(screen.getByLabelText(/Department/)).toBeRequired();
-    expect(screen.getByLabelText("Phone (optional)")).not.toBeRequired();
+    expect(screen.getByLabelText("Phone")).not.toBeRequired();
 
     fireEvent.change(screen.getByLabelText(/Job title/), {
       target: { value: "Research Fellow" },

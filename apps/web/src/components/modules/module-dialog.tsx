@@ -8,6 +8,7 @@ import {
   type Membership,
 } from "@/api/hooks";
 import { ModuleCollaboratorsManager } from "@/components/modules/module-collaborators";
+import { paperDisplayTitle } from "@/lib/paper-title";
 import { Button } from "@/components/ui/button";
 import { DatePickerInput } from "@/components/ui/date-picker-input";
 import {
@@ -33,8 +34,10 @@ const MODULE_STATUSES = ["Active", "Review", "Stalled", "Complete"] as const;
 const UNASSIGNED = "__unassigned__";
 
 export interface ModuleFormInput {
+  shortTitle: string;
   title: string;
   description: string;
+  abstract: string;
   projectId: string | null;
   status: string;
   pipelineStage: string;
@@ -56,8 +59,10 @@ interface ModuleDialogProps {
 }
 
 const INITIAL_FORM: ModuleFormInput = {
+  shortTitle: "",
   title: "",
   description: "",
+  abstract: "",
   projectId: null,
   status: "Active",
   pipelineStage: "",
@@ -114,8 +119,10 @@ export function ModuleDialog({
     setSaveError(null);
     if (module) {
       setForm({
-        title: module.title,
+        shortTitle: module.shortTitle ?? "",
+        title: module.title ?? "",
         description: module.description ?? "",
+        abstract: module.abstract ?? "",
         projectId: module.projectId,
         status: module.status ?? "Active",
         pipelineStage: module.pipelineStage ?? "",
@@ -146,8 +153,10 @@ export function ModuleDialog({
     try {
       await onSave({
         ...form,
+        shortTitle: form.shortTitle.trim(),
         title: form.title.trim(),
         description: form.description.trim(),
+        abstract: form.abstract.trim(),
         projectId: isIndependent ? null : form.projectId,
       });
       onOpenChange(false);
@@ -169,14 +178,23 @@ export function ModuleDialog({
         </DialogHeader>
 
         <form onSubmit={(event) => void handleSubmit(event)} className="grid gap-5">
-          <FormField label="Paper title" htmlFor="module-title" required>
+          <FormField label="Short title" htmlFor="module-short-title" required>
+            <Input
+              id="module-short-title"
+              value={form.shortTitle}
+              onChange={(event) => setForm((current) => ({ ...current, shortTitle: event.target.value }))}
+              placeholder="The working name you'll refer to this paper by"
+              autoFocus
+              required
+            />
+          </FormField>
+
+          <FormField label="Formal title" htmlFor="module-title">
             <Input
               id="module-title"
               value={form.title}
               onChange={(event) => setForm((current) => ({ ...current, title: event.target.value }))}
-              placeholder="What area of work does this paper cover?"
-              autoFocus
-              required
+              placeholder="Add once the paper has a formal title"
             />
           </FormField>
 
@@ -189,6 +207,18 @@ export function ModuleDialog({
               }
               placeholder="Add an optional description"
               rows={3}
+            />
+          </FormField>
+
+          <FormField label="Abstract" htmlFor="module-abstract">
+            <Textarea
+              id="module-abstract"
+              value={form.abstract}
+              onChange={(event) =>
+                setForm((current) => ({ ...current, abstract: event.target.value }))
+              }
+              placeholder="Add the paper's academic abstract"
+              rows={5}
             />
           </FormField>
 
@@ -320,7 +350,7 @@ export function ModuleDialog({
               <ModuleCollaboratorsManager
                 tenantId={tenantId}
                 moduleId={module.id}
-                moduleTitle={module.title}
+                moduleTitle={paperDisplayTitle(module)}
                 members={members}
               />
             </div>

@@ -3,11 +3,11 @@ import {
   Activity,
   BarChart3,
   BookOpen,
-  Boxes,
   Calendar,
   ClipboardCheck,
   ClipboardList,
   DollarSign,
+  FileStack,
   FileText,
   Files,
   FolderKanban,
@@ -18,7 +18,6 @@ import {
   Network,
   NotebookPen,
   Presentation,
-  Settings,
   ShieldCheck,
   Users,
   Workflow,
@@ -49,7 +48,7 @@ export const navGroups: NavGroup[] = [
     items: [
       { label: "Dashboard", to: "/", icon: LayoutDashboard, end: true },
       { label: "Major Projects", to: "/projects", icon: FolderKanban },
-      { label: "Papers", to: "/modules", icon: Boxes },
+      { label: "Papers", to: "/modules", icon: FileStack },
       { label: "Tasks and to do", to: "/tasks", icon: ClipboardList },
       { label: "Calendar", to: "/calendar", icon: Calendar },
       { label: "Mind map", to: "/mind-map", icon: Network },
@@ -61,18 +60,17 @@ export const navGroups: NavGroup[] = [
   {
     label: "Account",
     items: [
-      { label: "Settings", to: "/settings", icon: Settings },
-      {
-        label: "Account Audit",
-        to: "/settings/account-audit",
-        icon: ShieldCheck,
-      },
       { label: "Usage", to: "/usage", icon: BarChart3 },
     ],
   },
   {
     label: "Potential Future Features",
     items: [
+      {
+        label: "Account Audit",
+        to: "/settings/account-audit",
+        icon: ShieldCheck,
+      },
       { label: "Collaborators", to: "/future/collaborators", icon: Users },
       { label: "CV Builder", to: "/future/cv-builder", icon: FileText },
       { label: "Dissemination", to: "/future/dissemination", icon: Megaphone },

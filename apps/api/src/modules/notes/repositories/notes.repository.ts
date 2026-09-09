@@ -101,6 +101,7 @@ export class NotesRepository {
     content?: string;
     displayId?: string;
     visibilityId?: string;
+    followUpDate?: string;
   }) {
     const [note] = await this.drizzle.db
       .insert(notes)
@@ -118,6 +119,7 @@ export class NotesRepository {
       visibilityId: string;
       projectId: string | null;
       moduleId: string | null;
+      followUpDate: string;
     }>,
   ) {
     const [note] = await this.drizzle.db

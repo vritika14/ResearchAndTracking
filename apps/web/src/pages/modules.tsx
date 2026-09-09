@@ -1,5 +1,5 @@
 import { useCallback, useMemo, useState } from "react";
-import { Archive, ArrowDown, ArrowUp, ArrowUpDown, Boxes, Pencil, UserPlus } from "lucide-react";
+import { Archive, ArrowDown, ArrowUp, ArrowUpDown, FileStack, Pencil, UserPlus } from "lucide-react";
 import { Link } from "react-router-dom";
 
 import {
@@ -15,6 +15,7 @@ import {
 import { ColumnVisibilityMenu } from "@/components/dashboard/column-visibility-menu";
 import { ModuleDialog, type ModuleFormInput } from "@/components/modules/module-dialog";
 import { ModuleCollaboratorsManager } from "@/components/modules/module-collaborators";
+import { paperDisplayTitle } from "@/lib/paper-title";
 import { ErrorState } from "@/components/shared/error-state";
 import { LoadingState } from "@/components/shared/loading-state";
 import { PageHeading } from "@/components/typography/heading";
@@ -168,7 +169,7 @@ export default function ModulesPage() {
   function compareModules(a: ApiModule, b: ApiModule, column: SortColumn) {
     switch (column) {
       case "module":
-        return a.title.localeCompare(b.title);
+        return paperDisplayTitle(a).localeCompare(paperDisplayTitle(b));
       case "project":
         return projectName(a.projectId).localeCompare(projectName(b.projectId));
       case "status":
@@ -191,7 +192,8 @@ export default function ModulesPage() {
       const linkedProject = projectName(module.projectId);
       return (
         !query ||
-        module.title.toLowerCase().includes(query) ||
+        paperDisplayTitle(module).toLowerCase().includes(query) ||
+        (module.title?.toLowerCase().includes(query) ?? false) ||
         (module.description?.toLowerCase().includes(query) ?? false) ||
         linkedProject.toLowerCase().includes(query)
       );
@@ -206,8 +208,10 @@ export default function ModulesPage() {
 
   async function handleCreateModule(input: ModuleFormInput) {
     await createModule.mutateAsync({
-      title: input.title,
+      shortTitle: input.shortTitle,
+      title: input.title || undefined,
       description: input.description || undefined,
+      abstract: input.abstract || undefined,
       projectId: input.projectId ?? undefined,
       status: input.status,
       pipelineStage: input.pipelineStage,
@@ -219,7 +223,7 @@ export default function ModulesPage() {
   }
 
   async function archive(module: ApiModule) {
-    if (!window.confirm(`Archive "${module.title}"? It will be permanently deleted after 14 days.`)) {
+    if (!window.confirm(`Archive "${paperDisplayTitle(module)}"? It will be permanently deleted after 14 days.`)) {
       return;
     }
     setActionError(null);
@@ -248,7 +252,7 @@ export default function ModulesPage() {
     <div className="page-stack">
       <PageHeading
         tone="violet"
-        icon={Boxes}
+        icon={FileStack}
         eyebrow="Workflows"
         title="Papers"
         description="Organise project-related or independent areas of work by status, type and assignee."
@@ -273,7 +277,7 @@ export default function ModulesPage() {
           <DialogHeader>
             <DialogTitle>Paper collaborators</DialogTitle>
             <DialogDescription>
-              Invite collaborators to {sharingModule?.title ?? "this paper"} by email and manage pending access.
+              Invite collaborators to {sharingModule ? paperDisplayTitle(sharingModule) : "this paper"} by email and manage pending access.
             </DialogDescription>
           </DialogHeader>
           {sharingModule ? (
@@ -281,7 +285,7 @@ export default function ModulesPage() {
               <ModuleCollaboratorsManager
                 tenantId={tenantId}
                 moduleId={sharingModule.id}
-                moduleTitle={sharingModule.title}
+                moduleTitle={paperDisplayTitle(sharingModule)}
                 members={members}
               />
             ) : (
@@ -379,12 +383,12 @@ export default function ModulesPage() {
                             to={`/modules/${module.id}`}
                             className="font-semibold leading-tight text-foreground transition-colors hover:text-primary hover:underline"
                           >
-                            {module.title}
+                            {paperDisplayTitle(module)}
                           </Link>
                           {module.tenantId === tenantId ? (
                             <button
                               type="button"
-                              aria-label={`Manage collaborators for ${module.title}`}
+                              aria-label={`Manage collaborators for ${paperDisplayTitle(module)}`}
                               title="Manage collaborators"
                               onClick={() => setSharingModule(module)}
                               className="inline-flex h-6 w-6 shrink-0 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-accent hover:text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
@@ -394,7 +398,7 @@ export default function ModulesPage() {
                           ) : null}
                           <Link
                             to={`/modules/${module.id}?edit=true`}
-                            aria-label={`Edit ${module.title}`}
+                            aria-label={`Edit ${paperDisplayTitle(module)}`}
                             title="Edit paper"
                             className="inline-flex h-6 w-6 shrink-0 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-accent hover:text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
                           >
@@ -402,7 +406,7 @@ export default function ModulesPage() {
                           </Link>
                           <button
                             type="button"
-                            aria-label={`Archive ${module.title}`}
+                            aria-label={`Archive ${paperDisplayTitle(module)}`}
                             title="Archive paper"
                             onClick={() => void archive(module)}
                             disabled={archiveModule.isPending}

@@ -51,7 +51,7 @@ type StatusFilter = (typeof STATUS_FILTERS)[number];
 type RoleFilter = (typeof ROLE_FILTERS)[number];
 
 const PROJECT_COLUMNS = [
-  { id: "project", label: "Project", width: "minmax(280px,2.2fr)" },
+  { id: "project", label: "Project", width: "220px" },
   { id: "role", label: "My Role", width: "110px" },
   { id: "importance", label: "Importance", width: "110px" },
   { id: "status", label: "Status", width: "110px" },
@@ -243,11 +243,7 @@ export default function ProjectsPage() {
     PROJECT_COLUMNS.map((column) => column.id),
     "projects",
   );
-  const gridTemplate = PROJECT_COLUMNS.filter((column) =>
-    columns.visibleColumns.has(column.id),
-  )
-    .map((column) => column.width)
-    .join(" ");
+  const statColumns = PROJECT_COLUMNS.filter((column) => column.id !== "project");
 
   function toggleExpanded(id: string) {
     setExpandedId((prev) => (prev === id ? null : id));
@@ -490,24 +486,33 @@ export default function ProjectsPage() {
         </div>
       </div>
 
-      <div className="overflow-x-auto rounded-xl border border-border/70 bg-muted/20 p-3 shadow-sm sm:p-4">
-        <div className="min-w-[720px]">
-          <div
-            className="mb-3 grid gap-4 rounded-lg border border-blue-200/60 bg-blue-100/60 px-4 py-3 text-[11px] font-bold uppercase tracking-[0.08em] text-blue-900 dark:border-blue-900/50 dark:bg-blue-950/35 dark:text-blue-200"
-            style={{ gridTemplateColumns: gridTemplate }}
-          >
-            {PROJECT_COLUMNS.filter((column) =>
-              columns.visibleColumns.has(column.id),
-            ).map((column) => (
-              <SortableHeader
-                key={column.id}
-                label={column.label}
-                column={column.id}
-                sortColumn={sortColumn}
-                sortDirection={sortDirection}
-                onSort={handleSort}
-              />
-            ))}
+      <div className="rounded-xl border border-border/70 bg-muted/20 p-3 shadow-sm sm:p-4">
+        <div>
+          <div className="mb-3 flex flex-wrap items-center gap-x-6 gap-y-2 rounded-lg border border-blue-200/60 bg-blue-100/60 px-4 py-3 text-[11px] font-bold uppercase tracking-[0.08em] text-blue-900 dark:border-blue-900/50 dark:bg-blue-950/35 dark:text-blue-200">
+            {columns.isColumnVisible("project") ? (
+              <div className="min-w-[160px] flex-1">
+                <SortableHeader
+                  label="Project"
+                  column="project"
+                  sortColumn={sortColumn}
+                  sortDirection={sortDirection}
+                  onSort={handleSort}
+                />
+              </div>
+            ) : null}
+            {statColumns
+              .filter((column) => columns.visibleColumns.has(column.id))
+              .map((column) => (
+                <div key={column.id} className="shrink-0" style={{ width: column.width }}>
+                  <SortableHeader
+                    label={column.label}
+                    column={column.id}
+                    sortColumn={sortColumn}
+                    sortDirection={sortDirection}
+                    onSort={handleSort}
+                  />
+                </div>
+              ))}
           </div>
 
           <div className="flex flex-col gap-3">
@@ -537,33 +542,37 @@ export default function ProjectsPage() {
                         }
                       }}
                       className={cn(
-                        "grid cursor-pointer items-center gap-4 border border-blue-200/70 bg-gradient-to-r from-blue-50/55 via-card to-card px-4 py-4 shadow-sm transition-all hover:border-blue-300 hover:bg-blue-50/75 hover:shadow-md dark:border-blue-900/50 dark:from-blue-950/15",
+                        "flex cursor-pointer flex-wrap items-center gap-x-6 gap-y-3 border border-blue-200/70 bg-gradient-to-r from-blue-50/55 via-card to-card px-4 py-4 shadow-sm transition-all hover:border-blue-300 hover:bg-blue-50/75 hover:shadow-md dark:border-blue-900/50 dark:from-blue-950/15",
                         isExpanded ? "rounded-t-xl border-b-0" : "rounded-xl",
                       )}
-                      style={{ gridTemplateColumns: gridTemplate }}
                     >
                       {columns.isColumnVisible("project") ? (
-                      <div className="flex items-start gap-2">
+                      <div className="flex min-w-[220px] flex-1 items-start gap-2">
                         <ChevronRight
                           className={cn(
                             "mt-1 h-4 w-4 shrink-0 text-muted-foreground transition-transform",
                             isExpanded && "rotate-90",
                           )}
                         />
-                        <div className="flex flex-col gap-0.5">
+                        <div className="flex flex-1 flex-wrap items-baseline gap-x-2 gap-y-0.5">
                           {project.displayId ? (
                             <span className="font-mono text-[11px] text-muted-foreground">
                               {project.displayId}
                             </span>
                           ) : null}
-                          <div className="flex items-start gap-2">
-                            <Link
-                              to={`/projects/${project.id}`}
-                              onClick={(event) => event.stopPropagation()}
-                              className="font-semibold leading-tight transition-colors hover:text-primary hover:underline"
-                            >
-                              {project.title}
-                            </Link>
+                          <Link
+                            to={`/projects/${project.id}`}
+                            onClick={(event) => event.stopPropagation()}
+                            className="font-semibold leading-tight transition-colors hover:text-primary hover:underline"
+                          >
+                            {project.title}
+                          </Link>
+                          {project.researchArea ? (
+                            <span className="text-xs text-muted-foreground">
+                              {project.researchArea}
+                            </span>
+                          ) : null}
+                          <span className="flex items-center gap-1">
                             {project.tenantId === tenantId ? (
                               <button
                                 type="button"
@@ -599,54 +608,62 @@ export default function ProjectsPage() {
                             >
                               <Trash2 className="h-3.5 w-3.5" />
                             </button>
-                          </div>
-                          {project.researchArea ? (
-                            <span className="text-xs text-muted-foreground">
-                              {project.researchArea}
-                            </span>
-                          ) : null}
+                          </span>
                         </div>
                       </div>
                       ) : null}
 
                       {columns.isColumnVisible("role") ? (
-                      <Badge variant="outline" className={rolePillClass(project.role)}>
-                        {project.role ?? "—"}
-                      </Badge>
+                      <div className="shrink-0" style={{ width: "110px" }}>
+                        <Badge variant="outline" className={rolePillClass(project.role)}>
+                          {project.role ?? "—"}
+                        </Badge>
+                      </div>
                       ) : null}
 
                       {columns.isColumnVisible("importance") ? (
-                      <Badge variant="outline" className={priorityPillClass(project.importance)}>
-                        {project.importance ?? "—"}
-                      </Badge>
+                      <div className="shrink-0" style={{ width: "110px" }}>
+                        <Badge variant="outline" className={priorityPillClass(project.importance)}>
+                          {project.importance ?? "—"}
+                        </Badge>
+                      </div>
                       ) : null}
 
                       {columns.isColumnVisible("status") ? (
-                      <Badge variant="outline" className={statusPillClass(project.status)}>
-                        {project.status ?? "—"}
-                      </Badge>
+                      <div className="shrink-0" style={{ width: "110px" }}>
+                        <Badge variant="outline" className={statusPillClass(project.status)}>
+                          {project.status ?? "—"}
+                        </Badge>
+                      </div>
                       ) : null}
 
                       {columns.isColumnVisible("progress") ? (
-                      <ProgressCell
-                        completed={taskCounts.completed}
-                        total={taskCounts.total}
-                      />
+                      <div className="shrink-0" style={{ width: "130px" }}>
+                        <ProgressCell
+                          completed={taskCounts.completed}
+                          total={taskCounts.total}
+                        />
+                      </div>
                       ) : null}
 
                       {columns.isColumnVisible("notes") ? (
-                      <span className="text-sm text-muted-foreground">
-                        {noteCountByProject.get(project.id) ?? 0}
-                      </span>
+                      <div className="shrink-0" style={{ width: "70px" }}>
+                        <span className="text-sm text-muted-foreground">
+                          {noteCountByProject.get(project.id) ?? 0}
+                        </span>
+                      </div>
                       ) : null}
 
                       {columns.isColumnVisible("scheduled") ? (
-                      <span className="text-sm tabular-nums text-muted-foreground">
-                        {formatDate(project.scheduledFor)}
-                      </span>
+                      <div className="shrink-0" style={{ width: "110px" }}>
+                        <span className="text-sm tabular-nums text-muted-foreground">
+                          {formatDate(project.scheduledFor)}
+                        </span>
+                      </div>
                       ) : null}
 
                       {columns.isColumnVisible("due") ? (
+                      <div className="shrink-0" style={{ width: "110px" }}>
                       <span
                         className={cn(
                           "text-sm",
@@ -657,6 +674,7 @@ export default function ProjectsPage() {
                       >
                         {formatDate(project.dueDate)}
                       </span>
+                      </div>
                       ) : null}
                     </div>
 

@@ -1,0 +1,1 @@
+ALTER TABLE "notes" ADD COLUMN "follow_up_date" date;

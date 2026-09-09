@@ -31,6 +31,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { paperDisplayTitle } from "@/lib/paper-title";
 import { cn } from "@/lib/utils";
 
 type LinkedItem = ApiTask | ApiNote;
@@ -48,6 +49,16 @@ type BubblePosition = BubbleNode & { x: number; y: number };
 
 function matchesSearch(value: string | null | undefined, search: string) {
   return !search || value?.toLowerCase().includes(search);
+}
+
+/** Selected = solid primary. Inactive = white pill, light-grey border. Matches the Pipeline page's View toggle. */
+function controlPillClass(selected: boolean) {
+  return cn(
+    "inline-flex items-center gap-1.5 rounded-full border px-3 py-1 text-xs font-medium transition-colors",
+    selected
+      ? "border-primary bg-primary text-primary-foreground"
+      : "border-border bg-background text-muted-foreground hover:bg-accent hover:text-accent-foreground",
+  );
 }
 
 function ItemNode({ item, kind }: { item: LinkedItem; kind: "task" | "note" }) {
@@ -140,7 +151,7 @@ function BubbleRelationshipMap({
   const scopedNotes = notes.filter((note) => projectFilter === "all" || (note.projectId ? projectScope.has(note.projectId) : Boolean(note.moduleId && scopedModuleIds.has(note.moduleId))));
 
   const directlyMatchedProjects = new Set(scopedProjects.filter((project) => matchesSearch(project.title, search)).map((project) => project.id));
-  const directlyMatchedModules = new Set(scopedModules.filter((module) => matchesSearch(module.title, search)).map((module) => module.id));
+  const directlyMatchedModules = new Set(scopedModules.filter((module) => matchesSearch(paperDisplayTitle(module), search)).map((module) => module.id));
   const directlyMatchedTasks = new Set(scopedTasks.filter((task) => matchesSearch(task.title, search)).map((task) => task.id));
   const directlyMatchedNotes = new Set(scopedNotes.filter((note) => matchesSearch(note.title, search)).map((note) => note.id));
 
@@ -170,6 +181,17 @@ function BubbleRelationshipMap({
     else if (note.projectId) projectHasChildren.add(note.projectId);
   }
 
+  function expandAll() {
+    setCollapsedKeys(new Set());
+  }
+
+  function collapseAll() {
+    const keys = new Set<string>();
+    for (const projectId of projectHasChildren) keys.add(`project-${projectId}`);
+    for (const moduleId of moduleHasChildren) keys.add(`module-${moduleId}`);
+    setCollapsedKeys(keys);
+  }
+
   function isCollapsedDescendant(moduleId?: string | null, projectId?: string | null) {
     if (moduleId) {
       if (collapsedKeys.has(`module-${moduleId}`)) return true;
@@ -185,7 +207,7 @@ function BubbleRelationshipMap({
   const displayedNotes = visibleNotes.filter((note) => !isCollapsedDescendant(note.moduleId, note.projectId));
 
   const projectNodes: BubbleNode[] = visibleProjects.map((project) => ({ key: `project-${project.id}`, sourceId: project.id, kind: "project", title: project.title, href: `/projects/${project.id}` }));
-  const moduleNodes: BubbleNode[] = displayedModules.map((module) => ({ key: `module-${module.id}`, sourceId: module.id, kind: "module", title: module.title, href: `/modules/${module.id}` }));
+  const moduleNodes: BubbleNode[] = displayedModules.map((module) => ({ key: `module-${module.id}`, sourceId: module.id, kind: "module", title: paperDisplayTitle(module), href: `/modules/${module.id}` }));
   const leafNodes: BubbleNode[] = [
     ...displayedTasks.map((task) => ({ key: `task-${task.id}`, sourceId: task.id, kind: "task" as const, title: task.title, href: `/tasks/${task.id}` })),
     ...displayedNotes.map((note) => ({ key: `note-${note.id}`, sourceId: note.id, kind: "note" as const, title: note.title, href: `/daily-notes/${note.id}` })),
@@ -244,8 +266,13 @@ function BubbleRelationshipMap({
   }
 
   return (
-    <div className="overflow-x-auto rounded-2xl border bg-muted/10 shadow-inner">
-      <svg role="group" aria-label="Bubble relationship map" viewBox={`0 0 1100 ${height}`} className="min-w-[1100px]" style={{ height }}>
+    <div className="space-y-3">
+      <div className="flex items-center justify-end gap-2">
+        <Button type="button" variant="outline" size="sm" onClick={expandAll}>Expand all</Button>
+        <Button type="button" variant="outline" size="sm" onClick={collapseAll}>Collapse all</Button>
+      </div>
+      <div className="overflow-x-auto rounded-2xl border bg-muted/10 shadow-inner">
+        <svg role="group" aria-label="Bubble relationship map" viewBox={`0 0 1100 ${height}`} className="min-w-[1100px]" style={{ height }}>
         <title>Bubble relationship map for {workspaceName}</title>
         {edges.map((edge) => {
           const path = `M ${edge.from.x + 40} ${edge.from.y} C ${edge.from.x + 120} ${edge.from.y}, ${edge.to.x - 120} ${edge.to.y}, ${edge.to.x - 40} ${edge.to.y}`;
@@ -317,7 +344,8 @@ function BubbleRelationshipMap({
             </g>
           );
         })}
-      </svg>
+        </svg>
+      </div>
     </div>
   );
 }
@@ -326,14 +354,15 @@ function ModuleBranch({
   module,
   tasks,
   notes,
-  defaultExpanded,
+  isExpanded,
+  onToggleExpanded,
 }: {
   module: ApiModule;
   tasks: ApiTask[];
   notes: ApiNote[];
-  defaultExpanded: boolean;
+  isExpanded: boolean;
+  onToggleExpanded: () => void;
 }) {
-  const [expanded, setExpanded] = useState(defaultExpanded);
   return (
     <Branch>
       <div className="rounded-2xl border border-violet-200 bg-violet-50/50 p-3 dark:border-violet-900 dark:bg-violet-950/20">
@@ -343,21 +372,21 @@ function ModuleBranch({
             variant="ghost"
             size="icon"
             className="h-7 w-7 shrink-0"
-            aria-label={`${expanded ? "Collapse" : "Expand"} ${module.title}`}
-            aria-expanded={expanded}
-            onClick={() => setExpanded((current) => !current)}
+            aria-label={`${isExpanded ? "Collapse" : "Expand"} ${paperDisplayTitle(module)}`}
+            aria-expanded={isExpanded}
+            onClick={onToggleExpanded}
           >
-            {expanded ? <ChevronDown className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}
+            {isExpanded ? <ChevronDown className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}
           </Button>
           <Link to={`/modules/${module.id}`} className="flex min-w-0 flex-1 items-center gap-2 rounded-lg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring">
             <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-violet-600 text-white"><Boxes className="h-4 w-4" /></span>
             <span className="min-w-0">
-              <span className="block truncate text-sm font-semibold hover:text-primary">{module.title}</span>
+              <span className="block truncate text-sm font-semibold hover:text-primary">{paperDisplayTitle(module)}</span>
               <span className="block text-xs text-muted-foreground">Paper · {tasks.length} tasks · {notes.length} notes</span>
             </span>
           </Link>
         </div>
-        {expanded ? <div className="mt-3 border-t border-violet-200/70 pt-3 dark:border-violet-900/70"><LeafCollection tasks={tasks} notes={notes} /></div> : null}
+        {isExpanded ? <div className="mt-3 border-t border-violet-200/70 pt-3 dark:border-violet-900/70"><LeafCollection tasks={tasks} notes={notes} /></div> : null}
       </div>
     </Branch>
   );
@@ -369,20 +398,27 @@ function ProjectTree({
   tasks,
   notes,
   search,
+  isExpanded,
+  onToggleExpanded,
+  isModuleExpanded,
+  onToggleModuleExpanded,
 }: {
   project: ApiProject;
   modules: ApiModule[];
   tasks: ApiTask[];
   notes: ApiNote[];
   search: string;
+  isExpanded: boolean;
+  onToggleExpanded: () => void;
+  isModuleExpanded: (moduleId: string) => boolean;
+  onToggleModuleExpanded: (moduleId: string) => void;
 }) {
-  const [expanded, setExpanded] = useState(true);
   const projectMatches = matchesSearch(project.title, search);
   const directTasks = tasks.filter((task) => task.projectId === project.id && !task.moduleId && (projectMatches || matchesSearch(task.title, search)));
   const directNotes = notes.filter((note) => note.projectId === project.id && !note.moduleId && (projectMatches || matchesSearch(note.title, search)));
   const visibleModules = modules.filter((module) => {
     if (module.projectId !== project.id) return false;
-    if (projectMatches || matchesSearch(module.title, search)) return true;
+    if (projectMatches || matchesSearch(paperDisplayTitle(module), search)) return true;
     return tasks.some((task) => task.moduleId === module.id && matchesSearch(task.title, search))
       || notes.some((note) => note.moduleId === module.id && matchesSearch(note.title, search));
   });
@@ -395,11 +431,11 @@ function ProjectTree({
           variant="ghost"
           size="icon"
           className="h-8 w-8 shrink-0"
-          aria-label={`${expanded ? "Collapse" : "Expand"} ${project.title}`}
-          aria-expanded={expanded}
-          onClick={() => setExpanded((current) => !current)}
+          aria-label={`${isExpanded ? "Collapse" : "Expand"} ${project.title}`}
+          aria-expanded={isExpanded}
+          onClick={onToggleExpanded}
         >
-          {expanded ? <ChevronDown className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}
+          {isExpanded ? <ChevronDown className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}
         </Button>
         <Link to={`/projects/${project.id}`} className="flex min-w-0 flex-1 items-center gap-3 rounded-lg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring">
           <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-blue-600 text-white shadow-sm"><FolderKanban className="h-5 w-5" /></span>
@@ -411,7 +447,7 @@ function ProjectTree({
         </Link>
       </div>
 
-      {expanded ? (
+      {isExpanded ? (
         <div className="mt-3 space-y-3">
           {(directTasks.length > 0 || directNotes.length > 0) ? (
             <Branch>
@@ -425,9 +461,10 @@ function ProjectTree({
             <ModuleBranch
               key={module.id}
               module={module}
-              tasks={tasks.filter((task) => task.moduleId === module.id && (projectMatches || matchesSearch(module.title, search) || matchesSearch(task.title, search)))}
-              notes={notes.filter((note) => note.moduleId === module.id && (projectMatches || matchesSearch(module.title, search) || matchesSearch(note.title, search)))}
-              defaultExpanded
+              tasks={tasks.filter((task) => task.moduleId === module.id && (projectMatches || matchesSearch(paperDisplayTitle(module), search) || matchesSearch(task.title, search)))}
+              notes={notes.filter((note) => note.moduleId === module.id && (projectMatches || matchesSearch(paperDisplayTitle(module), search) || matchesSearch(note.title, search)))}
+              isExpanded={isModuleExpanded(module.id)}
+              onToggleExpanded={() => onToggleModuleExpanded(module.id)}
             />
           ))}
           {visibleModules.length === 0 && directTasks.length === 0 && directNotes.length === 0 ? (
@@ -453,19 +490,48 @@ export default function MindMapPage() {
   const [search, setSearch] = useState("");
   const [projectFilter, setProjectFilter] = useState("all");
   const [view, setView] = useState<MapView>("tree");
+  const [collapsedTreeKeys, setCollapsedTreeKeys] = useState<Set<string>>(new Set());
   const normalizedSearch = search.trim().toLowerCase();
+
+  function toggleTreeKey(key: string) {
+    setCollapsedTreeKeys((current) => {
+      const next = new Set(current);
+      if (next.has(key)) next.delete(key);
+      else next.add(key);
+      return next;
+    });
+  }
+
+  function isProjectExpanded(projectId: string) {
+    return !collapsedTreeKeys.has(`project-${projectId}`);
+  }
+
+  function isModuleExpanded(moduleId: string) {
+    return !collapsedTreeKeys.has(`module-${moduleId}`);
+  }
+
+  function expandAllTree() {
+    setCollapsedTreeKeys(new Set());
+  }
+
+  function collapseAllTree() {
+    const keys = new Set<string>();
+    for (const project of allProjects) keys.add(`project-${project.id}`);
+    for (const module of modules) keys.add(`module-${module.id}`);
+    setCollapsedTreeKeys(keys);
+  }
 
   const projects = useMemo(() => allProjects.filter((project) => {
     if (projectFilter !== "all" && project.id !== projectFilter) return false;
     if (!normalizedSearch || matchesSearch(project.title, normalizedSearch)) return true;
     const moduleIds = new Set((modules).filter((module) => module.projectId === project.id).map((module) => module.id));
-    return (modules).some((module) => module.projectId === project.id && matchesSearch(module.title, normalizedSearch))
+    return (modules).some((module) => module.projectId === project.id && matchesSearch(paperDisplayTitle(module), normalizedSearch))
       || (tasks).some((task) => (task.projectId === project.id || (task.moduleId && moduleIds.has(task.moduleId))) && matchesSearch(task.title, normalizedSearch))
       || (notes).some((note) => (note.projectId === project.id || (note.moduleId && moduleIds.has(note.moduleId))) && matchesSearch(note.title, normalizedSearch));
     }), [modules, normalizedSearch, notes, projectFilter, allProjects, tasks]);
 
   const independentModules = (modules).filter((module) => !module.projectId && (
-    matchesSearch(module.title, normalizedSearch)
+    matchesSearch(paperDisplayTitle(module), normalizedSearch)
     || (tasks).some((task) => task.moduleId === module.id && matchesSearch(task.title, normalizedSearch))
     || (notes).some((note) => note.moduleId === module.id && matchesSearch(note.title, normalizedSearch))
   ));
@@ -492,33 +558,51 @@ export default function MindMapPage() {
         description="Explore how projects, papers, tasks, and notes connect. Select any node to open its details."
       />
 
-      <div className="flex flex-col gap-3 rounded-2xl border bg-card p-4 shadow-sm lg:flex-row lg:items-center lg:justify-between">
-        <div className="relative w-full lg:max-w-md">
-          <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-          <Input value={search} onChange={(event) => setSearch(event.target.value)} placeholder="Search the map" aria-label="Search the mind map" className="pl-9" />
+      <div className="surface-toolbar flex flex-col gap-4 border-violet-200/70 bg-violet-50/40 dark:border-violet-900/50 dark:bg-violet-950/10">
+        <div className="flex flex-wrap items-center gap-2">
+          <span className="mr-1 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+            View
+          </span>
+          <button
+            type="button"
+            aria-pressed={view === "tree"}
+            onClick={() => setView("tree")}
+            className={controlPillClass(view === "tree")}
+          >
+            <GitBranch className="h-3.5 w-3.5" /> Tree
+          </button>
+          <button
+            type="button"
+            aria-pressed={view === "bubbles"}
+            onClick={() => setView("bubbles")}
+            className={controlPillClass(view === "bubbles")}
+          >
+            <CircleDot className="h-3.5 w-3.5" /> Bubbles
+          </button>
         </div>
-        <Select value={projectFilter} onValueChange={setProjectFilter}>
-          <SelectTrigger aria-label="Filter mind map by project" className="w-full sm:w-56">
-            <SelectValue placeholder="Filter by project" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all">All projects</SelectItem>
-            {allProjects.map((project) => (
-              <SelectItem key={project.id} value={project.id}>{project.title}</SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
+
+        <div className="flex flex-wrap items-center gap-3">
+          <div className="relative w-full sm:max-w-xs">
+            <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+            <Input value={search} onChange={(event) => setSearch(event.target.value)} placeholder="Search the map" aria-label="Search the mind map" className="pl-9" />
+          </div>
+          <Select value={projectFilter} onValueChange={setProjectFilter}>
+            <SelectTrigger aria-label="Filter mind map by project" className="sm:w-56">
+              <SelectValue placeholder="Filter by project" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">All projects</SelectItem>
+              {allProjects.map((project) => (
+                <SelectItem key={project.id} value={project.id}>{project.title}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
       </div>
 
-      <div className="flex items-center justify-between gap-3">
-        <p className="text-sm text-muted-foreground">Choose how relationships are displayed.</p>
-        <div className="flex rounded-lg border bg-card p-1" aria-label="Mind map view">
-          <Button type="button" size="sm" variant={view === "tree" ? "default" : "ghost"} aria-pressed={view === "tree"} onClick={() => setView("tree")}><GitBranch className="mr-1.5 h-4 w-4" />Tree</Button>
-          <Button type="button" size="sm" variant={view === "bubbles" ? "default" : "ghost"} aria-pressed={view === "bubbles"} onClick={() => setView("bubbles")}><CircleDot className="mr-1.5 h-4 w-4" />Bubbles</Button>
-        </div>
-      </div>
-
-      <div className="flex flex-wrap gap-4 rounded-xl border border-dashed bg-muted/20 px-4 py-3 text-xs text-muted-foreground" aria-label="Mind map legend">
+      <div role="group" className="flex flex-wrap items-center gap-4 rounded-xl border border-dashed bg-muted/20 px-4 py-3 text-xs text-muted-foreground" aria-label="Mind map legend">
+        <span className="font-semibold uppercase tracking-wide">Key:</span>
+        <span className="inline-flex items-center gap-1.5"><Network className="h-4 w-4 text-violet-600" /> Workspace</span>
         <span className="inline-flex items-center gap-1.5"><FolderKanban className="h-4 w-4 text-blue-600" /> Project</span>
         <span className="inline-flex items-center gap-1.5"><Boxes className="h-4 w-4 text-violet-600" /> Paper</span>
         <span className="inline-flex items-center gap-1.5"><CheckSquare2 className="h-4 w-4 text-amber-600" /> Task</span>
@@ -536,16 +620,40 @@ export default function MindMapPage() {
           search={normalizedSearch}
         />
       ) : <div className="relative space-y-4 rounded-2xl border bg-muted/10 p-4 sm:p-6">
-        <div className="flex items-center gap-3 rounded-2xl border-2 border-violet-300 bg-violet-50 p-4 shadow-sm dark:border-violet-800 dark:bg-violet-950/30">
+        <div className="flex flex-wrap items-center gap-3 rounded-2xl border-2 border-violet-300 bg-violet-50 p-4 shadow-sm dark:border-violet-800 dark:bg-violet-950/30">
           <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-violet-600 text-white"><Network className="h-5 w-5" /></span>
           <span><span className="block font-semibold">{workspace.data?.name ?? "Workspace"}</span><span className="block text-xs text-muted-foreground">Research workspace</span></span>
+          <div className="ml-auto flex items-center gap-2">
+            <Button type="button" variant="outline" size="sm" onClick={expandAllTree}>Expand all</Button>
+            <Button type="button" variant="outline" size="sm" onClick={collapseAllTree}>Collapse all</Button>
+          </div>
         </div>
 
         <div className="ml-5 space-y-4 border-l-2 border-border pl-5 sm:ml-8 sm:pl-8">
-          {projects.map((project) => <ProjectTree key={project.id} project={project} modules={modules} tasks={tasks} notes={notes} search={normalizedSearch} />)}
+          {projects.map((project) => (
+            <ProjectTree
+              key={project.id}
+              project={project}
+              modules={modules}
+              tasks={tasks}
+              notes={notes}
+              search={normalizedSearch}
+              isExpanded={isProjectExpanded(project.id)}
+              onToggleExpanded={() => toggleTreeKey(`project-${project.id}`)}
+              isModuleExpanded={isModuleExpanded}
+              onToggleModuleExpanded={(moduleId) => toggleTreeKey(`module-${moduleId}`)}
+            />
+          ))}
 
           {showStandalone && independentModules.map((module) => (
-            <ModuleBranch key={module.id} module={module} tasks={(tasks).filter((task) => task.moduleId === module.id && (matchesSearch(module.title, normalizedSearch) || matchesSearch(task.title, normalizedSearch)))} notes={(notes).filter((note) => note.moduleId === module.id && (matchesSearch(module.title, normalizedSearch) || matchesSearch(note.title, normalizedSearch)))} defaultExpanded />
+            <ModuleBranch
+              key={module.id}
+              module={module}
+              tasks={(tasks).filter((task) => task.moduleId === module.id && (matchesSearch(paperDisplayTitle(module), normalizedSearch) || matchesSearch(task.title, normalizedSearch)))}
+              notes={(notes).filter((note) => note.moduleId === module.id && (matchesSearch(paperDisplayTitle(module), normalizedSearch) || matchesSearch(note.title, normalizedSearch)))}
+              isExpanded={isModuleExpanded(module.id)}
+              onToggleExpanded={() => toggleTreeKey(`module-${module.id}`)}
+            />
           ))}
 
           {showStandalone && (unassignedTasks.length > 0 || unassignedNotes.length > 0) ? (

@@ -9,7 +9,8 @@ type ModuleFixture = {
   displayId: string | null;
   tenantId: string;
   projectId: string | null;
-  title: string;
+  shortTitle: string | null;
+  title: string | null;
   description: string | null;
   tag: string | null;
   status: string | null;
@@ -132,7 +133,8 @@ vi.mock("@/api/hooks", async () => {
           displayId: `MOD-${String(modules.length + 1).padStart(3, "0")}`,
           tenantId: fixtures.tenantId,
           projectId: (input.projectId as string | undefined) ?? null,
-          title: input.title as string,
+          shortTitle: (input.shortTitle as string | undefined) ?? null,
+          title: (input.title as string | undefined) ?? null,
           description: (input.description as string | undefined) ?? null,
           tag: (input.tag as string | undefined) ?? null,
           status: (input.status as string | undefined) ?? "Active",
@@ -193,6 +195,7 @@ describe("ModulesPage", () => {
         displayId: "MOD-001",
         tenantId: fixtures.tenantId,
         projectId: null,
+        shortTitle: "Literature synthesis",
         title: "Literature synthesis",
         description: "",
         tag: null,
@@ -222,7 +225,7 @@ describe("ModulesPage", () => {
         "Concept & Ideation",
       ),
     );
-    fireEvent.change(screen.getByRole("textbox", { name: /Paper title/ }), {
+    fireEvent.change(screen.getByRole("textbox", { name: /Short title/ }), {
       target: { value: "Independent literature synthesis" },
     });
     fireEvent.click(screen.getByRole("button", { name: "Create Paper" }));
@@ -310,6 +313,7 @@ describe("ModulesPage", () => {
         displayId: "MOD-001",
         tenantId: fixtures.tenantId,
         projectId: null,
+        shortTitle: "Charlie module",
         title: "Charlie module",
         description: "",
         tag: null,
@@ -326,6 +330,7 @@ describe("ModulesPage", () => {
         displayId: "MOD-002",
         tenantId: fixtures.tenantId,
         projectId: null,
+        shortTitle: "Alpha module",
         title: "Alpha module",
         description: "",
         tag: null,
@@ -342,6 +347,7 @@ describe("ModulesPage", () => {
         displayId: "MOD-003",
         tenantId: fixtures.tenantId,
         projectId: null,
+        shortTitle: "Bravo module",
         title: "Bravo module",
         description: "",
         tag: null,

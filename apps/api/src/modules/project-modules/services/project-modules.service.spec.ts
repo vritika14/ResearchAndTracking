@@ -318,6 +318,7 @@ describe('ProjectModulesService', () => {
       });
 
       await service.create('tenant-1', 'user-1', {
+        shortTitle: 'New Module',
         title: 'New Module',
         tag: 'Research Paper',
         status: 'Active',
@@ -348,7 +349,7 @@ describe('ProjectModulesService', () => {
       });
 
       await service.create('tenant-1', 'user-1', {
-        title: 'Paper in progress',
+        shortTitle: 'Paper in progress',
         pipelineStage: 'Drafting & Writing',
       });
 
@@ -357,6 +358,25 @@ describe('ProjectModulesService', () => {
       ).toHaveBeenCalledWith('tenant-1', 'Drafting & Writing');
       expect(repository.create).toHaveBeenCalledWith(
         expect.objectContaining({ pipelineStageId: 'tenant-stage-drafting' }),
+      );
+    });
+
+    it('always records pipelineStageChangedAt at creation time', async () => {
+      enumRepository.findByCategoryAndValue.mockImplementation(
+        (category: string, value: string) =>
+          Promise.resolve({ id: `${category}-${value}-id` }),
+      );
+      repository.create.mockResolvedValue({
+        id: 'module-1',
+        tagId: null,
+        statusId: null,
+        pipelineStageId: null,
+      });
+
+      await service.create('tenant-1', 'user-1', { shortTitle: 'New Module' });
+
+      expect(repository.create).toHaveBeenCalledWith(
+        expect.objectContaining({ pipelineStageChangedAt: expect.any(Date) }),
       );
     });
 
@@ -371,7 +391,7 @@ describe('ProjectModulesService', () => {
 
       await expect(
         service.create('tenant-1', 'user-1', {
-          title: 'Paper in progress',
+          shortTitle: 'Paper in progress',
           pipelineStage: 'Not A Real Stage',
         }),
       ).rejects.toThrow(NotFoundException);
@@ -381,7 +401,7 @@ describe('ProjectModulesService', () => {
       enumRepository.findByCategoryAndValue.mockResolvedValue(undefined);
       await expect(
         service.create('tenant-1', 'user-1', {
-          title: 'New Module',
+          shortTitle: 'New Module',
           tag: 'NotReal',
         }),
       ).rejects.toThrow(NotFoundException);
@@ -398,7 +418,7 @@ describe('ProjectModulesService', () => {
         statusId: null,
       });
       await service.create('tenant-1', 'user-1', {
-        title: 'Project module',
+        shortTitle: 'Project module',
         projectId: 'project-1',
       });
 
@@ -493,6 +513,108 @@ describe('ProjectModulesService', () => {
         'tenant-1',
         'module-1',
         expect.objectContaining({ projectId: undefined }),
+      );
+    });
+
+    it('records pipelineStageChangedAt when the pipeline stage actually changes', async () => {
+      repository.findById.mockResolvedValue({
+        id: 'module-1',
+        projectId: null,
+        tagId: null,
+        statusId: null,
+        pipelineStageId: 'stage-concept-id',
+      });
+      collaboratorsRepository.findByModuleAndUser.mockResolvedValue({
+        roleId: 'role-1',
+      });
+      enumRepository.findValuesByIds.mockResolvedValue(
+        new Map([['stage-concept-id', 'Concept, Ideation']]),
+      );
+      enumRepository.findModuleStageByValueForTenant.mockResolvedValue({
+        id: 'stage-drafting-id',
+        value: 'Drafting & Writing',
+      });
+      repository.update.mockResolvedValue({
+        id: 'module-1',
+        projectId: null,
+        tagId: null,
+        statusId: null,
+        pipelineStageId: 'stage-drafting-id',
+      });
+
+      await service.update('tenant-1', 'module-1', 'user-1', {
+        pipelineStage: 'Drafting & Writing',
+      });
+
+      expect(repository.update).toHaveBeenCalledWith(
+        'tenant-1',
+        'module-1',
+        expect.objectContaining({ pipelineStageChangedAt: expect.any(Date) }),
+      );
+    });
+
+    it('does not touch pipelineStageChangedAt when the pipeline stage is re-submitted unchanged', async () => {
+      repository.findById.mockResolvedValue({
+        id: 'module-1',
+        projectId: null,
+        tagId: null,
+        statusId: null,
+        pipelineStageId: 'stage-concept-id',
+      });
+      collaboratorsRepository.findByModuleAndUser.mockResolvedValue({
+        roleId: 'role-1',
+      });
+      enumRepository.findValuesByIds.mockResolvedValue(
+        new Map([['stage-concept-id', 'Concept, Ideation']]),
+      );
+      enumRepository.findModuleStageByValueForTenant.mockResolvedValue({
+        id: 'stage-concept-id',
+        value: 'Concept, Ideation',
+      });
+      repository.update.mockResolvedValue({
+        id: 'module-1',
+        projectId: null,
+        tagId: null,
+        statusId: null,
+        pipelineStageId: 'stage-concept-id',
+      });
+
+      await service.update('tenant-1', 'module-1', 'user-1', {
+        pipelineStage: 'Concept, Ideation',
+      });
+
+      expect(repository.update).toHaveBeenCalledWith(
+        'tenant-1',
+        'module-1',
+        expect.objectContaining({ pipelineStageChangedAt: undefined }),
+      );
+    });
+
+    it('does not touch pipelineStageChangedAt when the pipeline stage is omitted', async () => {
+      repository.findById.mockResolvedValue({
+        id: 'module-1',
+        projectId: 'project-1',
+        tagId: null,
+        statusId: null,
+      });
+      projectCollaboratorsRepository.findByProjectAndUser.mockResolvedValue({
+        roleId: 'role-1',
+      });
+      repository.update.mockResolvedValue({
+        id: 'module-1',
+        projectId: 'project-1',
+        tagId: null,
+        statusId: null,
+      });
+
+      await service.update('tenant-1', 'module-1', 'user-1', {
+        title: 'Renamed module',
+      });
+
+      expect(repository.update).toHaveBeenCalledWith(
+        'tenant-1',
+        'module-1',
+        expect.objectContaining({ pipelineStageChangedAt: undefined }),
       );
     });
   });

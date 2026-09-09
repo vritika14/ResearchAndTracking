@@ -10,6 +10,7 @@ import {
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { paperDisplayTitle } from "@/lib/paper-title";
 
 export type ConferenceSubmissionInput = ConferenceInput;
 
@@ -95,7 +96,7 @@ export function ConferenceSubmissionDialog({
         return {
           key: `module:${module.id}`,
           projectId: module.projectId,
-          label: module.title,
+          label: paperDisplayTitle(module),
           meta: parentProject ? `${kind} · via ${parentProject.title}` : kind,
         };
       });

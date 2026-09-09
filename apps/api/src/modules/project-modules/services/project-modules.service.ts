@@ -133,8 +133,10 @@ export class ProjectModulesService {
     callerUserId: string,
     input: {
       projectId?: string;
-      title: string;
+      shortTitle: string;
+      title?: string;
       description?: string;
+      abstract?: string;
       tag?: string;
       status?: string;
       pipelineStage?: string;
@@ -153,11 +155,14 @@ export class ProjectModulesService {
     const createValues = {
       projectId: input.projectId,
       tenantId,
+      shortTitle: input.shortTitle,
       title: input.title,
       description: input.description,
+      abstract: input.abstract,
       tagId,
       statusId,
       pipelineStageId,
+      pipelineStageChangedAt: new Date(),
       assignedToUserId: input.assignedToUserId,
       dueDate: input.dueDate,
       displayId,
@@ -189,8 +194,10 @@ export class ProjectModulesService {
     moduleId: string,
     callerUserId: string,
     input: Partial<{
+      shortTitle: string;
       title: string;
       description: string;
+      abstract: string;
       projectId: string | null;
       tag: string;
       status: string;
@@ -199,7 +206,7 @@ export class ProjectModulesService {
       dueDate: string;
     }>,
   ) {
-    await this.findOne(tenantId, moduleId, callerUserId);
+    const existing = await this.findOne(tenantId, moduleId, callerUserId);
 
     const [tagId, statusId, pipelineStageId] = await Promise.all([
       input.tag ? this.resolveEnum('module_type', input.tag) : undefined,
@@ -211,13 +218,20 @@ export class ProjectModulesService {
         : undefined,
     ]);
 
+    const stageChanged =
+      input.pipelineStage !== undefined &&
+      input.pipelineStage !== existing?.pipelineStage;
+
     const module = await this.repository.update(tenantId, moduleId, {
+      shortTitle: input.shortTitle,
       title: input.title,
       description: input.description,
+      abstract: input.abstract,
       projectId: input.projectId,
       tagId,
       statusId,
       pipelineStageId,
+      pipelineStageChangedAt: stageChanged ? new Date() : undefined,
       assignedToUserId: input.assignedToUserId,
       dueDate: input.dueDate,
     });

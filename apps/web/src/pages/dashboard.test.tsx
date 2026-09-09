@@ -108,7 +108,7 @@ describe("DashboardPage", () => {
     );
 
     expect(screen.getByRole("status")).toHaveTextContent("Loading dashboard");
-    expect(screen.queryByRole("heading", { name: "Pipeline distribution" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("heading", { name: "Stalled papers" })).not.toBeInTheDocument();
   });
 
   it("shows an error state and retries when dashboard data fails to load", () => {
@@ -134,7 +134,7 @@ describe("DashboardPage", () => {
     expect(screen.getByTestId("dashboard-table-pipeline")).toBeInTheDocument();
     expect(screen.getByTestId("dashboard-table-conferences")).toBeInTheDocument();
     expect(screen.queryByTestId("dashboard-table-tasks")).not.toBeInTheDocument();
-    expect(screen.queryByRole("heading", { name: "Pipeline distribution" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("heading", { name: "Stalled papers" })).not.toBeInTheDocument();
     expect(screen.queryByRole("heading", { name: "Task health" })).not.toBeInTheDocument();
     expect(screen.queryByRole("heading", { name: "Priority workload" })).not.toBeInTheDocument();
     expect(screen.queryByRole("heading", { name: "Project progress" })).not.toBeInTheDocument();
@@ -198,7 +198,7 @@ describe("DashboardPage", () => {
             workspacePreferences: {
               dashboardLayout: {
                 order: [
-                  "pipeline-distribution",
+                  "stalled-papers",
                   "task-health",
                   "priority-workload",
                   "project-progress",

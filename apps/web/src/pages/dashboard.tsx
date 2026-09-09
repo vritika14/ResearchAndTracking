@@ -26,7 +26,7 @@ import {
 import { ConferenceSubmissionDialog, type ConferenceSubmissionInput } from "@/components/dashboard/conference-submission-dialog";
 import { ConferenceSubmissionsTable } from "@/components/dashboard/conference-submissions-table";
 import {
-  PipelineDistributionCard,
+  StalledPapersCard,
   PriorityWorkloadCard,
   ProjectProgressCard,
   TaskHealthCard,
@@ -82,7 +82,7 @@ function buildSummary(counts: {
     },
     {
       label: "In Review Stage",
-      description: "Projects in consolidation and review",
+      description: "Papers in the Submitted, Under Review stage",
       value: String(counts.reviewStage),
       icon: FilePenLine,
       tone: "violet",
@@ -100,7 +100,7 @@ function buildSummary(counts: {
 }
 
 type DashboardWidgetId =
-  | "pipeline-distribution"
+  | "stalled-papers"
   | "task-health"
   | "priority-workload"
   | "project-progress"
@@ -116,11 +116,11 @@ interface DashboardWidgetDefinition extends DashboardWidgetOption<DashboardWidge
 
 const DASHBOARD_WIDGETS: readonly DashboardWidgetDefinition[] = [
   {
-    id: "pipeline-distribution",
-    label: "Pipeline distribution",
-    description: "Project volume across research stages.",
+    id: "stalled-papers",
+    label: "Stalled papers",
+    description: "Papers that haven't moved stage in the longest time.",
     group: "Insights",
-    component: PipelineDistributionCard,
+    component: StalledPapersCard,
     span: "xl:col-span-3",
   },
   {
@@ -176,7 +176,7 @@ const DASHBOARD_WIDGETS: readonly DashboardWidgetDefinition[] = [
 const DEFAULT_WIDGET_ORDER = DASHBOARD_WIDGETS.map((widget) => widget.id);
 /** Widgets a first-time (or never-customized) dashboard starts with hidden — available to add back via Customise dashboard. */
 const DEFAULT_HIDDEN_WIDGETS: readonly DashboardWidgetId[] = [
-  "pipeline-distribution",
+  "stalled-papers",
   "task-health",
   "priority-workload",
   "project-progress",
@@ -272,8 +272,8 @@ export default function DashboardPage() {
           (task) => task.status !== "Complete",
         ).length,
         totalTasks: tasks.length,
-        reviewStage: projects.filter(
-          (project) => project.status === "Review",
+        reviewStage: modules.filter(
+          (module) => module.pipelineStage === "Submitted, Under Review",
         ).length,
         activeModules: modules.filter(
           (module) => module.status === "Active",

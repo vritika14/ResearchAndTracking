@@ -1,4 +1,5 @@
 import { useMemo, useState } from "react";
+import { Table2 } from "lucide-react";
 import { Link } from "react-router-dom";
 
 import { useCurrentWorkspace, useModulePipelineStagePool, useModules, useTasks } from "@/api/hooks";
@@ -31,6 +32,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import { paperDisplayTitle } from "@/lib/paper-title";
 import { cn } from "@/lib/utils";
 import { useColumnVisibility } from "@/hooks/use-column-visibility";
 
@@ -93,7 +95,7 @@ export function PipelineOverviewTable() {
             : undefined;
           return {
             id: paper.id,
-            name: paper.title,
+            name: paperDisplayTitle(paper),
             stageIndex,
             completion: counts.total > 0 ? Math.round((counts.completed / counts.total) * 100) : 0,
           };
@@ -119,12 +121,19 @@ export function PipelineOverviewTable() {
   }
 
   return (
-    <Card>
-      <CardHeader className="gap-4">
+    <Card className="relative isolate overflow-hidden">
+      <Table2
+        aria-hidden="true"
+        className="pointer-events-none absolute -bottom-8 -right-8 h-40 w-40 -rotate-12 text-primary/[0.05]"
+      />
+      <CardHeader className="relative z-10 gap-4">
         <div>
-          <CardTitle>Pipeline Paper Overview</CardTitle>
+          <CardTitle className="flex items-center gap-2">
+            <Table2 className="h-4 w-4 text-violet-600" />
+            Pipeline Paper Overview
+          </CardTitle>
           <CardDescription>
-            Where every paper stands, from Concept through Complete.
+            Every paper&rsquo;s individual position on the pipeline, searchable and filterable by stage.
           </CardDescription>
         </div>
         <div className="flex flex-wrap items-center gap-3">
@@ -165,7 +174,7 @@ export function PipelineOverviewTable() {
           ) : null}
         </div>
       </CardHeader>
-      <CardContent>
+      <CardContent className="relative z-10">
         <Table>
           <TableHeader>
             <TableRow>

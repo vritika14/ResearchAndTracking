@@ -1,4 +1,5 @@
 import { useMemo, useState } from "react";
+import { ListTodo } from "lucide-react";
 import { Link } from "react-router-dom";
 
 import { useCurrentWorkspace, useModules, useProjects, useTasks } from "@/api/hooks";
@@ -28,6 +29,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import { paperDisplayTitle } from "@/lib/paper-title";
 import { cn } from "@/lib/utils";
 import { useColumnVisibility } from "@/hooks/use-column-visibility";
 
@@ -75,7 +77,7 @@ export function PriorityTasksTable() {
   }, [projects]);
   const moduleById = useMemo(() => {
     const map = new Map<string, string>();
-    for (const module of modules) map.set(module.id, module.title);
+    for (const module of modules) map.set(module.id, paperDisplayTitle(module));
     return map;
   }, [modules]);
 
@@ -129,10 +131,17 @@ export function PriorityTasksTable() {
   }
 
   return (
-    <Card>
-      <CardHeader className="gap-4">
+    <Card className="relative isolate overflow-hidden">
+      <ListTodo
+        aria-hidden="true"
+        className="pointer-events-none absolute -bottom-8 -right-8 h-40 w-40 rotate-12 text-primary/[0.05]"
+      />
+      <CardHeader className="relative z-10 gap-4">
         <div>
-          <CardTitle>Tasks to be done</CardTitle>
+          <CardTitle className="flex items-center gap-2">
+            <ListTodo className="h-4 w-4 text-blue-600" />
+            Tasks to be done
+          </CardTitle>
           <CardDescription>
             Tasks across all projects that need attention first.
           </CardDescription>
@@ -175,7 +184,7 @@ export function PriorityTasksTable() {
           ) : null}
         </div>
       </CardHeader>
-      <CardContent>
+      <CardContent className="relative z-10">
         <Table>
           <TableHeader>
             <TableRow>

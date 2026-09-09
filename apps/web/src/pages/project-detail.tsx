@@ -47,6 +47,7 @@ import {
   type ApiTask,
 } from "@/api/hooks";
 import { ModuleDialog, type ModuleFormInput } from "@/components/modules/module-dialog";
+import { paperDisplayTitle } from "@/lib/paper-title";
 import { ProjectCollaborators } from "@/components/projects/project-collaborators";
 import { BackButton } from "@/components/shared/back-button";
 import { EmptyState } from "@/components/shared/empty-state";
@@ -194,7 +195,7 @@ function ProjectModulesDetails({
                         </span>
                       ) : null}
                       <span className="block text-sm font-semibold">
-                        {module.title}
+                        {paperDisplayTitle(module)}
                       </span>
                     </div>
                     <StatusBadge status={module.status ?? "—"} />
@@ -203,7 +204,7 @@ function ProjectModulesDetails({
                 <button
                   type="button"
                   onClick={() => onUnlinkModule(module)}
-                  aria-label={`Unlink ${module.title} from this project`}
+                  aria-label={`Unlink ${paperDisplayTitle(module)} from this project`}
                   title="Unlink"
                   className="shrink-0 rounded-md p-1.5 text-muted-foreground transition-colors hover:bg-destructive/10 hover:text-destructive focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
                 >
@@ -520,8 +521,10 @@ export default function ProjectDetailPage() {
 
   async function handleCreateModule(input: ModuleFormInput) {
     await createModule.mutateAsync({
-      title: input.title,
+      shortTitle: input.shortTitle,
+      title: input.title || undefined,
       description: input.description || undefined,
+      abstract: input.abstract || undefined,
       projectId: input.projectId ?? undefined,
       status: input.status,
       pipelineStage: input.pipelineStage,
@@ -533,7 +536,7 @@ export default function ProjectDetailPage() {
   }
 
   async function handleUnlinkModule(module: ApiModule) {
-    if (!window.confirm(`Unlink "${module.title}" from this project? It will become an independent paper.`)) {
+    if (!window.confirm(`Unlink "${paperDisplayTitle(module)}" from this project? It will become an independent paper.`)) {
       return;
     }
     await updateModule.mutateAsync({
